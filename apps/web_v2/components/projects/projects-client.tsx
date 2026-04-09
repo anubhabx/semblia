@@ -148,13 +148,19 @@ function ProjectRow({
           </span>
         )}
 
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MessageSquareTextIcon className="size-3.5 shrink-0" />
+        <span
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          title={`${project._count.testimonials} testimonials`}
+        >
+          <MessageSquareTextIcon className="size-3.5 shrink-0" aria-hidden />
           {project._count.testimonials}
         </span>
 
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <PuzzleIcon className="size-3.5 shrink-0" />
+        <span
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          title={`${project._count.widgets} widget${project._count.widgets !== 1 ? "s" : ""}`}
+        >
+          <PuzzleIcon className="size-3.5 shrink-0" aria-hidden />
           {project._count.widgets}
         </span>
 
@@ -162,10 +168,13 @@ function ProjectRow({
           className="flex items-center text-xs text-muted-foreground"
           title={project.visibility.toLowerCase().replace("_", " ")}
         >
-          <VisIcon className="size-3.5 shrink-0" />
+          <VisIcon className="size-3.5 shrink-0" aria-hidden />
         </span>
 
-        <span className="w-[68px] text-right text-xs tabular-nums text-muted-foreground">
+        <span
+          className="w-[68px] text-right text-xs tabular-nums text-muted-foreground"
+          title={project.updatedAt.toLocaleDateString()}
+        >
           {timeAgo(project.updatedAt)}
         </span>
       </div>
@@ -359,7 +368,7 @@ export function ProjectsClient() {
   );
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
+    <div className="flex flex-1 flex-col">
       {/* ── Header ── */}
       <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-4 px-6 py-4">
@@ -367,10 +376,10 @@ export function ProjectsClient() {
             <h1 className="text-base font-semibold tracking-tight">Projects</h1>
             <p className="text-xs text-muted-foreground">
               {loading
-                ? "Loading\u2026"
+                ? "Loading…"
                 : projects.length === 0
                   ? "Get started by creating your first project."
-                  : `${projects.length} project${projects.length !== 1 ? "s" : ""} \u00b7 ${totalTestimonials} testimonials${totalPending > 0 ? ` \u00b7 ${totalPending} pending review` : ""}`}
+                  : `${projects.length} project${projects.length !== 1 ? "s" : ""} · ${totalTestimonials} testimonial${totalTestimonials !== 1 ? "s" : ""}`}
             </p>
           </div>
           <Button size="sm" className="gap-1.5 shrink-0" asChild>
@@ -449,7 +458,7 @@ export function ProjectsClient() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((i) => (
                 <ProjectCardSkeleton key={i} />
               ))}
@@ -466,7 +475,7 @@ export function ProjectsClient() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((project, i) => (
               <ProjectCard key={project.id} project={project} index={i} />
             ))}

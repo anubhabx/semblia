@@ -305,7 +305,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="none" className="border-r border-sidebar-border">
       {/* ── Header ── */}
-      <SidebarHeader className="px-3 py-3">
+      <SidebarHeader className="px-3 pt-3 pb-2">
         <TrestaLogo />
       </SidebarHeader>
 
@@ -314,14 +314,14 @@ export function AppSidebar() {
           /* ── Project context ── */
           <>
             {/* Project switcher */}
-            <SidebarGroup className="px-3 py-2">
+            <SidebarGroup className="px-3 py-1.5">
               <ProjectSwitcher currentProject={currentProject} />
             </SidebarGroup>
 
-            <SidebarSeparator />
+            <SidebarSeparator className="mx-0" />
 
             {/* Project nav */}
-            <SidebarGroup>
+            <SidebarGroup className="px-1.5">
               <SidebarMenu>
                 {projectNavItems(currentSlug!, currentProject).map((item) => (
                   <SidebarMenuItem key={item.href}>
@@ -343,23 +343,53 @@ export function AppSidebar() {
           </>
         ) : (
           /* ── Global context (projects list) ── */
-          <SidebarGroup>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/projects" || pathname.startsWith("/projects")}>
-                  <Link href="/projects" className="gap-2">
-                    <LayoutGridIcon className="size-4 shrink-0" />
-                    <span>Projects</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
+          <>
+            <SidebarGroup className="px-1.5">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive>
+                    <Link href="/projects" className="gap-2">
+                      <LayoutGridIcon className="size-4 shrink-0" />
+                      <span>Projects</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  {MOCK_PROJECTS.reduce((s, p) => s + p._count.pendingModeration, 0) > 0 && (
+                    <SidebarMenuBadge className="bg-warning/15 font-semibold text-warning">
+                      {MOCK_PROJECTS.reduce((s, p) => s + p._count.pendingModeration, 0)}
+                    </SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+
+            {/* Recent projects for fast navigation */}
+            <SidebarSeparator className="mx-0" />
+
+            <SidebarGroup className="px-1.5">
+              <SidebarMenu>
+                {MOCK_PROJECTS.map((p) => (
+                  <SidebarMenuItem key={p.id}>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/projects/${p.slug}`} className="gap-2">
+                        <ProjectAvatar project={p} size="sm" />
+                        <span className="truncate">{p.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {p._count.pendingModeration > 0 && (
+                      <SidebarMenuBadge className="bg-warning/15 font-semibold text-warning">
+                        {p._count.pendingModeration}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </>
         )}
       </SidebarContent>
 
       {/* ── Footer ── */}
-      <SidebarFooter className="border-t border-sidebar-border px-3 py-3">
+      <SidebarFooter className="mt-auto border-t border-sidebar-border px-3 py-2.5">
         <div className="flex items-center gap-1">
           <div className="flex-1 min-w-0">
             <UserMenu />

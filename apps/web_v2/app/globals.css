@@ -427,6 +427,30 @@
     transform: scale(0.99);
   }
 
+  /* Active sidebar item — subtle left accent indicator */
+  [data-sidebar="menu-button"][data-active="true"] {
+    position: relative;
+  }
+  [data-sidebar="menu-button"][data-active="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 2px;
+    border-radius: 1px;
+    background-color: var(--brand);
+  }
+
+  /* Scrollbar hide — used on overflow-x-auto tab rows */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Brand highlight text */
   .text-brand {
     color: var(--brand);

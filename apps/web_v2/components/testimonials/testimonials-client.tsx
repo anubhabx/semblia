@@ -341,6 +341,7 @@ function EmptyState({ filter }: { filter: StatusFilter }) {
 interface Props {
   projectId: string;
   projectSlug: string;
+  totalCount?: number;
 }
 
 export function TestimonialsClient({ projectId, projectSlug }: Props) {
@@ -458,11 +459,11 @@ export function TestimonialsClient({ projectId, projectSlug }: Props) {
     SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
 
   return (
-    <div className="flex flex-col min-h-[100dvh]">
-      {/* ── Filter + search bar ── */}
-      <div className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
+    <div className="flex flex-1 flex-col">
+      {/* ── Filter + search bar — sits below the sticky page header (h-14 = 56px) ── */}
+      <div className="sticky top-14 z-10 border-b border-border bg-background/95 backdrop-blur-sm">
         {/* Status tabs */}
-        <div className="flex items-center gap-0 overflow-x-auto px-6 scrollbar-none">
+        <div className="flex items-center gap-0 overflow-x-auto px-6" style={{ scrollbarWidth: 'none' }}>
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
@@ -564,7 +565,10 @@ export function TestimonialsClient({ projectId, projectSlug }: Props) {
 
       {/* ── Pagination ── */}
       {result && result.totalPages > 1 && (
-        <div className="border-t border-border px-6 py-4">
+        <div className="flex items-center justify-between border-t border-border px-6 py-4">
+          <span className="text-xs text-muted-foreground">
+            Page {result.page} of {result.totalPages}
+          </span>
           <Pagination>
             <PaginationContent>
               <PaginationItem>

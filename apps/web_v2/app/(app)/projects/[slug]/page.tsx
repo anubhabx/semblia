@@ -19,7 +19,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
   Breadcrumb,
@@ -37,6 +36,7 @@ import {
   type ModerationStatus,
   type MockTestimonial,
 } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
@@ -184,18 +184,74 @@ function StatTile({
   label,
   value,
   sub,
+  urgent,
+  progress,
 }: {
   label: string;
   value: number | string;
   sub?: string;
+  urgent?: boolean;
+  progress?: number;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 py-5 px-6">
+    <div className={cn(
+      "flex flex-col gap-0.5 py-3.5 px-5 min-w-[80px]",
+      urgent && "bg-warning/5"
+    )}>
       <span className="label-quiet">{label}</span>
-      <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+      <span className={cn(
+        "text-xl font-bold tracking-tight tabular-nums",
+        urgent ? "text-warning" : "text-foreground"
+      )}>
         {value}
       </span>
-      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+      {sub && <span className="text-[11px] text-muted-foreground">{sub}</span>}
+      {progress !== undefined && (
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn("h-full rounded-full transition-all", urgent ? "bg-warning" : "bg-success")}
+            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Rating distribution ──────────────────────────────────────────────────────
+
+function RatingDistribution({ testimonials }: { testimonials: MockTestimonial[] }) {
+  const rated = testimonials.filter((t) => t.rating != null);
+  if (rated.length === 0) return null;
+
+  const counts = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: rated.filter((t) => t.rating === star).length,
+  }));
+  const maxCount = Math.max(...counts.map((c) => c.count), 1);
+
+  return (
+    <div className="mt-4">
+      <span className="label-quiet">Rating breakdown</span>
+      <div className="mt-2 space-y-1">
+        {counts.map(({ star, count }) => (
+          <div key={star} className="flex items-center gap-2">
+            <span className="w-5 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+              {star}
+            </span>
+            <StarIcon className="size-2.5 shrink-0 fill-warning text-warning" />
+            <div className="flex-1 overflow-hidden rounded-full bg-muted h-1.5">
+              <div
+                className="h-full rounded-full bg-warning/60 transition-all"
+                style={{ width: count > 0 ? `${(count / maxCount) * 100}%` : "0%" }}
+              />
+            </div>
+            <span className="w-4 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+              {count}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -215,11 +271,15 @@ export default async function ProjectHubPage(props: {
   const pending = testimonials.filter(
     (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
   ).length;
+  const publishedPct = testimonials.length > 0
+    ? Math.round((published / testimonials.length) * 100)
+    : 0;
+  const ratedTestimonials = testimonials.filter((t) => t.rating != null);
   const avgRating =
-    testimonials.filter((t) => t.rating).length > 0
+    ratedTestimonials.length > 0
       ? (
-          testimonials.reduce((s, t) => s + (t.rating ?? 0), 0) /
-          testimonials.filter((t) => t.rating).length
+          ratedTestimonials.reduce((s, t) => s + (t.rating ?? 0), 0) /
+          ratedTestimonials.length
         ).toFixed(1)
       : null;
 
@@ -238,11 +298,11 @@ export default async function ProjectHubPage(props: {
   );
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex flex-1 flex-col">
       {/* ── Project header ── */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm">
         {/* Breadcrumb strip */}
-        <div className="border-b border-border/50 px-6 py-2.5">
+        <div className="border-b border-border/50 px-6 py-2">
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
@@ -258,10 +318,10 @@ export default async function ProjectHubPage(props: {
           </Breadcrumb>
         </div>
 
-        <div className="flex items-center gap-4 px-6 py-4">
+        <div className="flex items-center gap-3 px-6 py-3">
           {/* Project avatar */}
           <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
             style={{
               backgroundColor: project.brandColorPrimary ?? "var(--brand)",
             }}
@@ -277,7 +337,7 @@ export default async function ProjectHubPage(props: {
           {/* Title + meta */}
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-base font-semibold tracking-tight">
+              <h1 className="text-sm font-semibold tracking-tight">
                 {project.name}
               </h1>
               {typeLabel && (
@@ -325,17 +385,19 @@ export default async function ProjectHubPage(props: {
         </div>
 
         {/* Stats strip */}
-        <div className="flex divide-x divide-border border-t border-border">
+        <div className="flex divide-x divide-border border-t border-border overflow-x-auto">
           <StatTile label="Total" value={testimonials.length} />
           <StatTile
             label="Published"
             value={published}
-            sub={`${testimonials.length > 0 ? Math.round((published / testimonials.length) * 100) : 0}%`}
+            sub={`${publishedPct}% of total`}
+            progress={publishedPct}
           />
           <StatTile
             label="Pending"
             value={pending}
             sub={pending > 0 ? "need attention" : "all clear"}
+            urgent={pending > 0}
           />
           {avgRating && (
             <StatTile
@@ -352,8 +414,13 @@ export default async function ProjectHubPage(props: {
         {/* ── Left: testimonial feed ── */}
         <section className="flex-1 min-w-0">
           {/* Section header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-3">
-            <span className="label-quiet">Recent testimonials</span>
+          <div className="flex items-center justify-between px-6 pt-5 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-foreground">Recent testimonials</span>
+              {recentTestimonials.length > 0 && (
+                <span className="tabular-nums text-xs text-muted-foreground">{recentTestimonials.length}</span>
+              )}
+            </div>
             <Button variant="ghost" size="xs" asChild>
               <Link
                 href={`/projects/${slug}/testimonials`}
@@ -390,47 +457,51 @@ export default async function ProjectHubPage(props: {
           )}
         </section>
 
-        {/* ── Divider (desktop only) ── */}
-        <Separator orientation="vertical" className="hidden lg:block" />
-
         {/* ── Right: actions + moderation queue ── */}
-        <aside className="w-full lg:w-72 shrink-0">
+        <aside className="w-full shrink-0 border-t border-border lg:w-72 lg:border-l lg:border-t-0">
           {/* Moderation queue */}
           {pendingTestimonials.length > 0 && (
-            <div className="px-6 pt-6">
-              <span className="label-quiet">Needs attention</span>
-              <div className="mt-3 space-y-2">
+            <div className="border-b border-border px-5 pt-5 pb-4">
+              <div className="flex items-center justify-between">
+                <span className="label-quiet">Needs attention</span>
+                <span className="rounded-full bg-warning/12 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-warning">
+                  {pendingTestimonials.length}
+                </span>
+              </div>
+              <div className="mt-2.5 space-y-1.5">
                 {pendingTestimonials.map((t) => (
                   <ModerationQueueItem key={t.id} t={t} projectSlug={slug} />
                 ))}
               </div>
-              <Separator className="mt-4" />
             </div>
           )}
 
           {/* Quick actions */}
-          <div className="px-6 pt-6 pb-6">
+          <div className="px-5 pt-5 pb-5">
             <span className="label-quiet">Quick actions</span>
-            <div className="mt-3 space-y-1">
+            <div className="mt-2.5 space-y-1">
               <QuickActionRow
                 icon={RadioIcon}
-                label="Collect page link"
-                sub={project.collectionFormUrl ?? `tresta.io/t/${project.slug}`}
+                label="Share collection link"
+                sub="Get new testimonials"
                 href={`/projects/${slug}/collect`}
               />
               <QuickActionRow
                 icon={MessageSquareTextIcon}
-                label="Testimonials inbox"
-                sub={`${testimonials.length} total`}
+                label="All testimonials"
+                sub={`${testimonials.length} total · ${published} published`}
                 href={`/projects/${slug}/testimonials`}
               />
             </div>
 
+            {/* Rating breakdown */}
+            <RatingDistribution testimonials={testimonials} />
+
             {/* Collection URL box */}
-            <div className="mt-5">
+            <div className="mt-4">
               <span className="label-quiet">Collection link</span>
-              <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5">
-                <span className="flex-1 truncate font-mono text-[11px] text-muted-foreground">
+              <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border bg-muted/60 px-2.5 py-2">
+                <span className="flex-1 truncate font-mono text-[10px] text-muted-foreground">
                   {project.collectionFormUrl ?? `https://tresta.io/t/${project.slug}`}
                 </span>
                 <CopyButton
