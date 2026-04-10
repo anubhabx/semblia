@@ -21,14 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import {
   getProjectBySlug,
   getTestimonialsByProject,
   PROJECT_TYPE_LABELS,
@@ -299,45 +291,12 @@ export default async function ProjectHubPage(props: {
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* ── Project header ── */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm">
-        {/* Breadcrumb strip */}
-        <div className="border-b border-border/50 px-6 py-2">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/projects" className="text-xs">Projects</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-xs">{project.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-
-        <div className="flex items-center gap-3 px-6 py-3">
-          {/* Project avatar */}
-          <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{
-              backgroundColor: project.brandColorPrimary ?? "var(--brand)",
-            }}
-          >
-            {project.name
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)}
-          </span>
-
-          {/* Title + meta */}
-          <div className="flex-1 min-w-0">
+      {/* ── Project page header (identity is in the topbar) ── */}
+      <header className="sticky top-14 z-20 border-b border-border bg-background/85 backdrop-blur-md">
+        <div className="flex flex-col gap-5 px-6 pt-7 pb-6 lg:flex-row lg:items-end lg:gap-6">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-sm font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 {project.name}
               </h1>
               {typeLabel && (
@@ -355,16 +314,15 @@ export default async function ProjectHubPage(props: {
               )}
             </div>
             {project.shortDescription && (
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="mt-1.5 max-w-[60ch] text-xs text-muted-foreground">
                 {project.shortDescription}
               </p>
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
             {project.websiteUrl && (
-              <Button variant="ghost" size="icon-sm" asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" asChild>
                 <a
                   href={project.websiteUrl}
                   target="_blank"
@@ -372,6 +330,7 @@ export default async function ProjectHubPage(props: {
                   title="Open website"
                 >
                   <ExternalLinkIcon className="size-3.5" />
+                  Website
                 </a>
               </Button>
             )}

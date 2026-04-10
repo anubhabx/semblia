@@ -1,0 +1,2 @@
+date,decision,reasoning,expected_outcome,review_date,status
+2026-04-10,"Shell redesign: universal topbar owns user actions + project switcher; project-scoped sidebar only inside /projects/[slug]/*","Sidebar on /projects was redundant with the page's own project list; user actions were inconsistent across pages","Consistent global actions, non-confusing navigation, sidebar only where it adds value",2026-05-10,

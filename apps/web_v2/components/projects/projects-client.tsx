@@ -369,29 +369,30 @@ export function ProjectsClient() {
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center gap-4 px-6 py-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold tracking-tight">Projects</h1>
-            <p className="text-xs text-muted-foreground">
-              {loading
-                ? "Loading…"
-                : projects.length === 0
-                  ? "Get started by creating your first project."
-                  : `${projects.length} project${projects.length !== 1 ? "s" : ""} · ${totalTestimonials} testimonial${totalTestimonials !== 1 ? "s" : ""}`}
-            </p>
-          </div>
-          <Button size="sm" className="gap-1.5 shrink-0" asChild>
-            <Link href="/projects/new">
-              <PlusIcon className="size-3.5" />
-              New project
-            </Link>
-          </Button>
+      {/* ── Page title ── */}
+      <div className="flex items-start gap-4 px-6 pt-7 pb-5">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Projects
+          </h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {loading
+              ? "Loading…"
+              : projects.length === 0
+                ? "Get started by creating your first project."
+                : `${projects.length} project${projects.length !== 1 ? "s" : ""} · ${totalTestimonials} testimonial${totalTestimonials !== 1 ? "s" : ""}${totalPending > 0 ? ` · ${totalPending} pending` : ""}`}
+          </p>
         </div>
+        <Button size="sm" className="gap-1.5 shrink-0" asChild>
+          <Link href="/projects/new">
+            <PlusIcon className="size-3.5" />
+            New project
+          </Link>
+        </Button>
+      </div>
 
-        {/* Search + view toggle bar */}
-        <div className="flex items-center gap-3 border-t border-border px-6 py-2.5">
+      {/* Search + view toggle bar — sticky under the global topbar */}
+      <div className="sticky top-14 z-10 flex items-center gap-3 border-y border-border bg-background/85 px-6 py-2.5 backdrop-blur-md">
           <div className="relative flex-1 max-w-xs">
             <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -443,9 +444,8 @@ export function ProjectsClient() {
             >
               <LayoutGridIcon className="size-3.5" />
             </button>
-          </div>
         </div>
-      </header>
+      </div>
 
       {/* ── Content ── */}
       <main className="flex-1">

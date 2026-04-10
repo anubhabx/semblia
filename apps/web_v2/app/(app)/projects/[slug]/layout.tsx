@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProjectBySlug } from "@/lib/mock-data";
+import { ProjectSidebar } from "@/components/nav/project-sidebar";
 
 interface ProjectLayoutProps {
   children: React.ReactNode;
@@ -13,9 +14,12 @@ export default async function ProjectLayout({
   const { slug } = await params;
   const project = getProjectBySlug(slug);
 
-  if (!project) {
-    notFound();
-  }
+  if (!project) notFound();
 
-  return <>{children}</>;
+  return (
+    <>
+      <ProjectSidebar slug={slug} />
+      <div className="flex flex-1 flex-col lg:pl-56">{children}</div>
+    </>
+  );
 }
