@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createClerkClient, type ClerkClient } from "@clerk/backend";
 
@@ -6,7 +6,10 @@ import { createClerkClient, type ClerkClient } from "@clerk/backend";
 export class ClerkService {
   private readonly client: ClerkClient | null;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    @Inject(ConfigService)
+    private readonly configService: ConfigService,
+  ) {
     const secretKey = this.configService.get<string>("CLERK_SECRET_KEY");
     this.client = secretKey
       ? createClerkClient({

@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Inject } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
@@ -9,9 +9,13 @@ import { Public } from "../../common/decorators/public.decorator.js";
 @Controller("health")
 export class HealthController {
   constructor(
+    @Inject(ConfigService)
     private readonly configService: ConfigService,
+    @Inject(PrismaService)
     private readonly prismaService: PrismaService,
+    @Inject(RedisService)
     private readonly redisService: RedisService,
+    @Inject(ClerkService)
     private readonly clerkService: ClerkService,
   ) {}
 

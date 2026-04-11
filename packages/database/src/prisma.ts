@@ -1,4 +1,8 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/index.js";
+
+const DEFAULT_DATABASE_URL =
+  "postgresql://appuser:apppassword@localhost:5432/appdb?schema=public";
 
 /**
  * Shared Prisma client - prevents connection storms
@@ -12,6 +16,9 @@ declare global {
 }
 
 export const prisma = global.prisma || new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+  }),
   log: process.env.NODE_ENV === 'development'
     ? ['query', 'info', 'warn', 'error']
     : ['error'],

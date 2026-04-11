@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -12,7 +13,9 @@ import { IS_PUBLIC_KEY } from "../decorators/public.decorator.js";
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {
   constructor(
+    @Inject(Reflector)
     private readonly reflector: Reflector,
+    @Inject(ConfigService)
     private readonly configService: ConfigService,
   ) {}
 

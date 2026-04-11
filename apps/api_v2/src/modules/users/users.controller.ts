@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Req,
+  Inject,
   BadRequestException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -20,7 +21,9 @@ interface ClerkWebhookEvent {
 @Controller()
 export class UsersController {
   constructor(
+    @Inject(UsersService)
     private readonly usersService: UsersService,
+    @Inject(ConfigService)
     private readonly configService: ConfigService,
   ) {}
 
