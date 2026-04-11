@@ -393,14 +393,30 @@
   }
 
   /* Stagger helpers — pairs with animate-fade-up */
-  .stagger-1  { animation-delay: 50ms;  }
-  .stagger-2  { animation-delay: 100ms; }
-  .stagger-3  { animation-delay: 150ms; }
-  .stagger-4  { animation-delay: 200ms; }
-  .stagger-5  { animation-delay: 250ms; }
-  .stagger-6  { animation-delay: 300ms; }
-  .stagger-7  { animation-delay: 350ms; }
-  .stagger-8  { animation-delay: 400ms; }
+  .stagger-1 {
+    animation-delay: 50ms;
+  }
+  .stagger-2 {
+    animation-delay: 100ms;
+  }
+  .stagger-3 {
+    animation-delay: 150ms;
+  }
+  .stagger-4 {
+    animation-delay: 200ms;
+  }
+  .stagger-5 {
+    animation-delay: 250ms;
+  }
+  .stagger-6 {
+    animation-delay: 300ms;
+  }
+  .stagger-7 {
+    animation-delay: 350ms;
+  }
+  .stagger-8 {
+    animation-delay: 400ms;
+  }
 
   /* Shimmer skeleton (use instead of animate-pulse for feel) */
   .animate-shimmer {
@@ -415,8 +431,12 @@
   }
 
   @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* Tactile press — add to interactive rows */
@@ -475,10 +495,18 @@
   .auth-stagger-4 {
     animation: auth-reveal 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
   }
-  .auth-stagger-1 { animation-delay: 80ms; }
-  .auth-stagger-2 { animation-delay: 200ms; }
-  .auth-stagger-3 { animation-delay: 360ms; }
-  .auth-stagger-4 { animation-delay: 480ms; }
+  .auth-stagger-1 {
+    animation-delay: 80ms;
+  }
+  .auth-stagger-2 {
+    animation-delay: 200ms;
+  }
+  .auth-stagger-3 {
+    animation-delay: 360ms;
+  }
+  .auth-stagger-4 {
+    animation-delay: 480ms;
+  }
 
   @keyframes auth-reveal {
     from {
@@ -541,8 +569,9 @@
 
   /* ── Tactile auth button press (per Emil philosophy) ── */
   .auth-btn {
-    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
-                box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition:
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
   }
   .auth-btn:active:not(:disabled) {
     transform: scale(0.97);
@@ -550,8 +579,9 @@
 
   /* ── Focus ring for auth inputs ── */
   .auth-input-focus {
-    transition: border-color 150ms ease,
-                box-shadow 150ms ease;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
   }
   .auth-input-focus:focus {
     border-color: var(--ring);
@@ -595,6 +625,22 @@
     }
   }
 
+  /* ── Testimonial detail panel section stagger ── */
+  .detail-section-enter {
+    animation: detail-section-in 350ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes detail-section-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* ── Directional step transitions — auth (horizontal) ── */
   .step-enter-forward {
     animation: step-fwd-in 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
@@ -610,20 +656,44 @@
   }
 
   @keyframes step-fwd-in {
-    from { opacity: 0; transform: translateX(12px); }
-    to   { opacity: 1; transform: translateX(0); }
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
   @keyframes step-fwd-out {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(-12px); }
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
   }
   @keyframes step-back-in {
-    from { opacity: 0; transform: translateX(-12px); }
-    to   { opacity: 1; transform: translateX(0); }
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
   @keyframes step-back-out {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(12px); }
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(12px);
+    }
   }
 
   /* ── Directional step transitions — onboarding (vertical) ── */
@@ -641,19 +711,43 @@
   }
 
   @keyframes onboard-fwd-in {
-    from { opacity: 0; transform: translateY(14px) scale(0.99); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
   @keyframes onboard-fwd-out {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to   { opacity: 0; transform: translateY(-10px) scale(0.99); }
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.99);
+    }
   }
   @keyframes onboard-rev-in {
-    from { opacity: 0; transform: translateY(-14px) scale(0.99); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+      opacity: 0;
+      transform: translateY(-14px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
   @keyframes onboard-rev-out {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to   { opacity: 0; transform: translateY(10px) scale(0.99); }
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(10px) scale(0.99);
+    }
   }
 }

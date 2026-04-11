@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   SearchIcon,
   XIcon,
@@ -15,12 +14,12 @@ import {
   EyeOffIcon,
   FilterIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   MessageSquareTextIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -151,6 +150,8 @@ interface TestimonialRowProps {
   onReject: (id: string) => void;
   onTogglePublish: (id: string, published: boolean) => void;
   pending: Set<string>;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 function TestimonialRow({
@@ -161,14 +162,31 @@ function TestimonialRow({
   onReject,
   onTogglePublish,
   pending,
+  isSelected,
+  onSelect,
 }: TestimonialRowProps) {
   const isBusy = pending.has(t.id);
   const isActionable = t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
 
   return (
     <div
-      className="group flex gap-3 border-b border-border px-6 py-4 last:border-0 animate-fade-up"
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect?.(t.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(t.id);
+        }
+      }}
+      className={cn(
+        "group flex gap-3 border-b border-border px-6 py-4 last:border-0 animate-fade-up cursor-pointer transition-colors duration-150",
+        isSelected
+          ? "bg-muted/50 border-l-2 border-l-brand pl-[22px]"
+          : "hover:bg-muted/30"
+      )}
       style={{ animationDelay: `${index * 45}ms`, animationFillMode: "both" }}
+      aria-selected={isSelected}
     >
       {/* Author avatar */}
       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground select-none">
@@ -198,14 +216,9 @@ function TestimonialRow({
         </div>
 
         {/* Content */}
-        <Link
-          href={`/projects/${projectSlug}/testimonials/${t.id}`}
-          className="mt-1 block"
-        >
-          <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2 transition-colors hover:text-foreground">
-            {t.content}
-          </p>
-        </Link>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2 transition-colors group-hover:text-foreground">
+          {t.content}
+        </p>
 
         {/* Meta row */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -246,7 +259,10 @@ function TestimonialRow({
 
         {/* Inline moderation actions */}
         {isActionable && (
-          <div className="mt-2.5 flex items-center gap-2">
+          <div
+            className="mt-2.5 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
               size="xs"
               variant="outline"
@@ -291,6 +307,9 @@ function TestimonialRow({
           </div>
         )}
       </div>
+
+      {/* Mobile chevron indicator */}
+      <ChevronRightIcon className="mt-1 size-4 shrink-0 text-muted-foreground/50 lg:hidden" />
     </div>
   );
 }
@@ -342,9 +361,11 @@ interface Props {
   projectId: string;
   projectSlug: string;
   totalCount?: number;
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
 }
 
-export function TestimonialsClient({ projectId, projectSlug }: Props) {
+export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelect }: Props) {
   const [status, setStatus] = React.useState<StatusFilter>("ALL");
   const [sort, setSort] = React.useState<SortOption>("newest");
   const [search, setSearch] = React.useState("");
@@ -557,6 +578,8 @@ export function TestimonialsClient({ projectId, projectSlug }: Props) {
                 onReject={handleReject}
                 onTogglePublish={handleTogglePublish}
                 pending={pendingActions}
+                isSelected={selectedId === t.id}
+                onSelect={onSelect}
               />
             ))}
           </div>

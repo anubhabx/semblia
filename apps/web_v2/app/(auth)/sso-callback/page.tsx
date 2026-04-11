@@ -14,7 +14,12 @@ export default function SSOCallbackPage() {
 
         {/* Spinner */}
         <div className="relative size-5">
-          <svg className="animate-spin text-brand" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg
+            className="animate-spin text-brand"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
             <circle
               cx="12"
               cy="12"

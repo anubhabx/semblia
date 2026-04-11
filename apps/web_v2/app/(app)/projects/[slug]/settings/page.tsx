@@ -29,9 +29,9 @@ export default async function SettingsPage(props: {
       </header>
       <div className="flex-1 px-6 py-8">
         <p className="text-sm text-muted-foreground">
-          Project name, slug, description, branding (colors, logo),
-          visibility, moderation settings, social links, and danger zone
-          (delete project) will be built here.
+          Project name, slug, description, branding (colors, logo), visibility,
+          moderation settings, social links, and danger zone (delete project)
+          will be built here.
         </p>
       </div>
     </div>

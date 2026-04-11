@@ -24,13 +24,14 @@ export default async function WidgetsPage(props: {
           Widgets
         </h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {project._count.widgets} widget{project._count.widgets !== 1 ? "s" : ""} — {project.name}
+          {project._count.widgets} widget
+          {project._count.widgets !== 1 ? "s" : ""} — {project.name}
         </p>
       </header>
       <div className="flex-1 px-6 py-8">
         <p className="text-sm text-muted-foreground">
-          Widget gallery with layout type, theme, load stats, and
-          create/edit actions will be built here.
+          Widget gallery with layout type, theme, load stats, and create/edit
+          actions will be built here.
         </p>
       </div>
     </div>

@@ -32,13 +32,14 @@ export default async function WidgetDetailPage(props: {
           Widget Editor
         </h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {widget.config.layoutType} · {widget.config.theme} theme — {project.name}
+          {widget.config.layoutType} · {widget.config.theme} theme —{" "}
+          {project.name}
         </p>
       </header>
       <div className="flex-1 px-6 py-8">
         <p className="text-sm text-muted-foreground">
-          Widget configuration editor with live preview, testimonial
-          selection, and embed code will be built here.
+          Widget configuration editor with live preview, testimonial selection,
+          and embed code will be built here.
         </p>
       </div>
     </div>

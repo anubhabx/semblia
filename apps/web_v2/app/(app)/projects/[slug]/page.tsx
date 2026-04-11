@@ -25,4 +25,3 @@ export default async function ProjectHubPage(props: {
 
   return <OverviewHub slug={slug} />;
 }
-

@@ -19,7 +19,7 @@ import {
   MessageSquareTextIcon,
   BarChart3Icon,
   ZapIcon,
-  CopyIcon,
+  CopyIcon
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import {
   apiGetTestimonials,
   apiGetWidgets,
   apiApproveTestimonial,
-  apiRejectTestimonial,
+  apiRejectTestimonial
 } from "@/lib/api";
 import {
   getProjectBySlug,
@@ -38,7 +38,7 @@ import {
   type MockProject,
   type MockTestimonial,
   type MockWidget,
-  type ModerationStatus,
+  type ModerationStatus
 } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -55,23 +55,23 @@ const statusConfig: Record<
   APPROVED: {
     label: "Approved",
     icon: CheckCircle2Icon,
-    className: "text-success bg-success/10",
+    className: "text-success bg-success/10"
   },
   PENDING: {
     label: "Pending",
     icon: ClockIcon,
-    className: "text-muted-foreground bg-muted",
+    className: "text-muted-foreground bg-muted"
   },
   FLAGGED: {
     label: "Flagged",
     icon: AlertTriangleIcon,
-    className: "text-warning bg-warning/12",
+    className: "text-warning bg-warning/12"
   },
   REJECTED: {
     label: "Rejected",
     icon: XCircleIcon,
-    className: "text-destructive bg-destructive/10",
-  },
+    className: "text-destructive bg-destructive/10"
+  }
 };
 
 function StatusPill({ status }: { status: ModerationStatus }) {
@@ -100,9 +100,7 @@ function Stars({ rating }: { rating: number | null }) {
           key={i}
           className={cn(
             "size-2.5",
-            i < rating
-              ? "fill-warning text-warning"
-              : "fill-border text-border"
+            i < rating ? "fill-warning text-warning" : "fill-border text-border"
           )}
         />
       ))}
@@ -126,7 +124,7 @@ function MetricTile({
   sub,
   accent,
   progress,
-  index,
+  index
 }: {
   label: string;
   value: string | number;
@@ -157,9 +155,7 @@ function MetricTile({
       >
         {value}
       </span>
-      {sub && (
-        <span className="text-[11px] text-muted-foreground">{sub}</span>
-      )}
+      {sub && <span className="text-[11px] text-muted-foreground">{sub}</span>}
       {progress !== undefined && (
         <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
           <div
@@ -180,7 +176,7 @@ function MetricTile({
 function FeedRow({
   t,
   slug,
-  index,
+  index
 }: {
   t: MockTestimonial;
   slug: string;
@@ -190,7 +186,10 @@ function FeedRow({
     <Link
       href={`/projects/${slug}/testimonials/${t.id}`}
       className="group tactile flex gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-muted/40 animate-fade-up"
-      style={{ animationDelay: `${100 + index * 50}ms`, animationFillMode: "both" }}
+      style={{
+        animationDelay: `${100 + index * 50}ms`,
+        animationFillMode: "both"
+      }}
     >
       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
         {t.authorName[0].toUpperCase()}
@@ -249,7 +248,7 @@ function ModerationItem({
   index,
   onApprove,
   onReject,
-  resolving,
+  resolving
 }: {
   t: MockTestimonial;
   slug: string;
@@ -266,7 +265,10 @@ function ModerationItem({
         "flex items-start gap-2.5 rounded-lg px-3 py-2.5 transition-all duration-200 animate-fade-up",
         isResolving && "opacity-40 pointer-events-none"
       )}
-      style={{ animationDelay: `${80 + index * 60}ms`, animationFillMode: "both" }}
+      style={{
+        animationDelay: `${80 + index * 60}ms`,
+        animationFillMode: "both"
+      }}
     >
       <Link
         href={`/projects/${slug}/testimonials/${t.id}`}
@@ -281,9 +283,7 @@ function ModerationItem({
           className="group block"
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium truncate">
-              {t.authorName}
-            </span>
+            <span className="text-xs font-medium truncate">{t.authorName}</span>
             <StatusPill status={t.moderationStatus} />
           </div>
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
@@ -337,13 +337,13 @@ const LAYOUT_LABELS: Record<string, string> = {
   grid: "Grid",
   masonry: "Masonry",
   wall: "Wall",
-  list: "List",
+  list: "List"
 };
 
 function WidgetMiniCard({
   widget,
   slug,
-  index,
+  index
 }: {
   widget: MockWidget;
   slug: string;
@@ -353,7 +353,10 @@ function WidgetMiniCard({
     <Link
       href={`/projects/${slug}/widgets/${widget.id}`}
       className="group tactile flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40 animate-fade-up"
-      style={{ animationDelay: `${120 + index * 60}ms`, animationFillMode: "both" }}
+      style={{
+        animationDelay: `${120 + index * 60}ms`,
+        animationFillMode: "both"
+      }}
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
         <PuzzleIcon className="size-3.5 text-muted-foreground" />
@@ -367,10 +370,7 @@ function WidgetMiniCard({
           <span>{widget._analytics.avgLoadMs}ms avg</span>
         </div>
       </div>
-      <Badge
-        variant="secondary"
-        className="text-[9px] px-1.5 py-0 font-medium"
-      >
+      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-medium">
         {widget.config.theme}
       </Badge>
       <ArrowRightIcon className="size-3 shrink-0 text-muted-foreground/20 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/60" />
@@ -381,7 +381,7 @@ function WidgetMiniCard({
 // ── Rating distribution ─────────────────────────────────────────────────────
 
 function RatingDistribution({
-  testimonials,
+  testimonials
 }: {
   testimonials: MockTestimonial[];
 }) {
@@ -390,7 +390,7 @@ function RatingDistribution({
 
   const counts = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    count: rated.filter((t) => t.rating === star).length,
+    count: rated.filter((t) => t.rating === star).length
   }));
   const maxCount = Math.max(...counts.map((c) => c.count), 1);
 
@@ -408,8 +408,7 @@ function RatingDistribution({
               <div
                 className="h-full rounded-full bg-warning/60 transition-all duration-500"
                 style={{
-                  width:
-                    count > 0 ? `${(count / maxCount) * 100}%` : "0%",
+                  width: count > 0 ? `${(count / maxCount) * 100}%` : "0%"
                 }}
               />
             </div>
@@ -492,19 +491,12 @@ function EmptyFeed({ slug }: { slug: string }) {
       <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted">
         <MessageSquareTextIcon className="size-4 text-muted-foreground" />
       </div>
-      <p className="text-sm font-medium text-foreground">
-        No testimonials yet
-      </p>
+      <p className="text-sm font-medium text-foreground">No testimonials yet</p>
       <p className="mt-1 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
         Share your collection link to start gathering testimonials from your
         users.
       </p>
-      <Button
-        size="sm"
-        variant="outline"
-        className="mt-4 gap-1.5"
-        asChild
-      >
+      <Button size="sm" variant="outline" className="mt-4 gap-1.5" asChild>
         <Link href={`/projects/${slug}/collect`}>
           <RadioIcon className="size-3.5" />
           Get collection link
@@ -536,9 +528,7 @@ function AllClear() {
 
 export function OverviewHub({ slug }: { slug: string }) {
   const project = getProjectBySlug(slug);
-  const [testimonials, setTestimonials] = React.useState<MockTestimonial[]>(
-    []
-  );
+  const [testimonials, setTestimonials] = React.useState<MockTestimonial[]>([]);
   const [widgets, setWidgets] = React.useState<MockWidget[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [resolving, setResolving] = React.useState<Set<string>>(new Set());
@@ -549,7 +539,7 @@ export function OverviewHub({ slug }: { slug: string }) {
     setLoading(true);
     Promise.all([
       apiGetTestimonials(project.id, { pageSize: 50 }),
-      apiGetWidgets(project.id),
+      apiGetWidgets(project.id)
     ]).then(([testimonialsRes, widgetsRes]) => {
       setTestimonials(testimonialsRes.items);
       setWidgets(widgetsRes);
@@ -566,16 +556,15 @@ export function OverviewHub({ slug }: { slug: string }) {
   const publishedPct = total > 0 ? Math.round((published / total) * 100) : 0;
 
   const pending = testimonials.filter(
-    (t) =>
-      t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
+    (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
   );
 
   const rated = testimonials.filter((t) => t.rating != null);
   const avgRating =
     rated.length > 0
-      ? (
-          rated.reduce((s, t) => s + (t.rating ?? 0), 0) / rated.length
-        ).toFixed(1)
+      ? (rated.reduce((s, t) => s + (t.rating ?? 0), 0) / rated.length).toFixed(
+          1
+        )
       : null;
 
   const totalWidgetLoads = widgets.reduce(
@@ -598,7 +587,11 @@ export function OverviewHub({ slug }: { slug: string }) {
       setTestimonials((prev) =>
         prev.map((t) =>
           t.id === id
-            ? { ...t, moderationStatus: "APPROVED" as ModerationStatus, isApproved: true }
+            ? {
+                ...t,
+                moderationStatus: "APPROVED" as ModerationStatus,
+                isApproved: true
+              }
             : t
         )
       );
@@ -656,7 +649,9 @@ export function OverviewHub({ slug }: { slug: string }) {
         <MetricTile
           label="Avg rating"
           value={avgRating ? `${avgRating}` : "--"}
-          sub={rated.length > 0 ? `from ${rated.length} ratings` : "no ratings yet"}
+          sub={
+            rated.length > 0 ? `from ${rated.length} ratings` : "no ratings yet"
+          }
           index={3}
         />
       </div>
@@ -791,12 +786,7 @@ export function OverviewHub({ slug }: { slug: string }) {
             ) : (
               <div className="mt-2 space-y-0.5">
                 {widgets.map((w, i) => (
-                  <WidgetMiniCard
-                    key={w.id}
-                    widget={w}
-                    slug={slug}
-                    index={i}
-                  />
+                  <WidgetMiniCard key={w.id} widget={w} slug={slug} index={i} />
                 ))}
               </div>
             )}

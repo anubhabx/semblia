@@ -40,7 +40,12 @@ const VALUE_PROPS = [
   },
 ];
 
-const SUGGESTIONS = ["My SaaS", "Client Work", "Agency Portfolio", "Personal Brand"];
+const SUGGESTIONS = [
+  "My SaaS",
+  "Client Work",
+  "Agency Portfolio",
+  "Personal Brand",
+];
 
 export function WelcomeFlow() {
   const { user } = useUser();
@@ -75,7 +80,10 @@ export function WelcomeFlow() {
     if (!firstName.trim()) return;
     setNameLoading(true);
     try {
-      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() });
+      await user?.update({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
     } catch {
       // Continue — name can be updated later
     }
@@ -97,7 +105,8 @@ export function WelcomeFlow() {
     : direction === "forward"
       ? "onboard-enter-fwd"
       : "onboard-enter-rev";
-  const exitCls = direction === "forward" ? "onboard-exit-fwd" : "onboard-exit-rev";
+  const exitCls =
+    direction === "forward" ? "onboard-exit-fwd" : "onboard-exit-rev";
 
   return (
     <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center px-4 py-12">
@@ -188,7 +197,10 @@ function NameStep({
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); onContinue(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onContinue();
+        }}
         className="space-y-4"
       >
         <div className="grid grid-cols-2 gap-2.5">
@@ -272,7 +284,9 @@ function WelcomeStep({
               <prop.icon className="size-4 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">{prop.title}</p>
+              <p className="text-[13px] font-semibold text-foreground">
+                {prop.title}
+              </p>
               <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
                 {prop.desc}
               </p>
@@ -337,13 +351,16 @@ function ProjectStep({
           Name your first project
         </h1>
         <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">
-          A project groups testimonials for a product, service, or brand.
-          You can always rename it later.
+          A project groups testimonials for a product, service, or brand. You
+          can always rename it later.
         </p>
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
         className="space-y-4"
       >
         <div className="space-y-2">
@@ -367,7 +384,7 @@ function ProjectStep({
                   "px-2 py-0.5 rounded-md text-[11px] font-medium transition-all duration-150",
                   projectName === s
                     ? "bg-brand/12 text-brand ring-1 ring-brand/20"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
                 )}
               >
                 {s}
@@ -446,7 +463,9 @@ function ReadyStep({
               <tip.icon className="size-4 text-brand" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">{tip.label}</p>
+              <p className="text-[13px] font-semibold text-foreground">
+                {tip.label}
+              </p>
               <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
                 {tip.desc}
               </p>

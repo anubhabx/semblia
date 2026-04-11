@@ -29,8 +29,8 @@ export default async function CollectPage(props: {
       </header>
       <div className="flex-1 px-6 py-8">
         <p className="text-sm text-muted-foreground">
-          Form configuration (18 toggle fields), collection URL with copy,
-          embed snippet, and form preview will be built here.
+          Form configuration (18 toggle fields), collection URL with copy, embed
+          snippet, and form preview will be built here.
         </p>
       </div>
     </div>

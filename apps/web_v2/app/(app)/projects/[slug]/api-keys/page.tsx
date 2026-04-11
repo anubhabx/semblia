@@ -24,13 +24,14 @@ export default async function ApiKeysPage(props: {
           API Keys
         </h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {project._count.apiKeys} key{project._count.apiKeys !== 1 ? "s" : ""} — {project.name}
+          {project._count.apiKeys} key{project._count.apiKeys !== 1 ? "s" : ""}{" "}
+          — {project.name}
         </p>
       </header>
       <div className="flex-1 px-6 py-8">
         <p className="text-sm text-muted-foreground">
-          API key list with permissions, usage/limits, rate limits, daily
-          usage chart, and create/revoke actions will be built here.
+          API key list with permissions, usage/limits, rate limits, daily usage
+          chart, and create/revoke actions will be built here.
         </p>
       </div>
     </div>

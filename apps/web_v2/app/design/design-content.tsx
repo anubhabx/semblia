@@ -385,19 +385,47 @@ export function DesignSystemContent() {
             >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
-                  { title: "Calm Confidence", desc: "Every screen tells the user exactly what to do next. No ambiguity, no noise. Clear hierarchy, clear path.", accent: "#" },
-                  { title: "Fast & Fluid", desc: "150ms micro-interactions. No layout shifts. Transitions feel instant yet intentional.", accent: "#" },
-                  { title: "Precision & Trust", desc: "Consistent spacing grid. Single typeface family. Tokens enforced everywhere — nothing is magic-numbered.", accent: "#" },
-                  { title: "Refined Delight", desc: "Subtle fade-ups on scroll, warm amber accent used sparingly as a reward signal, not decoration.", accent: "#" },
-                  { title: "Empowerment", desc: "Stats surface user impact. Progress is always visible. Users know they're building something meaningful.", accent: "#" },
-                  { title: "Quiet Focus", desc: "Low chroma palette. Warm neutrals instead of cold grays. Never compete with the user's content.", accent: "#" },
+                  {
+                    title: "Calm Confidence",
+                    desc: "Every screen tells the user exactly what to do next. No ambiguity, no noise. Clear hierarchy, clear path.",
+                    accent: "#",
+                  },
+                  {
+                    title: "Fast & Fluid",
+                    desc: "150ms micro-interactions. No layout shifts. Transitions feel instant yet intentional.",
+                    accent: "#",
+                  },
+                  {
+                    title: "Precision & Trust",
+                    desc: "Consistent spacing grid. Single typeface family. Tokens enforced everywhere — nothing is magic-numbered.",
+                    accent: "#",
+                  },
+                  {
+                    title: "Refined Delight",
+                    desc: "Subtle fade-ups on scroll, warm amber accent used sparingly as a reward signal, not decoration.",
+                    accent: "#",
+                  },
+                  {
+                    title: "Empowerment",
+                    desc: "Stats surface user impact. Progress is always visible. Users know they're building something meaningful.",
+                    accent: "#",
+                  },
+                  {
+                    title: "Quiet Focus",
+                    desc: "Low chroma palette. Warm neutrals instead of cold grays. Never compete with the user's content.",
+                    accent: "#",
+                  },
                 ].map(({ title, desc }) => (
                   <div key={title} className="stat-card animate-fade-up">
                     <div className="brand-strip mb-3">
                       <p className="label-quiet">Principle</p>
-                      <h3 className="mt-1 text-sm font-semibold text-foreground">{title}</h3>
+                      <h3 className="mt-1 text-sm font-semibold text-foreground">
+                        {title}
+                      </h3>
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {desc}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -415,9 +443,15 @@ export function DesignSystemContent() {
                     <Swatch variable="--background" label="Background" />
                     <Swatch variable="--foreground" label="Foreground" />
                     <Swatch variable="--primary" label="Primary" />
-                    <Swatch variable="--primary-foreground" label="Primary FG" />
+                    <Swatch
+                      variable="--primary-foreground"
+                      label="Primary FG"
+                    />
                     <Swatch variable="--secondary" label="Secondary" />
-                    <Swatch variable="--secondary-foreground" label="Secondary FG" />
+                    <Swatch
+                      variable="--secondary-foreground"
+                      label="Secondary FG"
+                    />
                     <Swatch variable="--muted" label="Muted" />
                     <Swatch variable="--muted-foreground" label="Muted FG" />
                     <Swatch variable="--accent" label="Accent" />
@@ -434,8 +468,10 @@ export function DesignSystemContent() {
                   </div>
                   <div className="w-full">
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      The brand accent is the only non-neutral hue in the system. Use it exclusively for calls-to-action,
-                      progress milestones, highlights, and sidebar active states in dark mode. Never use it for decoration.
+                      The brand accent is the only non-neutral hue in the
+                      system. Use it exclusively for calls-to-action, progress
+                      milestones, highlights, and sidebar active states in dark
+                      mode. Never use it for decoration.
                     </p>
                   </div>
                 </Demo>
@@ -443,9 +479,15 @@ export function DesignSystemContent() {
                 <Demo label="Semantic Status">
                   <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-4">
                     <Swatch variable="--success" label="Success" />
-                    <Swatch variable="--success-foreground" label="Success FG" />
+                    <Swatch
+                      variable="--success-foreground"
+                      label="Success FG"
+                    />
                     <Swatch variable="--warning" label="Warning" />
-                    <Swatch variable="--warning-foreground" label="Warning FG" />
+                    <Swatch
+                      variable="--warning-foreground"
+                      label="Warning FG"
+                    />
                   </div>
                 </Demo>
 
@@ -454,7 +496,10 @@ export function DesignSystemContent() {
                     <Swatch variable="--card" label="Card" />
                     <Swatch variable="--card-foreground" label="Card FG" />
                     <Swatch variable="--popover" label="Popover" />
-                    <Swatch variable="--popover-foreground" label="Popover FG" />
+                    <Swatch
+                      variable="--popover-foreground"
+                      label="Popover FG"
+                    />
                     <Swatch variable="--border" label="Border" />
                     <Swatch variable="--input" label="Input" />
                     <Swatch variable="--ring" label="Ring" />
@@ -474,12 +519,30 @@ export function DesignSystemContent() {
                 <Demo label="Sidebar">
                   <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                     <Swatch variable="--sidebar" label="Sidebar" />
-                    <Swatch variable="--sidebar-foreground" label="Sidebar FG" />
-                    <Swatch variable="--sidebar-primary" label="Sidebar Primary" />
-                    <Swatch variable="--sidebar-primary-foreground" label="Sidebar Primary FG" />
-                    <Swatch variable="--sidebar-accent" label="Sidebar Accent" />
-                    <Swatch variable="--sidebar-accent-foreground" label="Sidebar Accent FG" />
-                    <Swatch variable="--sidebar-border" label="Sidebar Border" />
+                    <Swatch
+                      variable="--sidebar-foreground"
+                      label="Sidebar FG"
+                    />
+                    <Swatch
+                      variable="--sidebar-primary"
+                      label="Sidebar Primary"
+                    />
+                    <Swatch
+                      variable="--sidebar-primary-foreground"
+                      label="Sidebar Primary FG"
+                    />
+                    <Swatch
+                      variable="--sidebar-accent"
+                      label="Sidebar Accent"
+                    />
+                    <Swatch
+                      variable="--sidebar-accent-foreground"
+                      label="Sidebar Accent FG"
+                    />
+                    <Swatch
+                      variable="--sidebar-border"
+                      label="Sidebar Border"
+                    />
                     <Swatch variable="--sidebar-ring" label="Sidebar Ring" />
                   </div>
                 </Demo>
@@ -645,15 +708,21 @@ export function DesignSystemContent() {
                   <div className="grid w-full gap-4 sm:grid-cols-3">
                     <div className="elevation-1 rounded-xl bg-card p-5">
                       <p className="label-quiet">elevation-1</p>
-                      <p className="mt-2 text-sm text-muted-foreground">Subtle lift. Cards, list items.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Subtle lift. Cards, list items.
+                      </p>
                     </div>
                     <div className="elevation-2 rounded-xl bg-card p-5">
                       <p className="label-quiet">elevation-2</p>
-                      <p className="mt-2 text-sm text-muted-foreground">Raised surface. Popovers, dropdowns.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Raised surface. Popovers, dropdowns.
+                      </p>
                     </div>
                     <div className="elevation-3 rounded-xl bg-card p-5">
                       <p className="label-quiet">elevation-3</p>
-                      <p className="mt-2 text-sm text-muted-foreground">Prominent surface. Modals, dialogs.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Prominent surface. Modals, dialogs.
+                      </p>
                     </div>
                   </div>
                 </Demo>
@@ -661,14 +730,33 @@ export function DesignSystemContent() {
                 <Demo label="Duration Tokens">
                   <div className="w-full space-y-3">
                     {[
-                      { name: "--duration-fast", value: "150ms", use: "Micro-interactions: hover, focus, toggle" },
-                      { name: "--duration-base", value: "200ms", use: "Default transitions: colour, opacity" },
-                      { name: "--duration-slow", value: "350ms", use: "Entrance/exit animations" },
+                      {
+                        name: "--duration-fast",
+                        value: "150ms",
+                        use: "Micro-interactions: hover, focus, toggle",
+                      },
+                      {
+                        name: "--duration-base",
+                        value: "200ms",
+                        use: "Default transitions: colour, opacity",
+                      },
+                      {
+                        name: "--duration-slow",
+                        value: "350ms",
+                        use: "Entrance/exit animations",
+                      },
                     ].map(({ name, value, use }) => (
-                      <div key={name} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                      <div
+                        key={name}
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3"
+                      >
                         <code className="w-48 shrink-0 text-xs">{name}</code>
-                        <span className="w-16 shrink-0 font-mono text-xs font-semibold text-brand">{value}</span>
-                        <span className="text-xs text-muted-foreground">{use}</span>
+                        <span className="w-16 shrink-0 font-mono text-xs font-semibold text-brand">
+                          {value}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {use}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -692,7 +780,9 @@ export function DesignSystemContent() {
                   <div className="w-full max-w-sm space-y-3">
                     <div className="brand-strip">
                       <p className="label-quiet">Section Label</p>
-                      <p className="mt-1 font-medium">Use brand strips to anchor section headings</p>
+                      <p className="mt-1 font-medium">
+                        Use brand strips to anchor section headings
+                      </p>
                     </div>
                     <div className="brand-strip">
                       <p className="label-quiet">Key Metric</p>

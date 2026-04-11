@@ -13,6 +13,7 @@ import {
   MOCK_SUBSCRIPTION,
   MOCK_USER,
   getProjectBySlug,
+  getTestimonialById,
   type MockProject,
   type MockTestimonial,
   type MockWidget,
@@ -155,6 +156,14 @@ export async function apiPublishTestimonial(
 ): Promise<{ success: boolean }> {
   await sleep(280);
   return { success: true };
+}
+
+export async function apiGetTestimonial(
+  projectId: string,
+  testimonialId: string
+): Promise<MockTestimonial | null> {
+  await simulateLatency();
+  return getTestimonialById(projectId, testimonialId);
 }
 
 // ── Widgets ────────────────────────────────────────────────────────────────────

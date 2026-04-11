@@ -6,7 +6,11 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { errMsg } from "@/components/auth/clerk-error";
 import { AuthField } from "@/components/auth/auth-field";
 import { AuthPasswordField } from "@/components/auth/auth-password-field";
@@ -33,7 +37,9 @@ export function SignUpForm() {
   const [resendCooldown, setResendCooldown] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | "github" | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "github" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const busy = loading || !!oauthLoading || fetchStatus === "fetching";
@@ -48,7 +54,11 @@ export function SignUpForm() {
     setResendTimer(30);
     const interval = setInterval(() => {
       setResendTimer((prev) => {
-        if (prev <= 1) { clearInterval(interval); setResendCooldown(false); return 0; }
+        if (prev <= 1) {
+          clearInterval(interval);
+          setResendCooldown(false);
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);
@@ -60,10 +70,21 @@ export function SignUpForm() {
     if (busy) return;
     setLoading(true);
     setError(null);
-    const { error: createErr } = await signUp.password({ emailAddress: email, password });
-    if (createErr) { setError(errMsg(createErr)); setLoading(false); return; }
+    const { error: createErr } = await signUp.password({
+      emailAddress: email,
+      password,
+    });
+    if (createErr) {
+      setError(errMsg(createErr));
+      setLoading(false);
+      return;
+    }
     const { error: sendErr } = await signUp.verifications.sendEmailCode();
-    if (sendErr) { setError(errMsg(sendErr)); setLoading(false); return; }
+    if (sendErr) {
+      setError(errMsg(sendErr));
+      setLoading(false);
+      return;
+    }
     setLoading(false);
     go("verify", "forward");
   }
@@ -73,13 +94,22 @@ export function SignUpForm() {
     if (loading || otp.length !== 6) return;
     setLoading(true);
     setError(null);
-    const { error: verifyErr } = await signUp.verifications.verifyEmailCode({ code: otp });
-    if (verifyErr) { setError(errMsg(verifyErr)); setLoading(false); return; }
+    const { error: verifyErr } = await signUp.verifications.verifyEmailCode({
+      code: otp,
+    });
+    if (verifyErr) {
+      setError(errMsg(verifyErr));
+      setLoading(false);
+      return;
+    }
     if (signUp.status === "complete") {
       const { error: finalErr } = await signUp.finalize({
         navigate: () => router.push("/welcome"),
       });
-      if (finalErr) { setError(errMsg(finalErr)); setLoading(false); }
+      if (finalErr) {
+        setError(errMsg(finalErr));
+        setLoading(false);
+      }
     } else {
       setError("Verification incomplete. Please try again.");
       setLoading(false);
@@ -90,7 +120,10 @@ export function SignUpForm() {
     if (resendCooldown) return;
     setError(null);
     const { error: sendErr } = await signUp.verifications.sendEmailCode();
-    if (sendErr) { setError(errMsg(sendErr)); return; }
+    if (sendErr) {
+      setError(errMsg(sendErr));
+      return;
+    }
     setResendCooldown(true);
   }
 
@@ -104,7 +137,10 @@ export function SignUpForm() {
       redirectUrl: "/welcome",
       redirectCallbackUrl: `${window.location.origin}/sso-callback`,
     });
-    if (ssoErr) { setError(errMsg(ssoErr)); setOauthLoading(null); }
+    if (ssoErr) {
+      setError(errMsg(ssoErr));
+      setOauthLoading(null);
+    }
   }
 
   function handleBack() {
@@ -152,7 +188,11 @@ export function SignUpForm() {
               <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
                 <InputOTPGroup>
                   {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <InputOTPSlot key={i} index={i} className="size-11 text-base" />
+                    <InputOTPSlot
+                      key={i}
+                      index={i}
+                      className="size-11 text-base"
+                    />
                   ))}
                 </InputOTPGroup>
               </InputOTP>

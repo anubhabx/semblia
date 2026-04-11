@@ -35,7 +35,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           aria-hidden
           className="absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full pointer-events-none"
           style={{
-            background: "radial-gradient(circle, var(--color-brand) 0%, transparent 70%)",
+            background:
+              "radial-gradient(circle, var(--color-brand) 0%, transparent 70%)",
             opacity: 0.08,
           }}
         />
@@ -44,7 +45,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           aria-hidden
           className="absolute -bottom-24 -left-24 w-[20rem] h-[20rem] rounded-full pointer-events-none"
           style={{
-            background: "radial-gradient(circle, var(--color-brand) 0%, transparent 70%)",
+            background:
+              "radial-gradient(circle, var(--color-brand) 0%, transparent 70%)",
             opacity: 0.04,
           }}
         />
@@ -52,7 +54,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div
           aria-hidden
           className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-          style={{ background: "linear-gradient(to top, var(--color-card), transparent)" }}
+          style={{
+            background:
+              "linear-gradient(to top, var(--color-card), transparent)",
+          }}
         />
 
         {/* ── Wordmark ── */}
@@ -77,7 +82,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <div className="rounded-xl p-5 space-y-4 auth-stagger-3 bg-muted/40 border border-border/50">
             <div className="flex gap-[3px]">
               {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} aria-hidden width="12" height="12" viewBox="0 0 13 13" fill="none">
+                <svg
+                  key={i}
+                  aria-hidden
+                  width="12"
+                  height="12"
+                  viewBox="0 0 13 13"
+                  fill="none"
+                >
                   <path
                     d="M6.5 1l1.44 2.92 3.22.47-2.33 2.27.55 3.21L6.5 8.26 3.62 9.87l.55-3.21L1.84 4.39l3.22-.47L6.5 1z"
                     className="fill-brand stroke-brand"
@@ -95,7 +107,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                 {TESTIMONIAL.initials}
               </div>
               <div>
-                <p className="text-[13px] font-medium text-foreground">{TESTIMONIAL.author}</p>
+                <p className="text-[13px] font-medium text-foreground">
+                  {TESTIMONIAL.author}
+                </p>
                 <p className="text-[11px] text-muted-foreground">
                   {TESTIMONIAL.role}, {TESTIMONIAL.company}
                 </p>
@@ -111,7 +125,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <p className="font-semibold text-lg tabular-nums tracking-tight text-foreground">
                 {stat.value}
               </p>
-              <p className="text-[10px] leading-snug text-muted-foreground">{stat.label}</p>
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                {stat.label}
+              </p>
             </div>
           ))}
         </div>

@@ -21,7 +21,9 @@ export function SignInForm() {
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | "github" | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "github" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const busy = loading || !!oauthLoading || fetchStatus === "fetching";
@@ -37,7 +39,10 @@ export function SignInForm() {
     setLoading(true);
     setError(null);
 
-    const { error: signInErr } = await signIn.password({ identifier: email, password });
+    const { error: signInErr } = await signIn.password({
+      identifier: email,
+      password,
+    });
     if (signInErr) {
       setError(errMsg(signInErr));
       setLoading(false);
@@ -47,13 +52,19 @@ export function SignInForm() {
     if (signIn.status === "complete") {
       const { error: finalErr } = await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) { console.log(session.currentTask); return; }
+          if (session?.currentTask) {
+            console.log(session.currentTask);
+            return;
+          }
           const url = decorateUrl("/projects");
           if (url.startsWith("http")) window.location.href = url;
           else router.push(url);
         },
       });
-      if (finalErr) { setError(errMsg(finalErr)); setLoading(false); }
+      if (finalErr) {
+        setError(errMsg(finalErr));
+        setLoading(false);
+      }
     } else if (signIn.status === "needs_second_factor") {
       setError("Multi-factor authentication is not yet supported.");
       setLoading(false);
@@ -76,7 +87,10 @@ export function SignInForm() {
       redirectUrl: "/projects",
       redirectCallbackUrl: `${window.location.origin}/sso-callback`,
     });
-    if (ssoErr) { setError(errMsg(ssoErr)); setOauthLoading(null); }
+    if (ssoErr) {
+      setError(errMsg(ssoErr));
+      setOauthLoading(null);
+    }
   }
 
   return (
@@ -130,7 +144,12 @@ export function SignInForm() {
           }
         />
         <AuthNotice error={error} />
-        <AuthPrimaryBtn type="submit" loading={loading} loadingLabel="Signing in…" disabled={busy}>
+        <AuthPrimaryBtn
+          type="submit"
+          loading={loading}
+          loadingLabel="Signing in…"
+          disabled={busy}
+        >
           Sign in
         </AuthPrimaryBtn>
       </form>
