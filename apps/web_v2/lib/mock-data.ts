@@ -832,6 +832,37 @@ export function getTestimonialsByProject(projectId: string): MockTestimonial[] {
   return MOCK_TESTIMONIALS[projectId] ?? [];
 }
 
+/** Returns a single testimonial by project ID and testimonial ID, or null */
+export function getTestimonialById(
+  projectId: string,
+  testimonialId: string,
+): MockTestimonial | null {
+  return (
+    (MOCK_TESTIMONIALS[projectId] ?? []).find((t) => t.id === testimonialId) ??
+    null
+  );
+}
+
+/** Returns a single widget by project ID and widget ID, or null */
+export function getWidgetById(
+  projectId: string,
+  widgetId: string,
+): MockWidget | null {
+  return (
+    (MOCK_WIDGETS[projectId] ?? []).find((w) => w.id === widgetId) ?? null
+  );
+}
+
+/** Returns widgets for a project */
+export function getWidgetsByProject(projectId: string): MockWidget[] {
+  return MOCK_WIDGETS[projectId] ?? [];
+}
+
+/** Returns API keys for a project */
+export function getApiKeysByProject(projectId: string): MockApiKey[] {
+  return MOCK_API_KEYS[projectId] ?? [];
+}
+
 /** Returns the unread notification count */
 export function getUnreadNotificationCount(): number {
   return MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;

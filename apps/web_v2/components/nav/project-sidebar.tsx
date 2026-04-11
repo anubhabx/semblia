@@ -8,6 +8,7 @@ import {
   MessageSquareTextIcon,
   RadioIcon,
   PuzzleIcon,
+  BarChart3Icon,
   KeyRoundIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
@@ -51,7 +52,12 @@ function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
       icon: PuzzleIcon,
     },
     {
-      label: "API keys",
+      label: "Analytics",
+      href: `/projects/${slug}/analytics`,
+      icon: BarChart3Icon,
+    },
+    {
+      label: "API Keys",
       href: `/projects/${slug}/api-keys`,
       icon: KeyRoundIcon,
     },

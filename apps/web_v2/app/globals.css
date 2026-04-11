@@ -594,4 +594,66 @@
       transform: scale(1);
     }
   }
+
+  /* ── Directional step transitions — auth (horizontal) ── */
+  .step-enter-forward {
+    animation: step-fwd-in 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .step-exit-forward {
+    animation: step-fwd-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  .step-enter-back {
+    animation: step-back-in 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .step-exit-back {
+    animation: step-back-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes step-fwd-in {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes step-fwd-out {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(-12px); }
+  }
+  @keyframes step-back-in {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes step-back-out {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(12px); }
+  }
+
+  /* ── Directional step transitions — onboarding (vertical) ── */
+  .onboard-enter-fwd {
+    animation: onboard-fwd-in 450ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .onboard-exit-fwd {
+    animation: onboard-fwd-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  .onboard-enter-rev {
+    animation: onboard-rev-in 450ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .onboard-exit-rev {
+    animation: onboard-rev-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes onboard-fwd-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.99); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes onboard-fwd-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-10px) scale(0.99); }
+  }
+  @keyframes onboard-rev-in {
+    from { opacity: 0; transform: translateY(-14px) scale(0.99); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes onboard-rev-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(10px) scale(0.99); }
+  }
 }

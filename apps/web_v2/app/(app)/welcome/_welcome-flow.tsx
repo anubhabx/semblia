@@ -13,13 +13,14 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ── Step types ────────────────────────────────────────────────────────────────
+import { AuthField } from "@/components/auth/auth-field";
+import { AuthPrimaryBtn } from "@/components/auth/auth-primary-btn";
+import { AuthBackBtn } from "@/components/auth/auth-back-btn";
+import { ProgressDots } from "@/components/onboarding/progress-dots";
+import { useAnimatedStep } from "@/hooks/use-animated-step";
 
 type OnboardStep = "name" | "welcome" | "project" | "ready";
 const TOTAL_STEPS = 4;
-
-// ── Value proposition cards ───────────────────────────────────────────────────
 
 const VALUE_PROPS = [
   {
@@ -39,45 +40,31 @@ const VALUE_PROPS = [
   },
 ];
 
-// ── Project name suggestions ──────────────────────────────────────────────────
-
-const SUGGESTIONS = [
-  "My SaaS",
-  "Client Work",
-  "Agency Portfolio",
-  "Personal Brand",
-];
-
-// ── Main flow ─────────────────────────────────────────────────────────────────
+const SUGGESTIONS = ["My SaaS", "Client Work", "Agency Portfolio", "Personal Brand"];
 
 export function WelcomeFlow() {
   const { user } = useUser();
   const router = useRouter();
+  const { activeStep, isLeaving, direction, go, isFirstRender } =
+    useAnimatedStep<OnboardStep>("name", 200);
 
-  const [step, setStep] = React.useState<OnboardStep>("name");
   const [projectName, setProjectName] = React.useState("");
   const [creating, setCreating] = React.useState(false);
-
-  // Name state — pre-fill from Clerk user data (OAuth may already have these)
   const [firstName, setFirstName] = React.useState(user?.firstName ?? "");
   const [lastName, setLastName] = React.useState(user?.lastName ?? "");
   const [nameLoading, setNameLoading] = React.useState(false);
 
-  // Sync when user object loads
   React.useEffect(() => {
     if (user?.firstName && !firstName) setFirstName(user.firstName);
     if (user?.lastName && !lastName) setLastName(user.lastName);
   }, [user?.firstName, user?.lastName]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const displayName = firstName || user?.firstName || "there";
-
-  // Check if user already completed onboarding
   React.useEffect(() => {
     const done = localStorage.getItem("tresta:onboarding:done");
-    if (done === "true") {
-      router.replace("/projects");
-    }
+    if (done === "true") router.replace("/projects");
   }, [router]);
+
+  const displayName = firstName || user?.firstName || "there";
 
   function handleSkip() {
     localStorage.setItem("tresta:onboarding:done", "true");
@@ -87,38 +74,38 @@ export function WelcomeFlow() {
   async function handleSaveName() {
     if (!firstName.trim()) return;
     setNameLoading(true);
-
     try {
-      // Update Clerk user profile via useUser hook
-      await user?.update({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-      });
-    } catch (err) {
-      console.error("Failed to update profile:", err);
-      // Continue anyway — name can be updated later
+      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() });
+    } catch {
+      // Continue — name can be updated later
     }
-
     setNameLoading(false);
-    setStep("welcome");
+    go("welcome", "forward");
   }
 
   async function handleCreateProject() {
     if (!projectName.trim() || creating) return;
     setCreating(true);
-
-    // Simulate project creation (will be replaced with real API)
     await new Promise((r) => setTimeout(r, 800));
-
     localStorage.setItem("tresta:onboarding:done", "true");
     setCreating(false);
-    setStep("ready");
+    go("ready", "forward");
   }
+
+  const enterCls = isFirstRender
+    ? "onboard-fade-in"
+    : direction === "forward"
+      ? "onboard-enter-fwd"
+      : "onboard-enter-rev";
+  const exitCls = direction === "forward" ? "onboard-exit-fwd" : "onboard-exit-rev";
 
   return (
     <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {step === "name" && (
+      <div
+        key={activeStep}
+        className={cn("w-full max-w-md", isLeaving ? exitCls : enterCls)}
+      >
+        {activeStep === "name" && (
           <NameStep
             firstName={firstName}
             lastName={lastName}
@@ -126,35 +113,31 @@ export function WelcomeFlow() {
             setLastName={setLastName}
             loading={nameLoading}
             onContinue={handleSaveName}
-            onSkip={() => setStep("welcome")}
+            onSkip={() => go("welcome", "forward")}
           />
         )}
-
-        {step === "welcome" && (
+        {activeStep === "welcome" && (
           <WelcomeStep
             firstName={displayName}
-            onContinue={() => setStep("project")}
+            onContinue={() => go("project", "forward")}
             onSkip={handleSkip}
           />
         )}
-
-        {step === "project" && (
+        {activeStep === "project" && (
           <ProjectStep
             projectName={projectName}
             setProjectName={setProjectName}
             creating={creating}
             onSubmit={handleCreateProject}
             onSkip={handleSkip}
-            onBack={() => setStep("welcome")}
+            onBack={() => go("welcome", "back")}
           />
         )}
-
-        {step === "ready" && (
+        {activeStep === "ready" && (
           <ReadyStep
             projectName={projectName}
             onGoToProject={() => {
               localStorage.setItem("tresta:onboarding:done", "true");
-              // In production, navigate to the actual project slug
               router.push("/projects");
             }}
           />
@@ -191,8 +174,7 @@ function NameStep({
   }, []);
 
   return (
-    <div className="onboard-fade-in">
-      {/* Greeting */}
+    <div>
       <div className="mb-8">
         <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand/10">
           <User className="size-5 text-brand" />
@@ -205,89 +187,40 @@ function NameStep({
         </p>
       </div>
 
-      {/* Name form */}
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onContinue();
-        }}
+        onSubmit={(e) => { e.preventDefault(); onContinue(); }}
         className="space-y-4"
       >
         <div className="grid grid-cols-2 gap-2.5">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="onboard-firstname"
-              className="text-[13px] font-medium text-foreground"
-            >
-              First name
-            </label>
-            <input
-              ref={firstNameRef}
-              id="onboard-firstname"
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Ada"
-              required
-              autoComplete="given-name"
-              className={cn(
-                "w-full h-10 px-3.5 rounded-lg border border-input bg-card",
-                "text-sm text-foreground placeholder:text-muted-foreground/60",
-                "focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand/40",
-                "transition-all duration-150",
-                "auth-input-focus"
-              )}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label
-              htmlFor="onboard-lastname"
-              className="text-[13px] font-medium text-foreground"
-            >
-              Last name
-            </label>
-            <input
-              id="onboard-lastname"
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Lovelace"
-              autoComplete="family-name"
-              className={cn(
-                "w-full h-10 px-3.5 rounded-lg border border-input bg-card",
-                "text-sm text-foreground placeholder:text-muted-foreground/60",
-                "focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand/40",
-                "transition-all duration-150",
-                "auth-input-focus"
-              )}
-            />
-          </div>
+          <AuthField
+            id="onboard-firstname"
+            label="First name"
+            value={firstName}
+            onChange={setFirstName}
+            placeholder="Ada"
+            required
+            autoComplete="given-name"
+            inputRef={firstNameRef}
+          />
+          <AuthField
+            id="onboard-lastname"
+            label="Last name"
+            value={lastName}
+            onChange={setLastName}
+            placeholder="Lovelace"
+            autoComplete="family-name"
+          />
         </div>
 
-        <button
+        <AuthPrimaryBtn
           type="submit"
+          loading={loading}
+          loadingLabel="Saving…"
           disabled={!firstName.trim() || loading}
-          className={cn(
-            "w-full h-10 rounded-lg bg-primary text-primary-foreground",
-            "text-sm font-medium",
-            "hover:opacity-90 transition-all duration-150",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            "auth-btn",
-            "flex items-center justify-center gap-2"
-          )}
         >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <Spinner />
-              Saving…
-            </span>
-          ) : (
-            <>
-              Continue
-              <ArrowRight className="size-4" />
-            </>
-          )}
-        </button>
+          Continue
+          <ArrowRight className="size-4" />
+        </AuthPrimaryBtn>
       </form>
 
       <button
@@ -297,7 +230,6 @@ function NameStep({
         I&apos;ll do this later
       </button>
 
-      {/* Progress dots */}
       <ProgressDots current={0} total={TOTAL_STEPS} />
     </div>
   );
@@ -315,8 +247,7 @@ function WelcomeStep({
   onSkip: () => void;
 }) {
   return (
-    <div className="onboard-fade-in">
-      {/* Greeting */}
+    <div>
       <div className="mb-8">
         <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand/10">
           <Sparkles className="size-5 text-brand" />
@@ -330,7 +261,6 @@ function WelcomeStep({
         </p>
       </div>
 
-      {/* Value props */}
       <div className="space-y-3 mb-8">
         {VALUE_PROPS.map((prop, i) => (
           <div
@@ -342,9 +272,7 @@ function WelcomeStep({
               <prop.icon className="size-4 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">
-                {prop.title}
-              </p>
+              <p className="text-[13px] font-semibold text-foreground">{prop.title}</p>
               <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
                 {prop.desc}
               </p>
@@ -353,21 +281,11 @@ function WelcomeStep({
         ))}
       </div>
 
-      {/* Actions */}
       <div className="space-y-3">
-        <button
-          onClick={onContinue}
-          className={cn(
-            "w-full h-10 rounded-lg bg-primary text-primary-foreground",
-            "text-sm font-medium",
-            "hover:opacity-90 transition-all duration-150",
-            "auth-btn",
-            "flex items-center justify-center gap-2"
-          )}
-        >
+        <AuthPrimaryBtn onClick={onContinue}>
           Get started
           <ArrowRight className="size-4" />
-        </button>
+        </AuthPrimaryBtn>
         <button
           onClick={onSkip}
           className="w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150 py-1"
@@ -376,7 +294,6 @@ function WelcomeStep({
         </button>
       </div>
 
-      {/* Progress dots */}
       <ProgressDots current={1} total={TOTAL_STEPS} />
     </div>
   );
@@ -412,27 +329,8 @@ function ProjectStep({
   }
 
   return (
-    <div className="onboard-fade-in">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150 mb-7"
-      >
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+    <div>
+      <AuthBackBtn onClick={onBack} className="mb-7" />
 
       <div className="mb-7">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -445,37 +343,20 @@ function ProjectStep({
       </div>
 
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-        }}
+        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
         className="space-y-4"
       >
         <div className="space-y-2">
-          <label
-            htmlFor="onboard-project-name"
-            className="text-[13px] font-medium text-foreground"
-          >
-            Project name
-          </label>
-          <input
-            ref={inputRef}
+          <AuthField
             id="onboard-project-name"
-            type="text"
+            label="Project name"
             value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+            onChange={setProjectName}
             placeholder="e.g. My SaaS Product"
             required
             maxLength={60}
-            className={cn(
-              "w-full h-10 px-3.5 rounded-lg border border-input bg-card",
-              "text-sm text-foreground placeholder:text-muted-foreground/60",
-              "focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand/40",
-              "transition-all duration-150",
-              "auth-input-focus"
-            )}
+            inputRef={inputRef}
           />
-          {/* Quick suggestions */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {SUGGESTIONS.map((s) => (
               <button
@@ -495,30 +376,15 @@ function ProjectStep({
           </div>
         </div>
 
-        <button
+        <AuthPrimaryBtn
           type="submit"
+          loading={creating}
+          loadingLabel="Creating…"
           disabled={!projectName.trim() || creating}
-          className={cn(
-            "w-full h-10 rounded-lg bg-primary text-primary-foreground",
-            "text-sm font-medium",
-            "hover:opacity-90 transition-all duration-150",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            "auth-btn",
-            "flex items-center justify-center gap-2"
-          )}
         >
-          {creating ? (
-            <span className="flex items-center gap-2">
-              <Spinner />
-              Creating…
-            </span>
-          ) : (
-            <>
-              Create project
-              <ArrowRight className="size-4" />
-            </>
-          )}
-        </button>
+          Create project
+          <ArrowRight className="size-4" />
+        </AuthPrimaryBtn>
       </form>
 
       <button
@@ -543,8 +409,7 @@ function ReadyStep({
   onGoToProject: () => void;
 }) {
   return (
-    <div className="onboard-fade-in text-center">
-      {/* Success checkmark */}
+    <div className="text-center">
       <div className="mb-6 flex justify-center">
         <div className="check-pop flex size-14 items-center justify-center rounded-full bg-success/10">
           <Check className="size-7 text-success" strokeWidth={2.5} />
@@ -559,7 +424,6 @@ function ReadyStep({
         ready. Your next step: set up a collection form or embed a widget.
       </p>
 
-      {/* Quick tips */}
       <div className="mt-8 space-y-2.5 text-left">
         {[
           {
@@ -582,9 +446,7 @@ function ReadyStep({
               <tip.icon className="size-4 text-brand" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">
-                {tip.label}
-              </p>
+              <p className="text-[13px] font-semibold text-foreground">{tip.label}</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
                 {tip.desc}
               </p>
@@ -593,80 +455,12 @@ function ReadyStep({
         ))}
       </div>
 
-      <button
-        onClick={onGoToProject}
-        className={cn(
-          "w-full mt-7 h-10 rounded-lg bg-primary text-primary-foreground",
-          "text-sm font-medium",
-          "hover:opacity-90 transition-all duration-150",
-          "auth-btn",
-          "flex items-center justify-center gap-2"
-        )}
-      >
+      <AuthPrimaryBtn onClick={onGoToProject} className="mt-7">
         Go to your project
         <ArrowRight className="size-4" />
-      </button>
+      </AuthPrimaryBtn>
 
       <ProgressDots current={3} total={TOTAL_STEPS} />
     </div>
-  );
-}
-
-// ── Progress indicator ────────────────────────────────────────────────────────
-
-function ProgressDots({ current, total }: { current: number; total: number }) {
-  return (
-    <div
-      className="flex items-center justify-center gap-1.5 mt-8"
-      role="progressbar"
-      aria-valuenow={current + 1}
-      aria-valuemin={1}
-      aria-valuemax={total}
-      aria-label={`Step ${current + 1} of ${total}`}
-    >
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "h-1 rounded-full transition-all duration-300",
-            i === current
-              ? "w-5 bg-brand"
-              : i < current
-                ? "w-1.5 bg-brand/40"
-                : "w-1.5 bg-border"
-          )}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Spinner ───────────────────────────────────────────────────────────────────
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      width={14}
-      height={14}
-      aria-hidden
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-        className="opacity-20"
-      />
-      <path
-        className="opacity-70"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
   );
 }

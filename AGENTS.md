@@ -5,6 +5,7 @@ Session start checklist:
 - Read `./memory/MEMORY.md`, `./memory/user.md`, and `./memory/decisions.md`.
 - Read the relevant files in `.claude/rules/`.
 - When writing in `./memory/`, make sure to drop your names. 
+- Check `graphify-out/graph.json` exists; if so, use it as the primary codebase reference. Do not read raw source files unless explicitly asked or graph resolution is insufficient.
 
 Hard constraints:
 

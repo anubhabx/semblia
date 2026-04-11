@@ -87,8 +87,10 @@ function sectionLabelFor(pathname: string, slug: string): string | null {
       return "Collect";
     case "widgets":
       return "Widgets";
+    case "analytics":
+      return "Analytics";
     case "api-keys":
-      return "API keys";
+      return "API Keys";
     case "settings":
       return "Settings";
     default:
