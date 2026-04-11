@@ -6,16 +6,12 @@ import {
   XIcon,
   CheckCircle2Icon,
   XCircleIcon,
-  ClockIcon,
-  AlertTriangleIcon,
   ShieldCheckIcon,
-  StarIcon,
-  EyeIcon,
-  EyeOffIcon,
   FilterIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   MessageSquareTextIcon,
+  CheckIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,9 +37,7 @@ import {
   apiGetTestimonials,
   apiApproveTestimonial,
   apiRejectTestimonial,
-  apiPublishTestimonial,
   type PaginatedResponse,
-  type TestimonialsFilter,
 } from "@/lib/api";
 import {
   timeAgo,
@@ -51,13 +45,14 @@ import {
   type ModerationStatus,
 } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { Stars, StatusPill } from "@/components/testimonials/shared";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────────────
 
 type StatusFilter = ModerationStatus | "ALL";
 type SortOption = "newest" | "oldest" | "rating_desc" | "rating_asc";
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Config ──────────────────────────────────────────────────────────────────
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "ALL", label: "All" },
@@ -74,242 +69,174 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: "rating_asc", label: "Rating: low to high" },
 ];
 
-const STATUS_CONFIG: Record<
-  ModerationStatus,
-  { label: string; icon: React.ComponentType<{ className?: string }>; pill: string }
-> = {
-  APPROVED: { label: "Approved", icon: CheckCircle2Icon, pill: "text-success bg-success/10" },
-  PENDING: { label: "Pending", icon: ClockIcon, pill: "text-muted-foreground bg-muted" },
-  FLAGGED: { label: "Flagged", icon: AlertTriangleIcon, pill: "text-warning bg-warning/12" },
-  REJECTED: { label: "Rejected", icon: XCircleIcon, pill: "text-destructive bg-destructive/10" },
-};
-
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
-function Stars({ rating }: { rating: number | null }) {
-  if (!rating) return null;
-  return (
-    <span className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <StarIcon
-          key={i}
-          className={cn(
-            "size-2.5",
-            i < rating ? "fill-warning text-warning" : "fill-muted text-muted"
-          )}
-        />
-      ))}
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: ModerationStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-        cfg.pill
-      )}
-    >
-      <cfg.icon className="size-3 shrink-0" />
-      {cfg.label}
-    </span>
-  );
-}
-
-// ── Skeleton rows ─────────────────────────────────────────────────────────────
 
 function TestimonialSkeleton() {
   return (
-    <div className="flex gap-3 px-6 py-4">
-      <Skeleton className="mt-0.5 size-8 shrink-0 rounded-full animate-shimmer" />
+    <div className="flex items-start gap-3 px-5 py-3.5">
+      <Skeleton className="mt-0.5 size-7 shrink-0 rounded-full animate-shimmer" />
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-3.5 w-28 animate-shimmer" />
-          <Skeleton className="h-3 w-20 animate-shimmer" />
+          <Skeleton className="h-3 w-24 animate-shimmer" />
+          <Skeleton className="h-2.5 w-16 animate-shimmer" />
         </div>
-        <Skeleton className="h-3 w-full animate-shimmer" />
-        <Skeleton className="h-3 w-3/4 animate-shimmer" />
-        <div className="flex items-center gap-3 pt-0.5">
-          <Skeleton className="h-4 w-14 rounded-full animate-shimmer" />
-          <Skeleton className="h-4 w-16 rounded-full animate-shimmer" />
+        <Skeleton className="h-3 w-full max-w-[260px] animate-shimmer" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3.5 w-12 rounded-full animate-shimmer" />
         </div>
       </div>
     </div>
   );
 }
 
-// ── Testimonial row ───────────────────────────────────────────────────────────
+// ── Testimonial row (with inline actions on hover) ────────────────────────
 
 interface TestimonialRowProps {
   t: MockTestimonial;
-  projectSlug: string;
   index: number;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  onTogglePublish: (id: string, published: boolean) => void;
-  pending: Set<string>;
   isSelected?: boolean;
+  isBulkSelected?: boolean;
+  bulkMode?: boolean;
   onSelect?: (id: string) => void;
+  onBulkToggle?: (id: string) => void;
+  onInlineApprove?: (id: string) => void;
+  onInlineReject?: (id: string) => void;
 }
 
 function TestimonialRow({
   t,
-  projectSlug,
   index,
-  onApprove,
-  onReject,
-  onTogglePublish,
-  pending,
   isSelected,
+  isBulkSelected,
+  bulkMode,
   onSelect,
+  onBulkToggle,
+  onInlineApprove,
+  onInlineReject,
 }: TestimonialRowProps) {
-  const isBusy = pending.has(t.id);
-  const isActionable = t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
+  const isActionable =
+    t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onSelect?.(t.id)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
+      onClick={() => {
+        if (bulkMode) {
+          onBulkToggle?.(t.id);
+        } else {
           onSelect?.(t.id);
         }
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (bulkMode) onBulkToggle?.(t.id);
+          else onSelect?.(t.id);
+        }
+      }}
       className={cn(
-        "group flex gap-3 border-b border-border px-6 py-4 last:border-0 animate-fade-up cursor-pointer transition-colors duration-150",
+        "group relative flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-150",
         isSelected
-          ? "bg-muted/50 border-l-2 border-l-brand pl-[22px]"
-          : "hover:bg-muted/30"
+          ? "bg-muted/60"
+          : isBulkSelected
+            ? "bg-brand/[0.04]"
+            : "hover:bg-muted/30"
       )}
-      style={{ animationDelay: `${index * 45}ms`, animationFillMode: "both" }}
       aria-selected={isSelected}
     >
-      {/* Author avatar */}
-      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground select-none">
-        {t.authorName[0].toUpperCase()}
-      </span>
+      {/* Checkbox / avatar */}
+      {bulkMode ? (
+        <span
+          className={cn(
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150",
+            isBulkSelected
+              ? "border-brand bg-brand text-brand-foreground"
+              : "border-border bg-background text-transparent hover:border-muted-foreground/40"
+          )}
+        >
+          <CheckIcon className="size-3.5" />
+        </span>
+      ) : (
+        <span
+          className={cn(
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold select-none transition-colors duration-150",
+            isSelected
+              ? "bg-foreground text-background"
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          {t.authorName[0].toUpperCase()}
+        </span>
+      )}
 
       <div className="min-w-0 flex-1">
-        {/* Header row */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-xs font-semibold text-foreground">
+        {/* Name + role + time */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-foreground truncate">
             {t.authorName}
           </span>
-          {(t.authorRole || t.authorCompany) && (
-            <span className="text-xs text-muted-foreground">
-              {[t.authorRole, t.authorCompany].filter(Boolean).join(", ")}
-            </span>
-          )}
           {t.isOAuthVerified && (
-            <span
-              className="inline-flex items-center gap-0.5 text-[10px] font-medium text-success"
-              aria-label={`Verified via ${t.oauthProvider}`}
-            >
-              <ShieldCheckIcon className="size-3" />
-              Verified
+            <ShieldCheckIcon className="size-3 shrink-0 text-success" />
+          )}
+          {(t.authorRole || t.authorCompany) && (
+            <span className="hidden sm:inline text-[11px] text-muted-foreground truncate">
+              {[t.authorRole, t.authorCompany].filter(Boolean).join(" at ")}
             </span>
           )}
-        </div>
-
-        {/* Content */}
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2 transition-colors group-hover:text-foreground">
-          {t.content}
-        </p>
-
-        {/* Meta row */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <Stars rating={t.rating} />
-          <StatusPill status={t.moderationStatus} />
-
-          <span
-            className={cn(
-              "flex items-center gap-1 text-[10px]",
-              t.isPublished ? "text-success" : "text-muted-foreground"
-            )}
-          >
-            {t.isPublished ? (
-              <EyeIcon className="size-3" />
-            ) : (
-              <EyeOffIcon className="size-3" />
-            )}
-            {t.isPublished ? "Published" : "Unpublished"}
-          </span>
-
-          {t.tags.length > 0 && (
-            <div className="flex items-center gap-1">
-              {t.tags.slice(0, 2).map((tag) => (
-                <span
-                  key={tag.id}
-                  className="rounded bg-brand-muted px-1.5 py-0.5 text-[10px] font-medium text-brand"
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+          <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
             {timeAgo(t.createdAt)}
           </span>
         </div>
 
-        {/* Inline moderation actions */}
-        {isActionable && (
-          <div
-            className="mt-2.5 flex items-center gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button
-              size="xs"
-              variant="outline"
-              className="gap-1 text-success hover:bg-success/10 hover:text-success hover:border-success/30 active:scale-[0.98]"
-              disabled={isBusy}
-              onClick={() => onApprove(t.id)}
-            >
-              <CheckCircle2Icon className="size-3" />
-              Approve
-            </Button>
-            <Button
-              size="xs"
-              variant="outline"
-              className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 active:scale-[0.98]"
-              disabled={isBusy}
-              onClick={() => onReject(t.id)}
-            >
-              <XCircleIcon className="size-3" />
-              Reject
-            </Button>
-            {t.moderationStatus === "FLAGGED" && (
-              <Button
-                size="xs"
-                variant="ghost"
-                className="gap-1 text-muted-foreground hover:text-foreground"
-                disabled={isBusy}
-                onClick={() => onTogglePublish(t.id, !t.isPublished)}
-              >
-                {t.isPublished ? (
-                  <>
-                    <EyeOffIcon className="size-3" />
-                    Unpublish
-                  </>
-                ) : (
-                  <>
-                    <EyeIcon className="size-3" />
-                    Publish anyway
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        )}
+        {/* Content preview */}
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+          {t.content}
+        </p>
+
+        {/* Compact meta */}
+        <div className="mt-1.5 flex items-center gap-2">
+          <Stars rating={t.rating} />
+          <StatusPill status={t.moderationStatus} />
+        </div>
       </div>
 
-      {/* Mobile chevron indicator */}
-      <ChevronRightIcon className="mt-1 size-4 shrink-0 text-muted-foreground/50 lg:hidden" />
+      {/* Inline actions — appear on hover, only for actionable items */}
+      {!bulkMode && isActionable && (onInlineApprove || onInlineReject) && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
+          {onInlineApprove && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInlineApprove(t.id);
+              }}
+              className="flex size-7 items-center justify-center rounded-md bg-success/10 text-success transition-all duration-150 hover:bg-success/20 active:scale-[0.93]"
+              aria-label={`Approve ${t.authorName}`}
+              title="Approve"
+            >
+              <CheckCircle2Icon className="size-3.5" />
+            </button>
+          )}
+          {onInlineReject && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInlineReject(t.id);
+              }}
+              className="flex size-7 items-center justify-center rounded-md bg-destructive/8 text-destructive transition-all duration-150 hover:bg-destructive/15 active:scale-[0.93]"
+              aria-label={`Reject ${t.authorName}`}
+              title="Reject"
+            >
+              <XCircleIcon className="size-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mobile chevron */}
+      {!bulkMode && (
+        <ChevronRightIcon className="mt-2 size-3.5 shrink-0 text-muted-foreground/40 lg:hidden" />
+      )}
     </div>
   );
 }
@@ -355,7 +282,51 @@ function EmptyState({ filter }: { filter: StatusFilter }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Bulk actions toolbar ────────────────────────────────────────────────────
+
+function BulkToolbar({
+  count,
+  onApproveAll,
+  onRejectAll,
+  onCancel,
+}: {
+  count: number;
+  onApproveAll: () => void;
+  onRejectAll: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/[0.04] px-6 py-2 animate-fade-up">
+      <span className="text-xs font-semibold tabular-nums text-foreground">
+        {count} selected
+      </span>
+      <div className="ml-auto flex items-center gap-1.5">
+        <Button
+          size="xs"
+          className="gap-1 bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97]"
+          onClick={onApproveAll}
+        >
+          <CheckCircle2Icon className="size-3" />
+          Approve
+        </Button>
+        <Button
+          size="xs"
+          variant="outline"
+          className="gap-1 text-destructive hover:bg-destructive/10 hover:border-destructive/30 active:scale-[0.97]"
+          onClick={onRejectAll}
+        >
+          <XCircleIcon className="size-3" />
+          Reject
+        </Button>
+        <Button size="xs" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ──────────────────────────────────────────────────────────
 
 interface Props {
   projectId: string;
@@ -363,9 +334,18 @@ interface Props {
   totalCount?: number;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
+  onInlineApprove?: (id: string) => void;
+  onInlineReject?: (id: string) => void;
 }
 
-export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelect }: Props) {
+export function TestimonialsClient({
+  projectId,
+  projectSlug,
+  selectedId,
+  onSelect,
+  onInlineApprove,
+  onInlineReject,
+}: Props) {
   const [status, setStatus] = React.useState<StatusFilter>("ALL");
   const [sort, setSort] = React.useState<SortOption>("newest");
   const [search, setSearch] = React.useState("");
@@ -374,16 +354,9 @@ export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelec
   const [loading, setLoading] = React.useState(true);
   const [result, setResult] = React.useState<PaginatedResponse<MockTestimonial> | null>(null);
 
-  // Optimistic local overrides: id → new status
-  const [statusOverrides, setStatusOverrides] = React.useState<
-    Map<string, ModerationStatus>
-  >(new Map());
-  const [publishOverrides, setPublishOverrides] = React.useState<
-    Map<string, boolean>
-  >(new Map());
-  const [pendingActions, setPendingActions] = React.useState<Set<string>>(
-    new Set()
-  );
+  // Bulk selection
+  const [bulkSelected, setBulkSelected] = React.useState<Set<string>>(new Set());
+  const bulkMode = bulkSelected.size > 0;
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -413,71 +386,58 @@ export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelec
     };
   }, [projectId, status, sort, debouncedSearch, page]);
 
-  // Optimistic approve
-  const handleApprove = React.useCallback(
-    (id: string) => {
-      setPendingActions((prev) => new Set(prev).add(id));
-      setStatusOverrides((prev) => new Map(prev).set(id, "APPROVED"));
-
-      apiApproveTestimonial(id).finally(() => {
-        setPendingActions((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
-    },
-    []
-  );
-
-  // Optimistic reject
-  const handleReject = React.useCallback(
-    (id: string) => {
-      setPendingActions((prev) => new Set(prev).add(id));
-      setStatusOverrides((prev) => new Map(prev).set(id, "REJECTED"));
-
-      apiRejectTestimonial(id).finally(() => {
-        setPendingActions((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
-    },
-    []
-  );
-
-  // Optimistic publish toggle
-  const handleTogglePublish = React.useCallback(
-    (id: string, published: boolean) => {
-      setPendingActions((prev) => new Set(prev).add(id));
-      setPublishOverrides((prev) => new Map(prev).set(id, published));
-
-      apiPublishTestimonial(id, published).finally(() => {
-        setPendingActions((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
-    },
-    []
-  );
-
-  // Apply overrides to the items
-  const items = React.useMemo(() => {
-    if (!result) return [];
-    return result.items.map((t) => ({
-      ...t,
-      moderationStatus: statusOverrides.get(t.id) ?? t.moderationStatus,
-      isPublished: publishOverrides.has(t.id)
-        ? publishOverrides.get(t.id)!
-        : t.isPublished,
-    }));
-  }, [result, statusOverrides, publishOverrides]);
+  const items = result?.items ?? [];
 
   const sortLabel =
     SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
+
+  // Bulk toggle
+  const handleBulkToggle = React.useCallback((id: string) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Bulk actions
+  const handleBulkApprove = React.useCallback(() => {
+    bulkSelected.forEach((id) => {
+      apiApproveTestimonial(id);
+      onInlineApprove?.(id);
+    });
+    setBulkSelected(new Set());
+  }, [bulkSelected, onInlineApprove]);
+
+  const handleBulkReject = React.useCallback(() => {
+    bulkSelected.forEach((id) => {
+      apiRejectTestimonial(id);
+      onInlineReject?.(id);
+    });
+    setBulkSelected(new Set());
+  }, [bulkSelected, onInlineReject]);
+
+  const handleBulkCancel = React.useCallback(() => {
+    setBulkSelected(new Set());
+  }, []);
+
+  // Select-all for current page
+  const handleSelectAll = React.useCallback(() => {
+    const actionable = items.filter(
+      (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
+    );
+    const allSelected = actionable.every((t) => bulkSelected.has(t.id));
+    if (allSelected) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(new Set(actionable.map((t) => t.id)));
+    }
+  }, [items, bulkSelected]);
+
+  const hasActionable = items.some(
+    (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -548,6 +508,18 @@ export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelec
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {hasActionable && !bulkMode && (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="gap-1 text-muted-foreground"
+              onClick={handleSelectAll}
+            >
+              <CheckIcon className="size-3" />
+              Select
+            </Button>
+          )}
+
           {result && (
             <span className="ml-auto text-xs text-muted-foreground tabular-nums">
               {result.total} {result.total === 1 ? "result" : "results"}
@@ -556,30 +528,40 @@ export function TestimonialsClient({ projectId, projectSlug, selectedId, onSelec
         </div>
       </div>
 
+      {/* ── Bulk actions bar ── */}
+      {bulkMode && (
+        <BulkToolbar
+          count={bulkSelected.size}
+          onApproveAll={handleBulkApprove}
+          onRejectAll={handleBulkReject}
+          onCancel={handleBulkCancel}
+        />
+      )}
+
       {/* ── List ── */}
       <main className="flex-1">
         {loading ? (
-          <div>
-            {[0, 1, 2, 3].map((i) => (
+          <div className="divide-y divide-border/60">
+            {[0, 1, 2, 3, 4].map((i) => (
               <TestimonialSkeleton key={i} />
             ))}
           </div>
         ) : items.length === 0 ? (
           <EmptyState filter={status} />
         ) : (
-          <div>
+          <div className="divide-y divide-border/60 list-content-enter">
             {items.map((t, i) => (
               <TestimonialRow
                 key={t.id}
                 t={t}
-                projectSlug={projectSlug}
                 index={i}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onTogglePublish={handleTogglePublish}
-                pending={pendingActions}
                 isSelected={selectedId === t.id}
+                isBulkSelected={bulkSelected.has(t.id)}
+                bulkMode={bulkMode}
                 onSelect={onSelect}
+                onBulkToggle={handleBulkToggle}
+                onInlineApprove={onInlineApprove}
+                onInlineReject={onInlineReject}
               />
             ))}
           </div>

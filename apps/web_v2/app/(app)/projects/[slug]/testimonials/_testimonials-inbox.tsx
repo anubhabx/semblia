@@ -13,6 +13,7 @@ import {
   apiPublishTestimonial
 } from "@/lib/api";
 import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -38,14 +39,20 @@ export function TestimonialsInbox({
   const [detail, setDetail] = React.useState<MockTestimonial | null>(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
 
+  // Track closing state for exit animation
+  const [panelClosing, setPanelClosing] = React.useState(false);
+  // Track whether panel should render (stays true during exit animation)
+  const [panelVisible, setPanelVisible] = React.useState(false);
+
   // ── Fetch detail when selection changes ──
   React.useEffect(() => {
     if (!selectedId) {
-      setDetail(null);
       return;
     }
 
     let cancelled = false;
+    // Clear stale detail immediately so user sees loading skeleton
+    setDetail(null);
     setDetailLoading(true);
 
     apiGetTestimonial(projectId, selectedId).then((data) => {
@@ -60,6 +67,14 @@ export function TestimonialsInbox({
     };
   }, [projectId, selectedId]);
 
+  // Sync panel visibility with selectedId
+  React.useEffect(() => {
+    if (selectedId) {
+      setPanelClosing(false);
+      setPanelVisible(true);
+    }
+  }, [selectedId]);
+
   // ── Selection handler — desktop inline, mobile navigate ──
   const handleSelect = React.useCallback(
     (id: string) => {
@@ -73,8 +88,14 @@ export function TestimonialsInbox({
   );
 
   const handleCloseDetail = React.useCallback(() => {
-    setSelectedId(null);
-    setDetail(null);
+    setPanelClosing(true);
+    // Wait for exit animation to complete before unmounting
+    setTimeout(() => {
+      setSelectedId(null);
+      setDetail(null);
+      setPanelClosing(false);
+      setPanelVisible(false);
+    }, 200);
   }, []);
 
   // ── Optimistic moderation for detail panel ──
@@ -110,33 +131,58 @@ export function TestimonialsInbox({
     []
   );
 
+  // ── Inline actions from list (optimistic) ──
+  const handleInlineApprove = React.useCallback((id: string) => {
+    apiApproveTestimonial(id);
+    // If currently viewing this item in detail, update it too
+    setDetail((prev) =>
+      prev && prev.id === id
+        ? {
+            ...prev,
+            moderationStatus: "APPROVED" as ModerationStatus,
+            isApproved: true
+          }
+        : prev
+    );
+  }, []);
+
+  const handleInlineReject = React.useCallback((id: string) => {
+    apiRejectTestimonial(id);
+    setDetail((prev) =>
+      prev && prev.id === id
+        ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
+        : prev
+    );
+  }, []);
+
   // ── Clear selection when switching to mobile ──
   React.useEffect(() => {
     if (!isDesktop) {
       setSelectedId(null);
       setDetail(null);
+      setPanelVisible(false);
     }
   }, [isDesktop]);
 
   return (
     <div className="flex flex-1 flex-col">
       {/* ── Page header ── */}
-      <div className="flex items-end justify-between gap-4 px-6 pt-7 pb-5">
+      <div className="flex items-center justify-between gap-4 px-6 h-14 border-b border-border shrink-0">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-sm font-semibold tracking-tight text-foreground">
             Testimonials
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              {totalCount} total
+              {pendingCount > 0 && (
+                <>
+                  {" \u00b7 "}
+                  <span className="font-medium text-warning">
+                    {pendingCount} pending
+                  </span>
+                </>
+              )}
+            </span>
           </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {totalCount} total
-            {pendingCount > 0 && (
-              <>
-                {" · "}
-                <span className="font-medium text-warning">
-                  {pendingCount} pending moderation
-                </span>
-              </>
-            )}
-          </p>
         </div>
       </div>
 
@@ -150,12 +196,21 @@ export function TestimonialsInbox({
             totalCount={totalCount}
             selectedId={selectedId}
             onSelect={handleSelect}
+            onInlineApprove={handleInlineApprove}
+            onInlineReject={handleInlineReject}
           />
         </div>
 
-        {/* Detail column — desktop only, visible when a testimonial is selected */}
-        {selectedId != null && (
-          <div className="hidden lg:flex lg:w-[420px] lg:shrink-0 flex-col border-l border-border bg-background">
+        {/* Detail column — desktop only, animated slide in/out */}
+        {panelVisible && (
+          <div
+            className={cn(
+              "hidden lg:flex lg:w-[420px] lg:shrink-0 flex-col border-l border-border bg-background overflow-hidden",
+              panelClosing
+                ? "detail-panel-slide-exit"
+                : "detail-panel-slide-enter"
+            )}
+          >
             <TestimonialDetail
               testimonial={detail}
               loading={detailLoading}

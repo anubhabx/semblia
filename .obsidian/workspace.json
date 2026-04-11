@@ -178,6 +178,8 @@
   },
   "active": "8a22a7918b3702f5",
   "lastOpenFiles": [
+    "apps/web_v2/components/testimonials/shared.tsx",
+    "apps/web_v2/components/nav/help-fab.tsx",
     "apps/web_v2/app/(app)/projects/[slug]/testimonials/[id]/_detail-page.tsx",
     "apps/web_v2/app/(app)/projects/[slug]/testimonials/_testimonials-inbox.tsx",
     "apps/web_v2/components/testimonials/testimonial-detail.tsx",
@@ -187,8 +189,6 @@
     "apps/web_v2/app/(app)/projects/[slug]/settings/page.tsx",
     "apps/web_v2/app/(app)/projects/[slug]/settings",
     "apps/web_v2/app/(app)/projects/[slug]/api-keys/page.tsx",
-    "apps/web_v2/app/(app)/projects/[slug]/api-keys",
-    "apps/web_v2/app/(app)/projects/[slug]/analytics/page.tsx",
     "graphify-out/obsidian/Untitled.canvas",
     "Untitled.canvas",
     "graphify-out/GRAPH_REPORT.md",

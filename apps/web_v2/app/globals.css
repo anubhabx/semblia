@@ -625,19 +625,65 @@
     }
   }
 
+  /* ── Testimonial detail panel entrance ── */
+  .detail-panel-enter {
+    animation: detail-panel-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes detail-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ── Testimonial detail content crossfade (on selection switch) ── */
+  .detail-content-enter {
+    animation: detail-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes detail-content-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* ── Testimonial detail panel section stagger ── */
   .detail-section-enter {
-    animation: detail-section-in 350ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation: detail-section-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   @keyframes detail-section-in {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(4px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* ── List content fade ── */
+  .list-content-enter {
+    animation: list-content-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes list-content-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 
@@ -748,6 +794,77 @@
     to {
       opacity: 0;
       transform: translateY(10px) scale(0.99);
+    }
+  }
+
+  /* ── Help FAB animations ── */
+  .help-fab-menu-enter {
+    animation: help-fab-menu-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .help-fab-item-enter {
+    animation: help-fab-item-in 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .help-fab-icon-enter {
+    animation: help-fab-spin-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes help-fab-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes help-fab-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes help-fab-spin-in {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+  }
+
+  /* ── Detail panel slide in/out (desktop) ── */
+  .detail-panel-slide-enter {
+    animation: detail-slide-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .detail-panel-slide-exit {
+    animation: detail-slide-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes detail-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes detail-slide-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
     }
   }
 }
