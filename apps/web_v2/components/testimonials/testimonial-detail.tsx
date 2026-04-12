@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Kbd } from "@/components/kbd-shortcuts-dialog";
 import { cn } from "@/lib/utils";
 import {
   type MockTestimonial,
@@ -412,22 +413,25 @@ export function TestimonialDetail({
             {isActionable && onApprove && (
               <Button
                 size="sm"
-                className="flex-1 gap-1.5 bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97]"
+                variant="outline"
+                className="flex-1 gap-1.5 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
                 onClick={() => onApprove(t.id)}
               >
                 <CheckCircle2Icon className="size-3.5" />
                 Approve
+                {!isPage && <Kbd className="ml-auto">a</Kbd>}
               </Button>
             )}
             {isActionable && onReject && (
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
+                className="flex-1 gap-1.5 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
                 onClick={() => onReject(t.id)}
               >
                 <XCircleIcon className="size-3.5" />
                 Reject
+                {!isPage && <Kbd className="ml-auto">r</Kbd>}
               </Button>
             )}
             {onTogglePublish && (
@@ -453,6 +457,7 @@ export function TestimonialDetail({
                     Publish
                   </>
                 )}
+                {!isPage && <Kbd className="ml-auto">p</Kbd>}
               </Button>
             )}
           </div>

@@ -17,11 +17,17 @@ import {
   MessageSquareTextIcon,
   ShieldAlertIcon,
   CircleCheckIcon,
+  HelpCircleIcon,
+  BookOpenIcon,
+  SparklesIcon,
+  MailIcon,
+  KeyboardIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Kbd, KbdShortcutsDialog } from "@/components/kbd-shortcuts-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -438,6 +444,93 @@ function MobileNavTrigger({ slug }: { slug: string }) {
   );
 }
 
+// ── Help dropdown (replaces floating FAB) ─────────────────────────────────────
+
+const HELP_LINKS = [
+  {
+    label: "Docs",
+    href: "https://tresta.io/docs",
+    icon: BookOpenIcon,
+  },
+  {
+    label: "Changelog",
+    href: "https://tresta.io/changelog",
+    icon: SparklesIcon,
+  },
+  {
+    label: "Support",
+    href: "mailto:support@tresta.io",
+    icon: MailIcon,
+  },
+] as const;
+
+function HelpDropdown() {
+  const [kbdOpen, setKbdOpen] = React.useState(false);
+
+  // Global ? shortcut to open keyboard shortcuts dialog
+  React.useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "?" && !isEditableTarget(e.target)) {
+        e.preventDefault();
+        setKbdOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
+  return (
+    <>
+      <KbdShortcutsDialog open={kbdOpen} onOpenChange={setKbdOpen} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Help & resources"
+          >
+            <HelpCircleIcon className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={8} className="w-48">
+          {HELP_LINKS.map((link) => (
+            <DropdownMenuItem key={link.label} asChild>
+              <a
+                href={link.href}
+                target={link.href.startsWith("mailto") ? undefined : "_blank"}
+                rel={link.href.startsWith("mailto") ? undefined : "noopener noreferrer"}
+                className="gap-2 text-xs"
+              >
+                <link.icon className="size-3.5 text-muted-foreground" />
+                {link.label}
+              </a>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 text-xs"
+            onSelect={() => setKbdOpen(true)}
+          >
+            <KeyboardIcon className="size-3.5 text-muted-foreground" />
+            <span className="flex-1">Keyboard shortcuts</span>
+            <Kbd>?</Kbd>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+}
+
+/** Returns true if target is an input, textarea, or contenteditable element. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (target.isContentEditable) return true;
+  return false;
+}
+
 // ── Main topbar ────────────────────────────────────────────────────────────────
 
 export function AppTopbar() {
@@ -478,6 +571,7 @@ export function AppTopbar() {
 
       {/* ── Right cluster ── */}
       <div className="flex shrink-0 items-center gap-0.5">
+        <HelpDropdown />
         <NotificationBell />
         <ThemeToggle className="text-muted-foreground hover:text-foreground" />
         <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />

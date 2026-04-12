@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { TestimonialsClient } from "@/components/testimonials/testimonials-client";
 import { TestimonialDetail } from "@/components/testimonials/testimonial-detail";
+import { KbdShortcutsDialog } from "@/components/kbd-shortcuts-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import {
   apiGetTestimonial,
   apiApproveTestimonial,
@@ -43,6 +45,15 @@ export function TestimonialsInbox({
   const [panelClosing, setPanelClosing] = React.useState(false);
   // Track whether panel should render (stays true during exit animation)
   const [panelVisible, setPanelVisible] = React.useState(false);
+
+  // Keyboard shortcut dialog
+  const [kbdOpen, setKbdOpen] = React.useState(false);
+
+  // Visible item IDs for j/k navigation
+  const [visibleIds, setVisibleIds] = React.useState<string[]>([]);
+  const handleItemsChange = React.useCallback((ids: string[]) => {
+    setVisibleIds(ids);
+  }, []);
 
   // ── Fetch detail when selection changes ──
   React.useEffect(() => {
@@ -164,8 +175,84 @@ export function TestimonialsInbox({
     }
   }, [isDesktop]);
 
+  // ── Keyboard shortcuts ──
+  useKeyboardShortcuts([
+    {
+      key: "?",
+      label: "Show keyboard shortcuts",
+      group: "General",
+      action: () => setKbdOpen(true),
+    },
+    {
+      key: "j",
+      label: "Next item",
+      group: "Navigation",
+      action: () => {
+        if (visibleIds.length === 0) return;
+        const idx = selectedId ? visibleIds.indexOf(selectedId) : -1;
+        const next = visibleIds[Math.min(idx + 1, visibleIds.length - 1)];
+        if (next) handleSelect(next);
+      },
+    },
+    {
+      key: "k",
+      label: "Previous item",
+      group: "Navigation",
+      action: () => {
+        if (visibleIds.length === 0) return;
+        const idx = selectedId ? visibleIds.indexOf(selectedId) : visibleIds.length;
+        const prev = visibleIds[Math.max(idx - 1, 0)];
+        if (prev) handleSelect(prev);
+      },
+    },
+    {
+      key: "Escape",
+      label: "Close panel",
+      group: "Navigation",
+      action: () => {
+        if (selectedId) handleCloseDetail();
+      },
+      enabled: () => !!selectedId,
+    },
+    {
+      key: "a",
+      label: "Approve",
+      group: "Actions",
+      action: () => {
+        if (detail && (detail.moderationStatus === "PENDING" || detail.moderationStatus === "FLAGGED")) {
+          handleApprove(detail.id);
+        }
+      },
+      enabled: () => !!detail,
+    },
+    {
+      key: "r",
+      label: "Reject",
+      group: "Actions",
+      action: () => {
+        if (detail && (detail.moderationStatus === "PENDING" || detail.moderationStatus === "FLAGGED")) {
+          handleReject(detail.id);
+        }
+      },
+      enabled: () => !!detail,
+    },
+    {
+      key: "p",
+      label: "Toggle publish",
+      group: "Actions",
+      action: () => {
+        if (detail) {
+          handleTogglePublish(detail.id, !detail.isPublished);
+        }
+      },
+      enabled: () => !!detail,
+    },
+  ]);
+
   return (
     <div className="flex flex-1 flex-col">
+      <KbdShortcutsDialog open={kbdOpen} onOpenChange={setKbdOpen} />
+
       {/* ── Page header ── */}
       <div className="flex items-center justify-between gap-4 px-6 h-14 border-b border-border shrink-0">
         <div className="min-w-0 flex-1">
@@ -198,6 +285,7 @@ export function TestimonialsInbox({
             onSelect={handleSelect}
             onInlineApprove={handleInlineApprove}
             onInlineReject={handleInlineReject}
+            onItemsChange={handleItemsChange}
           />
         </div>
 

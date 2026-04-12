@@ -210,7 +210,7 @@ function TestimonialRow({
                 e.stopPropagation();
                 onInlineApprove(t.id);
               }}
-              className="flex size-7 items-center justify-center rounded-md bg-success/10 text-success transition-all duration-150 hover:bg-success/20 active:scale-[0.93]"
+              className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border transition-all duration-150 hover:bg-success/10 hover:text-success hover:ring-success/30 active:scale-[0.93]"
               aria-label={`Approve ${t.authorName}`}
               title="Approve"
             >
@@ -223,7 +223,7 @@ function TestimonialRow({
                 e.stopPropagation();
                 onInlineReject(t.id);
               }}
-              className="flex size-7 items-center justify-center rounded-md bg-destructive/8 text-destructive transition-all duration-150 hover:bg-destructive/15 active:scale-[0.93]"
+              className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border transition-all duration-150 hover:bg-destructive/8 hover:text-destructive hover:ring-destructive/30 active:scale-[0.93]"
               aria-label={`Reject ${t.authorName}`}
               title="Reject"
             >
@@ -303,7 +303,8 @@ function BulkToolbar({
       <div className="ml-auto flex items-center gap-1.5">
         <Button
           size="xs"
-          className="gap-1 bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97]"
+          variant="outline"
+          className="gap-1 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
           onClick={onApproveAll}
         >
           <CheckCircle2Icon className="size-3" />
@@ -312,7 +313,7 @@ function BulkToolbar({
         <Button
           size="xs"
           variant="outline"
-          className="gap-1 text-destructive hover:bg-destructive/10 hover:border-destructive/30 active:scale-[0.97]"
+          className="gap-1 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
           onClick={onRejectAll}
         >
           <XCircleIcon className="size-3" />
@@ -336,6 +337,7 @@ interface Props {
   onSelect?: (id: string) => void;
   onInlineApprove?: (id: string) => void;
   onInlineReject?: (id: string) => void;
+  onItemsChange?: (ids: string[]) => void;
 }
 
 export function TestimonialsClient({
@@ -345,6 +347,7 @@ export function TestimonialsClient({
   onSelect,
   onInlineApprove,
   onInlineReject,
+  onItemsChange,
 }: Props) {
   const [status, setStatus] = React.useState<StatusFilter>("ALL");
   const [sort, setSort] = React.useState<SortOption>("newest");
@@ -387,6 +390,11 @@ export function TestimonialsClient({
   }, [projectId, status, sort, debouncedSearch, page]);
 
   const items = result?.items ?? [];
+
+  // Report visible item IDs for keyboard navigation
+  React.useEffect(() => {
+    onItemsChange?.(items.map((t) => t.id));
+  }, [items, onItemsChange]);
 
   const sortLabel =
     SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";

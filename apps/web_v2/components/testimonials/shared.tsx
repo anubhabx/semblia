@@ -249,7 +249,7 @@ export function ModerationItem({
           <button
             onClick={() => onApprove(t.id)}
             disabled={isResolving}
-            className="inline-flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 text-[10px] font-semibold text-success transition-all duration-150 hover:bg-success/20 active:scale-[0.97]"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-all duration-150 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
           >
             <CheckIcon className="size-3" />
             Approve
@@ -257,7 +257,7 @@ export function ModerationItem({
           <button
             onClick={() => onReject(t.id)}
             disabled={isResolving}
-            className="inline-flex items-center gap-1 rounded-md bg-destructive/8 px-2 py-1 text-[10px] font-semibold text-destructive transition-all duration-150 hover:bg-destructive/15 active:scale-[0.97]"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-all duration-150 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
           >
             <XIcon className="size-3" />
             Reject

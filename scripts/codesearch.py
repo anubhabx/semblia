@@ -31,7 +31,7 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 SOURCE_DIRS = [
     "apps/web_v2",
     "apps/api_v2",
-    "packages",
+    "packages/database",
 ]
 
 # Extensions to index
