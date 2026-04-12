@@ -1,1 +1,0 @@
-{"nodes": [{"id": "query_compiler_fast_bg_wasm_base64", "label": "query_compiler_fast_bg.wasm-base64.js", "file_type": "code", "source_file": "packages\\database\\src\\generated\\prisma\\query_compiler_fast_bg.wasm-base64.js", "source_location": "L1"}], "edges": []}

@@ -82,5 +82,6 @@ packages/database/prisma/migrations/
 .cursor/
 .vscode/
 .windsurf/
-/.obsidian
-/graphify-out
+.obsidian/
+graphify-out/
+vector-store/

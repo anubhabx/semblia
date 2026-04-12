@@ -3,7 +3,15 @@
 Session start checklist:
 - Read `./memory/MEMORY.md`, `./memory/user.md`, and `./memory/decisions.md`.
 - Read the relevant files in `.claude/rules/`.
-- Check `graphify-out/graph.json` exists; if so, use it as the primary codebase reference. Do not read raw source files unless explicitly asked or graph resolution is insufficient.
+- Codebase questions MUST follow the 3-level hierarchy in `.claude/rules/00-working-rules.md`:
+  1. `python scripts/codesearch.py query "<question>"` — vector search (always first)
+  2. `graphify-out/GRAPH_REPORT.md` — structure/relationships
+  3. Raw file reads — last resort only
+
+After writing or modifying any source file in `apps/web_v2`, `apps/api_v2`, or `packages`, always run:
+```bash
+python scripts/update-indexes.py
+```
 
 Hard constraints:
 - Do not end a session before `pnpm build --filter web_v2` succeeds.

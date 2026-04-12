@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutGridIcon,
   MessageSquareTextIcon,
   RadioIcon,
   PuzzleIcon,
@@ -29,12 +28,6 @@ interface ProjectNavItem {
 
 function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
   return [
-    {
-      label: "Overview",
-      href: `/projects/${slug}`,
-      icon: LayoutGridIcon,
-      exact: true,
-    },
     {
       label: "Testimonials",
       href: `/projects/${slug}/testimonials`,

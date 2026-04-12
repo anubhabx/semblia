@@ -1,3 +1,7 @@
+# Dependencies — never index these
+node_modules/
+**/node_modules/**
+
 # Prisma generated client (compiled WASM, edge runtimes, query engine binaries)
 **/generated/prisma/**
 **/generated/client/**
@@ -16,3 +20,8 @@ graphify-out/
 **/public/*.png
 **/public/*.jpg
 **/public/*.ico
+
+# Lock files and package manager artifacts
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
