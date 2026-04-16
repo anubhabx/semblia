@@ -1,10 +1,15 @@
 # CLAUDE.md
 
 Session start checklist:
-- Codebase questions MUST follow the 3-level hierarchy:
-  1. `python scripts/codesearch.py query "<question>"` — vector search (always first)
-  2. `graphify-out/GRAPH_REPORT.md` — structure/relationships
-  3. Raw file reads — last resort only
+- Codebase exploration MUST follow this intent-routed hierarchy:
+  1. Accuracy-first file localization: `python scripts/codesearch.py query "<question>"`
+  2. Speed-first structure traversal: `graphify query "<question>" --graph graphify-out/graph.json --budget 1200` + `graphify-out/GRAPH_REPORT.md`
+  3. Cross-check with the other method before editing if primary results are ambiguous
+  4. Raw file reads — last resort only
+
+Benchmark snapshot (2026-04-16, 15 canonical retrieval cases):
+- Vector (`scripts/codesearch.py`): Top-6 hit 100%, MRR 0.833, median latency 3.70s
+- Graphify (`graphify query`): Top-6 hit 53.3%, MRR 0.258, median latency 0.39s, ~4.0x token reduction
 
 After writing or modifying any source file in `apps/web_v2`, `apps/api_v2`, or `packages`, always run:
 ```bash
@@ -34,6 +39,7 @@ For creaing a new user, use any email appened with +clerk_test@tresta.app. Use t
 This project has a graphify knowledge graph at graphify-out/.
 
 Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- Before answering architecture/relationship questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- Use `graphify query` / `graphify path` for topology and dependency-flow questions
 - If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
 - After modifying code files in this session, run `python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"` to keep the graph current

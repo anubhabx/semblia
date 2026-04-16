@@ -2,25 +2,42 @@
 
 Session start checklist:
 
-- Codebase questions MUST follow the 3-level hierarchy below — never skip levels.
+- Codebase exploration MUST follow the intent-routed hierarchy below.
 
-## Codebase Exploration — STRICT HIERARCHY
+## Codebase Exploration — Intent-Routed Hierarchy
 
-**Level 1 — Vector search (DEFAULT, always try first):**
+Benchmark snapshot (2026-04-16, 15 canonical retrieval cases):
+
+- Vector (`scripts/codesearch.py`): Top-6 hit 100%, MRR 0.833, median latency 3.70s
+- Graphify (`graphify query`): Top-6 hit 53.3%, MRR 0.258, median latency 0.39s, ~4.0x token reduction
+
+**Level 1 — Pick primary traversal by intent:**
+
+Accuracy-first file localization (default for implementation lookup):
 ```
 python scripts/codesearch.py query "<your question>"
 ```
-Read only the files it returns. This is the cheapest and fastest path.
+Use this when the goal is to identify exact files/functions for edits.
 
-**Level 2 — Knowledge graph (if vector results are ambiguous or structural):**
+Speed-first structural orientation (architecture, relationships, cross-module flow):
+```
+graphify query "<your question>" --graph graphify-out/graph.json --budget 1200
+```
+Also read `graphify-out/GRAPH_REPORT.md` for god nodes/community structure.
+
+**Level 2 — Cross-check with the secondary traversal:**
+
+If you started with vector and results are ambiguous/multi-hop, use graphify for relationship context:
 Read `graphify-out/GRAPH_REPORT.md` for architecture and relationships.
 Fall back to `graphify-out/graph.json` only if GRAPH_REPORT.md lacks sufficient detail.
+
+If you started with graphify and need exact file targeting for code edits, run vector search before editing.
 
 **Level 3 — Raw file reads (last resort only):**
 Only when levels 1 and 2 are both insufficient to unblock the task, or when explicitly asked.
 Never read a file that wasn't returned by vector search or referenced in the graph.
 
-If Ollama is unreachable (`ollama serve` to start it), fall to Level 2 and note the degradation.
+If Ollama is unreachable (`ollama serve` to start it), use graphify-only traversal and explicitly note reduced file-level precision.
 
 ## After Creating or Modifying Files — MANDATORY
 
@@ -57,6 +74,7 @@ For creaing a new user, use any email appened with +clerk_test@tresta.app. Use t
 This project has a graphify knowledge graph at graphify-out/.
 
 Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- Before answering architecture/relationship questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- Use `graphify query` / `graphify path` for topology and dependency-flow questions
 - If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
 - After modifying code files in this session, run `python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"` to keep the graph current
