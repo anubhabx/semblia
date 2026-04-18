@@ -55,7 +55,7 @@ function Row({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center justify-between gap-2", className)}>
+    <div className={cn("flex flex-wrap items-center justify-between gap-2", className)}>
       <Label className="shrink-0 text-[11px]">
         {label}
       </Label>
@@ -80,7 +80,7 @@ function Pills<T extends string>({
       size="sm"
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T); }}
-      className="gap-0 rounded-md bg-muted/50 p-0.5"
+      className="flex-wrap gap-0 rounded-md bg-muted/50 p-0.5"
     >
       {options.map((o) => (
         <ToggleGroupItem

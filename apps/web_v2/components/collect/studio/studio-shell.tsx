@@ -2,9 +2,14 @@
 
 /**
  * StudioShell — full-screen testimonial form builder.
- * Uses dialog semantics with focus management for accessibility.
- * Left: controls panel (380px, Sheet on mobile). Right: preview stage.
- * Top: topbar with save/reset/close.
+ *
+ * Layout strategy:
+ * ≥ lg (1024px) — Side-by-side: collapsible controls sidebar + preview stage.
+ * < lg           — Tab layout: "Design" and "Preview" are equal full-width peers.
+ *                  Each tab gets the entire viewport width. No Sheet overlay.
+ *
+ * This avoids the fundamental problem of trying to fit two panels in
+ * insufficient space or using an overlay that hides one panel entirely.
  */
 
 import * as React from "react";
@@ -14,23 +19,44 @@ import {
   ArrowLeftIcon,
   SaveIcon,
   RotateCcwIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   SlidersHorizontalIcon,
+  EyeIcon,
 } from "lucide-react";
 import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import { StudioControls } from "./studio-controls";
 import { StudioPreview } from "./studio-preview";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+/* ─── Hook: track if we're above `lg` breakpoint ─────────────────────────── */
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = React.useState(true); // SSR-safe default
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
+/* ─── Mobile tab type ─────────────────────────────────────────────────────── */
+
+type MobileTab = "design" | "preview";
 
 export function StudioShell({ slug, formId }: { slug: string; formId: string }) {
   const router = useRouter();
   const dialogRef = React.useRef<HTMLDivElement>(null);
-  const [mobileControlsOpen, setMobileControlsOpen] = React.useState(false);
+  const isDesktop = useIsDesktop();
+
+  // Mobile: which tab is active
+  const [mobileTab, setMobileTab] = React.useState<MobileTab>("preview");
+  // Desktop: whether the sidebar is collapsed
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   // ─── Granular selectors — avoid full-store subscription ────────────────
   const dirty = useStudioStore((s) => {
@@ -38,7 +64,6 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
     return snap ? isStudioDirty(snap) : false;
   });
   const hasSnapshot = useStudioStore((s) => !!s.snapshots[formId]);
-  const ensureProject = useStudioStore((s) => s.ensureProject);
   const save = useStudioStore((s) => s.save);
   const reset = useStudioStore((s) => s.reset);
 
@@ -118,24 +143,46 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
       className="fixed inset-0 z-50 flex flex-col bg-background outline-none"
     >
       {/* ─── Topbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-4">
-        {/* Left: back button */}
-        <button
-          type="button"
-          onClick={handleClose}
-          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          aria-label="Back to form list"
-        >
-          <ArrowLeftIcon className="size-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Back to forms</span>
-        </button>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-2 sm:px-4">
+        {/* Left: back + sidebar toggle (desktop) */}
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Back to form list"
+          >
+            <ArrowLeftIcon className="size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Back to forms</span>
+          </button>
+
+          {/* Desktop sidebar toggle */}
+          {isDesktop && (
+            <>
+              <span className="mx-1.5 hidden h-4 w-px bg-border/60 lg:block" aria-hidden="true" />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setSidebarOpen((o) => !o)}
+                aria-label={sidebarOpen ? "Collapse controls panel" : "Expand controls panel"}
+                className="hidden lg:flex"
+              >
+                {sidebarOpen ? (
+                  <PanelLeftCloseIcon className="size-4" aria-hidden="true" />
+                ) : (
+                  <PanelLeftOpenIcon className="size-4" aria-hidden="true" />
+                )}
+              </Button>
+            </>
+          )}
+        </div>
 
         {/* Center: title + dirty dot */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Testimonial Studio</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-xs font-medium sm:text-sm">Testimonial Studio</span>
           {dirty && (
             <span
-              className="size-1.5 rounded-full bg-amber-500"
+              className="size-1.5 shrink-0 rounded-full bg-amber-500"
               title="Unsaved changes"
               aria-label="Unsaved changes"
               role="status"
@@ -143,27 +190,8 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
           )}
         </div>
 
-        {/* Right: actions */}
-        <div className="flex items-center gap-2">
-          {/* Mobile controls toggle */}
-          <Sheet open={mobileControlsOpen} onOpenChange={setMobileControlsOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-xs lg:hidden"
-                aria-label="Open design controls"
-              >
-                <SlidersHorizontalIcon className="size-3.5" aria-hidden="true" />
-                Controls
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[360px] p-0 sm:w-[380px]">
-              <SheetTitle className="sr-only">Design Controls</SheetTitle>
-              <StudioControls formId={formId} />
-            </SheetContent>
-          </Sheet>
-
+        {/* Right: save/reset */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -186,21 +214,92 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
         </div>
       </div>
 
-      {/* ─── Body: controls + preview ───────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1">
-        {/* Controls panel — scrollable (desktop only; mobile uses Sheet) */}
-        <aside
-          className="hidden w-[380px] shrink-0 border-r border-border/60 lg:block"
-          aria-label="Design controls"
-        >
-          <StudioControls formId={formId} />
-        </aside>
+      {/* ─── Body ───────────────────────────────────────────────────────────── */}
+      {isDesktop ? (
+        /* ── Desktop: side-by-side with collapsible sidebar ─────────────── */
+        <div className="flex min-h-0 flex-1">
+          <aside
+            className={cn(
+              "shrink-0 border-r border-border/60 transition-[width] duration-200 ease-in-out overflow-hidden",
+              sidebarOpen ? "w-[380px]" : "w-0",
+            )}
+            aria-label="Design controls"
+            aria-hidden={!sidebarOpen}
+          >
+            <div className="w-[380px] h-full">
+              <StudioControls formId={formId} />
+            </div>
+          </aside>
 
-        {/* Preview stage */}
-        <main className="flex-1" aria-label="Form preview">
-          <StudioPreview formId={formId} />
-        </main>
-      </div>
+          <main className="flex-1 min-w-0" aria-label="Form preview">
+            <StudioPreview formId={formId} />
+          </main>
+        </div>
+      ) : (
+        /* ── Mobile/Tablet: tab layout — each tab gets full width ────── */
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* Tab content */}
+          <div className="relative min-h-0 flex-1">
+            <div
+              className={cn(
+                "absolute inset-0 overflow-hidden",
+                mobileTab === "design" ? "visible" : "invisible",
+              )}
+              aria-hidden={mobileTab !== "design"}
+            >
+              <StudioControls formId={formId} />
+            </div>
+            <div
+              className={cn(
+                "absolute inset-0 overflow-hidden",
+                mobileTab === "preview" ? "visible" : "invisible",
+              )}
+              aria-hidden={mobileTab !== "preview"}
+            >
+              <StudioPreview formId={formId} />
+            </div>
+          </div>
+
+          {/* Bottom tab bar */}
+          <div
+            className="flex h-12 shrink-0 border-t border-border/60 bg-background"
+            role="tablist"
+            aria-label="Studio panels"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileTab === "design"}
+              onClick={() => setMobileTab("design")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 text-xs font-medium transition-colors",
+                mobileTab === "design"
+                  ? "text-foreground bg-muted/40"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <SlidersHorizontalIcon className="size-4" aria-hidden="true" />
+              Design
+            </button>
+            <span className="w-px self-stretch bg-border/60" aria-hidden="true" />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileTab === "preview"}
+              onClick={() => setMobileTab("preview")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 text-xs font-medium transition-colors",
+                mobileTab === "preview"
+                  ? "text-foreground bg-muted/40"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <EyeIcon className="size-4" aria-hidden="true" />
+              Preview
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

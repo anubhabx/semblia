@@ -50,13 +50,14 @@ function DeviceSwitcher({
           aria-label={b.label}
           aria-pressed={device === b.id}
           className={cn(
-            "flex items-center justify-center rounded-md p-1.5 transition-all",
+            "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-medium transition-all sm:px-2.5",
             device === b.id
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
           {b.icon}
+          <span className="hidden sm:inline">{b.label}</span>
         </button>
       ))}
     </div>
@@ -83,11 +84,12 @@ const ScaledDeviceFrame = React.memo(function ScaledDeviceFrame({
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width: cw, height: ch } = entry.contentRect;
-        const pad = 40;
+        // Use smaller padding on narrow containers
+        const pad = cw < 500 ? 12 : 40;
         const availW = cw - pad * 2;
         const availH = ch - pad * 2;
         const s = Math.min(availW / dims.w, availH / dims.h, 1);
-        setScale(Math.max(0.2, s));
+        setScale(Math.max(0.15, s));
       }
     });
 
@@ -98,7 +100,7 @@ const ScaledDeviceFrame = React.memo(function ScaledDeviceFrame({
   return (
     <div
       ref={containerRef}
-      className="flex flex-1 items-center justify-center overflow-hidden"
+      className="flex flex-1 items-center justify-center overflow-hidden p-2 sm:p-0"
     >
       <div
         style={{
@@ -129,7 +131,7 @@ export function StudioPreview({ formId }: { formId: string }) {
   return (
     <div className="flex h-full flex-col">
       {/* Stage chrome bar */}
-      <div className="flex items-center justify-center border-b border-border/40 px-4 py-2">
+      <div className="flex items-center justify-center border-b border-border/40 px-2 py-1.5 sm:px-4 sm:py-2">
         <DeviceSwitcher device={device} onChange={setDevice} />
       </div>
 
