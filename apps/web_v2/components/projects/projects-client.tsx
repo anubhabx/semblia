@@ -398,7 +398,7 @@ export function ProjectsClient() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects\u2026"
+              placeholder="Search projects…"
               className="h-7 pl-8 text-xs"
               aria-label="Search projects"
             />

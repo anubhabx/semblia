@@ -477,7 +477,7 @@ export function TestimonialsClient({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search testimonials\u2026"
+              placeholder="Search testimonials…"
               className="h-7 pl-8 text-xs"
               aria-label="Search testimonials"
             />

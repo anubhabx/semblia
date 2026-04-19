@@ -216,11 +216,13 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
+const EMPTY_FORMS: FormConfigEntry[] = [];
+
 /* ─── Main form config list ───────────────────────────────────────────────── */
 
 export function FormConfigList({ slug }: { slug: string }) {
   const router = useRouter();
-  const forms = useStudioStore((s) => s.formsByProject[slug] ?? []);
+  const forms = useStudioStore((s) => s.formsByProject[slug]) ?? EMPTY_FORMS;
   const snapshots = useStudioStore((s) => s.snapshots);
   const ensureProject = useStudioStore((s) => s.ensureProject);
   const createForm = useStudioStore((s) => s.createForm);

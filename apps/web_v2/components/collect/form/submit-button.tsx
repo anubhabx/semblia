@@ -1,0 +1,45 @@
+"use client";
+
+import * as React from "react";
+import { useFormContext } from "./form-context";
+
+interface SubmitButtonProps {
+  label?: string;
+  /** When true, calls context.submit(); when false, calls goNext(). */
+  isFinal?: boolean;
+}
+
+export const SubmitButton = React.memo(function SubmitButton({
+  label = "Submit",
+  isFinal = true,
+}: SubmitButtonProps) {
+  const { submit, status } = useFormContext();
+  const loading = status === "submitting";
+
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={isFinal ? submit : undefined}
+      style={{
+        fontFamily: "var(--f-font-body)",
+        fontSize: "var(--f-size-base)",
+        fontWeight: 600,
+        padding: "12px 32px",
+        borderRadius: "var(--f-btn-radius)",
+        cursor: loading ? "wait" : "pointer",
+        transition: "all .2s",
+        width: "var(--f-btn-width)",
+        border: "var(--f-btn-border)",
+        textTransform: "var(--f-btn-uppercase)" as React.CSSProperties["textTransform"],
+        letterSpacing: "var(--f-btn-tracking)",
+        backgroundColor: "var(--f-btn-bg)",
+        color: "var(--f-btn-color)",
+        boxShadow: "var(--f-btn-shadow)",
+        opacity: loading ? 0.7 : 1,
+      }}
+    >
+      {loading ? "Submitting…" : label}
+    </button>
+  );
+});

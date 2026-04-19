@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { DeviceFrame } from "@/components/collect/device-frame";
 import type { StudioDevice } from "@/lib/collect/studio-types";
 import { useStudioStore } from "@/lib/collect/studio-store";
-import { LayoutRenderer } from "./studio-layout-renderer";
+import { TestimonialForm } from "@/components/collect/form";
 import { Monitor as MonitorIcon, DeviceTablet as TabletIcon, DeviceMobile as SmartphoneIcon } from "@phosphor-icons/react";
 
 /* ─── Device size map ─────────────────────────────────────────────────────── */
@@ -170,7 +170,7 @@ export const StudioPreview = React.memo(function StudioPreview({ formId }: { for
       {/* Stage area — warm paper background */}
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         <ScaledDeviceFrame device={device}>
-          <LayoutRenderer config={draft} />
+          <TestimonialForm config={draft} mode="preview" />
         </ScaledDeviceFrame>
       </div>
 
