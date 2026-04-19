@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeSlash as EyeOff, CheckCircle as CheckCircle2 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { authInputCls } from "./auth-field";
 

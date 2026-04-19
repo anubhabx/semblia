@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 interface AuthBackBtnProps {

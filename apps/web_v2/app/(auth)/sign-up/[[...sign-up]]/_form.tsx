@@ -4,7 +4,7 @@ import { useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Mail } from "lucide-react";
+import { Envelope as Mail } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   InputOTP,

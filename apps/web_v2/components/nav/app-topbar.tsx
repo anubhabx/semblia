@@ -5,24 +5,24 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
 import {
-  ChevronDownIcon,
-  CheckIcon,
-  PlusIcon,
-  BellIcon,
-  UserCircleIcon,
-  CreditCardIcon,
-  LogOutIcon,
-  MenuIcon,
-  CircleIcon,
-  MessageSquareTextIcon,
-  ShieldAlertIcon,
-  CircleCheckIcon,
-  HelpCircleIcon,
-  BookOpenIcon,
-  SparklesIcon,
-  MailIcon,
-  KeyboardIcon,
-} from "lucide-react";
+  CaretDown as ChevronDownIcon,
+  Check as CheckIcon,
+  Plus as PlusIcon,
+  Bell as BellIcon,
+  UserCircle as UserCircleIcon,
+  CreditCard as CreditCardIcon,
+  SignOut as LogOutIcon,
+  List as MenuIcon,
+  Circle as CircleIcon,
+  ChatText as MessageSquareTextIcon,
+  ShieldWarning as ShieldAlertIcon,
+  CheckCircle as CircleCheckIcon,
+  Question as HelpCircleIcon,
+  BookOpen as BookOpenIcon,
+  Sparkle as SparklesIcon,
+  Envelope as MailIcon,
+  Keyboard as KeyboardIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";

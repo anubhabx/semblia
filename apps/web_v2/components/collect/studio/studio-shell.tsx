@@ -16,14 +16,14 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  ArrowLeftIcon,
-  SaveIcon,
-  RotateCcwIcon,
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
-  SlidersHorizontalIcon,
-  EyeIcon,
-} from "lucide-react";
+  ArrowLeft as ArrowLeftIcon,
+  FloppyDisk as SaveIcon,
+  ArrowCounterClockwise as RotateCcwIcon,
+  SidebarSimple as PanelLeftCloseIcon,
+  SidebarSimple as PanelLeftOpenIcon,
+  SlidersHorizontal as SlidersHorizontalIcon,
+  Eye as EyeIcon,
+} from "@phosphor-icons/react";
 import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import { StudioControls } from "./studio-controls";
 import { StudioPreview } from "./studio-preview";

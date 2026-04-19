@@ -2,24 +2,24 @@
 
 import * as React from "react";
 import {
-  CheckCircle2Icon,
-  XCircleIcon,
-  ClockIcon,
-  AlertTriangleIcon,
-  ShieldCheckIcon,
-  StarIcon,
-  EyeIcon,
-  EyeOffIcon,
-  XIcon,
-  MailIcon,
-  CalendarIcon,
-  GlobeIcon,
-  TagIcon,
-  ShieldAlertIcon,
-  ArrowLeftIcon,
-  MessageSquareTextIcon,
-  QuoteIcon,
-} from "lucide-react";
+  CheckCircle as CheckCircle2Icon,
+  XCircle as XCircleIcon,
+  Clock as ClockIcon,
+  Warning as AlertTriangleIcon,
+  ShieldCheck as ShieldCheckIcon,
+  Star as StarIcon,
+  Eye as EyeIcon,
+  EyeSlash as EyeOffIcon,
+  X as XIcon,
+  Envelope as MailIcon,
+  Calendar as CalendarIcon,
+  Globe as GlobeIcon,
+  Tag as TagIcon,
+  ShieldWarning as ShieldAlertIcon,
+  ArrowLeft as ArrowLeftIcon,
+  ChatText as MessageSquareTextIcon,
+  Quotes as QuoteIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

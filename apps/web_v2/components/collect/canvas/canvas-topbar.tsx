@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, SaveIcon, PanelRightIcon } from "lucide-react";
+import { ArrowLeft as ArrowLeftIcon, FloppyDisk as SaveIcon, SidebarSimple as PanelRightIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DeviceSizeToggle } from "./device-size-toggle";
 import type { DeviceSize } from "@/components/collect/device-frame";

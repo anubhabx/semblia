@@ -2,17 +2,17 @@
 
 import * as React from "react";
 import {
-  SearchIcon,
-  XIcon,
-  CheckCircle2Icon,
-  XCircleIcon,
-  ShieldCheckIcon,
-  FilterIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  MessageSquareTextIcon,
-  CheckIcon,
-} from "lucide-react";
+  MagnifyingGlass as SearchIcon,
+  X as XIcon,
+  CheckCircle as CheckCircle2Icon,
+  XCircle as XCircleIcon,
+  ShieldCheck as ShieldCheckIcon,
+  Funnel as FilterIcon,
+  CaretDown as ChevronDownIcon,
+  CaretRight as ChevronRightIcon,
+  ChatText as MessageSquareTextIcon,
+  Check as CheckIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

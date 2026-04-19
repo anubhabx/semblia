@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import {
-  TypeIcon,
-  ListChecksIcon,
-  PaletteIcon,
-  SlidersHorizontalIcon,
-  GlobeIcon,
-} from "lucide-react";
+  TextT as TypeIcon,
+  ListChecks as ListChecksIcon,
+  Palette as PaletteIcon,
+  SlidersHorizontal as SlidersHorizontalIcon,
+  Globe as GlobeIcon,
+} from "@phosphor-icons/react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ContentPanel } from "./content-panel";

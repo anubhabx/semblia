@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { SunIcon, MoonIcon, MonitorIcon } from "lucide-react";
+import { Sun as SunIcon, Moon as MoonIcon, Monitor as MonitorIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

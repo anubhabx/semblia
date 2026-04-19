@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ImageIcon, TrashIcon } from "lucide-react";
+import { Image as ImageIcon, Trash as TrashIcon } from "@phosphor-icons/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

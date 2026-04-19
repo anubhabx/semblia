@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { EyeIcon, SlidersHorizontalIcon } from "lucide-react";
+import { Eye as EyeIcon, SlidersHorizontal as SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { useCollectStore, isDirty } from "@/lib/collect/form-config-store";
 import { useCollectSync } from "@/lib/collect/sync";
 import type { MockProject } from "@/lib/mock-data";

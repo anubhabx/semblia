@@ -11,7 +11,7 @@ import { DeviceFrame } from "@/components/collect/device-frame";
 import type { StudioDevice } from "@/lib/collect/studio-types";
 import { useStudioStore } from "@/lib/collect/studio-store";
 import { LayoutRenderer } from "./studio-layout-renderer";
-import { MonitorIcon, TabletIcon, SmartphoneIcon } from "lucide-react";
+import { Monitor as MonitorIcon, DeviceTablet as TabletIcon, DeviceMobile as SmartphoneIcon } from "@phosphor-icons/react";
 
 /* ─── Device size map ─────────────────────────────────────────────────────── */
 

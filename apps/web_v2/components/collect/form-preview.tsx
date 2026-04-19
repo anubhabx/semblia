@@ -3,11 +3,11 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  StarIcon,
-  UploadIcon,
-  VideoIcon,
-  CheckCircle2Icon,
-} from "lucide-react";
+  Star as StarIcon,
+  Upload as UploadIcon,
+  Video as VideoIcon,
+  CheckCircle as CheckCircle2Icon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   FIELD_ORDER,

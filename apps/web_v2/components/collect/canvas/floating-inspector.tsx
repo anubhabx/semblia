@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { XIcon } from "lucide-react";
+import { X as XIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { InspectorShell } from "@/components/collect/inspector/inspector-shell";
 import type { FormConfig } from "@/lib/collect/types";

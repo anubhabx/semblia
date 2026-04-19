@@ -3,18 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  CheckCircle2Icon,
-  ClockIcon,
-  AlertTriangleIcon,
-  XCircleIcon,
-  ShieldCheckIcon,
-  StarIcon,
-  EyeIcon,
-  EyeOffIcon,
-  ArrowRightIcon,
-  CheckIcon,
-  XIcon,
-} from "lucide-react";
+  CheckCircle as CheckCircle2Icon,
+  Clock as ClockIcon,
+  Warning as AlertTriangleIcon,
+  XCircle as XCircleIcon,
+  ShieldCheck as ShieldCheckIcon,
+  Star as StarIcon,
+  Eye as EyeIcon,
+  EyeSlash as EyeOffIcon,
+  ArrowRight as ArrowRightIcon,
+  Check as CheckIcon,
+  X as XIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   timeAgo,

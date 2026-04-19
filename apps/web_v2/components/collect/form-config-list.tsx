@@ -18,13 +18,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  PlusIcon,
-  PencilIcon,
-  CopyIcon,
-  TrashIcon,
-  ToggleLeftIcon,
-  ToggleRightIcon,
-} from "lucide-react";
+  Plus as PlusIcon,
+  Pencil as PencilIcon,
+  Copy as CopyIcon,
+  Trash as TrashIcon,
+  ToggleLeft as ToggleLeftIcon,
+  ToggleRight as ToggleRightIcon,
+} from "@phosphor-icons/react";
 
 /* ─── Weight bar (A/B traffic indicator) ──────────────────────────────────── */
 

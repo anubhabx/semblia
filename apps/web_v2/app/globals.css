@@ -359,6 +359,38 @@
   kbd {
     @apply font-mono;
   }
+
+  /* ── Studio panel — grid-based collapse/expand ── */
+  .studio-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms ease;
+  }
+  .studio-collapse[data-closed] {
+    grid-template-rows: 0fr;
+  }
+  .studio-collapse > .studio-collapse-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Studio panel — responsive grid ── */
+  @container studio-panel (max-width: 340px) {
+    .studio-layout-grid {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    .studio-presets-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (max-width: 480px) {
+    .studio-layout-grid {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    .studio-presets-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -867,4 +899,5 @@
       transform: translateX(100%);
     }
   }
+
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { Check as CheckIcon, Copy as CopyIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export function CopyButton({

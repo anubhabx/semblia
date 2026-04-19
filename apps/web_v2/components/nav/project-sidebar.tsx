@@ -4,13 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  MessageSquareTextIcon,
-  RadioIcon,
-  PuzzleIcon,
-  BarChart3Icon,
-  KeyRoundIcon,
-  SlidersHorizontalIcon,
-} from "lucide-react";
+  ChatText as MessageSquareTextIcon,
+  Broadcast as RadioIcon,
+  PuzzlePiece as PuzzleIcon,
+  ChartBar as BarChart3Icon,
+  Key as KeyRoundIcon,
+  SlidersHorizontal as SlidersHorizontalIcon,
+} from "@phosphor-icons/react";
 
 import { getProjectBySlug, type MockProject } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";

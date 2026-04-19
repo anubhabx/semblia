@@ -3,11 +3,11 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ExternalLinkIcon,
-  RotateCcwIcon,
-  SaveIcon,
-  CheckIcon,
-} from "lucide-react";
+  ArrowSquareOut as ExternalLinkIcon,
+  ArrowCounterClockwise as RotateCcwIcon,
+  FloppyDisk as SaveIcon,
+  Check as CheckIcon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

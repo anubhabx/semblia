@@ -4,7 +4,7 @@ import * as React from "react"
 import { Menubar as MenubarPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { CheckIcon, ChevronRightIcon } from "lucide-react"
+import { Check as CheckIcon, CaretRight as ChevronRightIcon } from "@phosphor-icons/react"
 
 function Menubar({
   className,

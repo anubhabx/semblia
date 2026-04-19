@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
   ArrowRight,
-  Sparkles,
-  MessageSquareText,
-  PuzzleIcon,
-  BarChart3,
+  Sparkle as Sparkles,
+  ChatText as MessageSquareText,
+  PuzzlePiece as PuzzleIcon,
+  ChartBar as BarChart3,
   Check,
   User,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { AuthField } from "@/components/auth/auth-field";
 import { AuthPrimaryBtn } from "@/components/auth/auth-primary-btn";

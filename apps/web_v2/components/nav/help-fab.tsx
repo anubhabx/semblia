@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import {
-  HelpCircleIcon,
-  BookOpenIcon,
-  SparklesIcon,
-  MailIcon,
-  XIcon,
-} from "lucide-react";
+  Question as HelpCircleIcon,
+  BookOpen as BookOpenIcon,
+  Sparkle as SparklesIcon,
+  Envelope as MailIcon,
+  X as XIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [

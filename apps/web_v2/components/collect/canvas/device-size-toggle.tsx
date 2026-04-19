@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SmartphoneIcon, TabletIcon, MonitorIcon, MaximizeIcon } from "lucide-react";
+import { DeviceMobile as SmartphoneIcon, DeviceTablet as TabletIcon, Monitor as MonitorIcon, ArrowsOut as MaximizeIcon } from "@phosphor-icons/react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { DeviceSize } from "@/components/collect/device-frame";
 

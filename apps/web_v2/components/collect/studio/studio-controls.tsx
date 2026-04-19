@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/lib/collect/studio-store";
 import {
   STYLE_PRESETS,
@@ -23,141 +24,25 @@ import type {
   TokenTexture,
   ShowIfOp,
 } from "@/lib/collect/studio-types";
-
-/* ─── Studio palette via CSS custom properties (supports dark mode) ─────── */
-
-const C = {
-  ink900: "var(--s-ink900)", ink700: "var(--s-ink700)", ink500: "var(--s-ink500)",
-  ink300: "var(--s-ink300)", ink100: "var(--s-ink100)", ink50: "var(--s-ink50)",
-  paper: "var(--s-paper)", panelBg: "var(--s-panel-bg)",
-  line: "var(--s-line)", lineSoft: "var(--s-line-soft)",
-  hot: "var(--s-hot)", pillBg: "var(--s-pill-bg)",
-  white: "var(--s-white)",
-};
-const F = {
-  sans: '"Geist", sans-serif',
-  mono: '"Geist Mono", ui-monospace, monospace',
-};
-
-/* ─── Injected styles (CSS vars, dark mode, animations, responsive) ─────── */
-
-const STUDIO_CSS = `
-.studio-panel {
-  --s-ink900: #111110; --s-ink700: #3a3a38; --s-ink500: #6b6b67;
-  --s-ink300: #b8b7b1; --s-ink100: #e8e6df; --s-ink50: #f4f2ec;
-  --s-paper: #faf8f2; --s-panel-bg: #f7f5ef;
-  --s-line: #d9d5c9; --s-line-soft: #e3dfd2;
-  --s-hot: #d7411f; --s-pill-bg: #ede9dd;
-  --s-white: #ffffff;
-  color-scheme: light;
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-:is(.dark, [data-theme="dark"]) .studio-panel {
-  --s-ink900: #f0ede6; --s-ink700: #ccc9c0; --s-ink500: #9c9a93;
-  --s-ink300: #55534e; --s-ink100: #2c2a26; --s-ink50: #1e1c18;
-  --s-paper: #161410; --s-panel-bg: #1a1814;
-  --s-line: #3b3830; --s-line-soft: #2d2b24;
-  --s-hot: #f06b4d; --s-pill-bg: #252320;
-  --s-white: #222018;
-  color-scheme: dark;
-}
-/* Section collapse animation */
-.s-section-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.22s ease; }
-.s-section-body[data-closed] { grid-template-rows: 0fr; }
-.s-section-body > .s-section-inner { overflow: hidden; min-height: 0; }
-/* Pill transition */
-.s-pill { transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease; }
-.s-pill:hover { background: var(--s-ink50); }
-.s-pill:active { opacity: 0.85; }
-/* Card hover */
-.s-card { transition: border-color 0.16s ease, background 0.16s ease; }
-.s-card:hover { border-color: var(--s-ink300); background: var(--s-white); }
-/* Question row expand */
-.s-qrow-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.2s ease; }
-.s-qrow-body[data-open] { grid-template-rows: 1fr; }
-.s-qrow-body > .s-qrow-inner { overflow: hidden; min-height: 0; }
-/* Icon button hover */
-.s-icon-btn { transition: background 0.12s, border-color 0.12s; }
-.s-icon-btn:not(:disabled):hover { background: var(--s-ink50); border-color: var(--s-ink300); }
-.s-icon-btn:not(:disabled):active { opacity: 0.8; }
-/* Add question grid appear */
-@keyframes s-slideDown { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-.s-add-grid { animation: s-slideDown 0.18s ease; }
-/* Responsive: narrow panel */
-@container studio-panel (max-width: 340px) {
-  .s-layout-grid { grid-template-columns: 1fr 1fr !important; }
-  .s-presets-grid { grid-template-columns: 1fr !important; }
-}
-@media (max-width: 480px) {
-  .s-layout-grid { grid-template-columns: 1fr 1fr !important; }
-  .s-presets-grid { grid-template-columns: 1fr !important; }
-}
-/* Focus ring */
-.studio-panel input:focus-visible, .studio-panel select:focus-visible, .studio-panel textarea:focus-visible {
-  outline: 2px solid var(--s-ink900); outline-offset: 1px;
-  border-color: var(--s-ink900) !important;
-}
-/* Badge */
-.s-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
-  padding: 1px 6px; border-radius: 3px; line-height: 1.6;
-  text-transform: uppercase;
-}
-.s-badge-dark { background: var(--s-ink900); color: var(--s-paper); }
-.s-badge-info { background: var(--s-ink100); color: var(--s-ink700); }
-.s-badge-warn { background: color-mix(in srgb, var(--s-hot) 12%, transparent); color: var(--s-hot); border: 1px solid color-mix(in srgb, var(--s-hot) 20%, transparent); }
-/* Destructive button */
-.s-btn-destructive {
-  font-family: 'Geist', sans-serif; font-size: 11px; font-weight: 500;
-  color: var(--s-hot); background: transparent;
-  border: 1px solid color-mix(in srgb, var(--s-hot) 22%, transparent);
-  border-radius: 5px; padding: 3px 10px; cursor: pointer;
-  transition: background 0.14s, color 0.14s, border-color 0.14s;
-}
-.s-btn-destructive:hover {
-  background: color-mix(in srgb, var(--s-hot) 8%, transparent);
-  border-color: color-mix(in srgb, var(--s-hot) 36%, transparent);
-}
-.s-btn-destructive:active { opacity: 0.8; }
-/* Custom checkbox */
-.s-checkbox {
-  appearance: none; -webkit-appearance: none; width: 14px; height: 14px;
-  border: 1.5px solid var(--s-ink300); border-radius: 3px;
-  background: var(--s-white); cursor: pointer;
-  display: inline-grid; place-content: center;
-  transition: background 0.12s, border-color 0.12s;
-  flex-shrink: 0; margin: 0;
-}
-.s-checkbox:checked {
-  background: var(--s-ink900); border-color: var(--s-ink900);
-}
-.s-checkbox:checked::after {
-  content: ''; width: 8px; height: 5px;
-  border-left: 1.5px solid var(--s-paper); border-bottom: 1.5px solid var(--s-paper);
-  transform: rotate(-45deg) translateY(-0.5px);
-}
-.s-checkbox:focus-visible {
-  outline: 2px solid var(--s-ink900); outline-offset: 1px;
-}
-`;
-
-function StudioStyles() {
-  return <style dangerouslySetInnerHTML={{ __html: STUDIO_CSS }} />;
-}
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 /* ─── Shared small primitives ─────────────────────────────────────────────── */
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{
-        fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" as const,
-        color: C.ink500, marginBottom: 8, display: "flex", justifyContent: "space-between",
-      }}>
+    <div className="mb-3.5">
+      <div className="label-quiet mb-2 flex justify-between">
         <span>{label}</span>
-        {hint != null && <span style={{ color: C.ink900, textTransform: "none" as const, letterSpacing: 0, fontSize: 11 }}>{hint}</span>}
+        {hint != null && (
+          <span className="text-foreground normal-case tracking-normal text-[11px]">{hint}</span>
+        )}
       </div>
       {children}
     </div>
@@ -169,55 +54,61 @@ function SectionCollapsible({ title, children, defaultOpen = true, tag }: {
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   return (
-    <div style={{ borderTop: `1px solid ${C.line}`, padding: "18px 20px" }}>
-      <button type="button" onClick={() => setOpen(!open)} style={{
-        width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "transparent", border: "none", padding: 0, cursor: "pointer",
-        fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: C.ink900,
-        letterSpacing: "-0.005em", marginBottom: open ? 14 : 0,
-        transition: "margin-bottom 0.22s ease",
-      }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="border-t border-border px-5 py-4.5">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex w-full items-center justify-between bg-transparent p-0 text-[13px] font-semibold text-foreground tracking-tight cursor-pointer border-none",
+          "transition-[margin-bottom] duration-200",
+          open ? "mb-3.5" : "mb-0"
+        )}
+      >
+        <span className="flex items-center gap-2">
           {title}
-          {tag && <span className="s-badge s-badge-dark">{tag}</span>}
+          {tag && <Badge variant="default" className="rounded-sm px-1.5 py-px font-mono text-[9px] font-semibold tracking-wider">{tag}</Badge>}
         </span>
-        <span style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)",
-          transition: "transform 180ms", fontFamily: F.mono, fontSize: 10, color: C.ink500 }}>▸</span>
+        <span className={cn(
+          "font-mono text-[10px] text-muted-foreground transition-transform duration-150",
+          open && "rotate-90"
+        )}>▸</span>
       </button>
-      <div className="s-section-body" {...(!open ? { "data-closed": "" } : {})}>
-        <div className="s-section-inner">{children}</div>
+      <div className="studio-collapse" {...(!open ? { "data-closed": "" } : {})}>
+        <div className="studio-collapse-inner">{children}</div>
       </div>
     </div>
   );
 }
 
-function StudioTextInput({ value, onChange, style: extraStyle, ...rest }: {
-  value: string; onChange: (v: string) => void; style?: React.CSSProperties;
+function StudioTextInput({ value, onChange, className: extraClass, ...rest }: {
+  value: string; onChange: (v: string) => void; className?: string;
   [k: string]: unknown;
 }) {
   return (
-    <input type="text" value={value} onChange={e => onChange(e.target.value)} {...rest}
-      style={{
-        width: "100%", padding: "8px 10px",
-        fontFamily: F.mono, fontSize: 12, color: C.ink900,
-        background: C.white, border: `1px solid ${C.line}`, borderRadius: 6, outline: "none",
-        ...extraStyle,
-      }}
-      onFocus={e => { (e.target as HTMLInputElement).style.borderColor = C.ink900; }}
-      onBlur={e => { (e.target as HTMLInputElement).style.borderColor = C.line; }} />
+    <Input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={cn("h-8 font-mono text-xs", extraClass)}
+      {...rest}
+    />
   );
 }
 
-function StudioNumberInput({ value, onChange, min, max, step = 1, suffix }: {
+function StudioNumberInput({ value, onChange, min = 0, max = 100, step = 1, suffix }: {
   value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; suffix?: string;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(parseFloat(e.target.value))}
-        style={{ flex: 1, accentColor: C.ink900 }} />
-      <div style={{ minWidth: 52, textAlign: "right" as const,
-        fontFamily: F.mono, fontSize: 11, color: C.ink900 }}>{value}{suffix || ""}</div>
+    <div className="flex items-center gap-3">
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
+        onValueChange={([v]) => onChange(v)}
+        className="flex-1"
+      />
+      <span className="min-w-[52px] text-right font-mono text-[11px] text-foreground">{value}{suffix || ""}</span>
     </div>
   );
 }
@@ -226,12 +117,19 @@ function StudioColorInput({ label, value, onChange }: { label: string; value: st
   const isHex = typeof value === "string" && value.startsWith("#");
   return (
     <Row label={label}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <label style={{ width: 32, height: 32, borderRadius: 6, background: value,
-          border: `1px solid ${C.line}`, cursor: "pointer", flexShrink: 0,
-          position: "relative" as const, overflow: "hidden" as const }}>
-          {isHex && <input type="color" value={value} onChange={e => onChange(e.target.value)}
-            style={{ position: "absolute" as const, inset: 0, opacity: 0, cursor: "pointer" }} />}
+      <div className="flex items-center gap-2">
+        <label
+          className="relative size-8 shrink-0 cursor-pointer overflow-hidden rounded-md border border-border"
+          style={{ background: value }}
+        >
+          {isHex && (
+            <input
+              type="color"
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          )}
         </label>
         <StudioTextInput value={value} onChange={onChange} />
       </div>
@@ -243,39 +141,24 @@ function StudioSelect<T extends string>({ value, onChange, options }: {
   value: T; onChange: (v: T) => void; options: { value: T; label: string }[];
 }) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value as T)}
-      style={{ width: "100%", padding: "8px 10px",
-        fontFamily: F.mono, fontSize: 12, color: C.ink900,
-        background: C.white, border: `1px solid ${C.line}`, borderRadius: 6,
-        outline: "none", cursor: "pointer" }}>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+    <NativeSelect
+      className="w-full"
+      value={value}
+      onChange={e => onChange(e.target.value as T)}
+    >
+      {options.map(o => (
+        <NativeSelectOption key={o.value} value={o.value}>{o.label}</NativeSelectOption>
+      ))}
+    </NativeSelect>
   );
 }
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "8px 10px", background: C.white, border: `1px solid ${C.line}`, borderRadius: 6,
-      fontFamily: F.sans, fontSize: 11.5, color: C.ink900, cursor: "pointer",
-    }}>
+    <Label className="flex items-center justify-between rounded-lg border border-border bg-card px-2.5 py-2 text-[11.5px] cursor-pointer">
       {label}
-      <span style={{
-        width: 28, height: 16, borderRadius: 999,
-        background: value ? C.ink900 : "#c6c4bc",
-        position: "relative" as const, transition: "background 120ms",
-        flexShrink: 0,
-      }}>
-        <span style={{
-          position: "absolute" as const, top: 2, left: value ? 14 : 2,
-          width: 12, height: 12, borderRadius: 999, background: C.white,
-          transition: "left 140ms",
-        }}/>
-      </span>
-      <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)}
-        style={{ display: "none" }} />
-    </label>
+      <Switch size="sm" checked={value} onCheckedChange={onChange} />
+    </Label>
   );
 }
 
@@ -289,19 +172,22 @@ function Pills<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 4, background: C.pillBg, padding: 3, borderRadius: 7 }}>
+    <div className="flex flex-wrap gap-1 rounded-lg bg-secondary p-0.5">
       {options.map(o => {
         const on = value === o.value;
         return (
-          <button key={o.value} type="button" onClick={() => onChange(o.value)}
-            className="s-pill"
-            style={{ flex: 1, minWidth: 0, padding: "7px 10px",
-              fontFamily: F.sans, fontSize: 11.5, fontWeight: 500,
-              color: on ? C.paper : C.ink700,
-              background: on ? C.ink900 : "transparent",
-              border: "none", borderRadius: 5, cursor: "pointer",
-              boxShadow: on ? "0 2px 6px rgba(0,0,0,0.12)" : "none",
-              whiteSpace: "nowrap" as const }}>
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "flex-1 min-w-0 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium whitespace-nowrap cursor-pointer border-none",
+              "transition-[background,color,box-shadow] duration-150",
+              on
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
             {o.label}
           </button>
         );
@@ -313,10 +199,10 @@ function Pills<T extends string>({
 /* ─── Layout thumbnails ───────────────────────────────────────────────────── */
 
 function LayoutThumbnail({ kind, selected }: { kind: string; selected: boolean }) {
-  const stroke = selected ? C.ink900 : C.ink500;
-  const fill = selected ? C.pillBg : C.panelBg;
+  const stroke = selected ? "currentColor" : "var(--color-muted-foreground)";
+  const fill = selected ? "var(--color-secondary)" : "var(--color-muted)";
   return (
-    <svg viewBox="0 0 80 48" width="100%" height="auto" style={{ display: "block", background: fill, borderRadius: 4 }}>
+    <svg viewBox="0 0 80 48" className="block w-full rounded text-foreground" style={{ background: fill }}>
       {kind === "classic" && (
         <g stroke={stroke} strokeWidth="1" fill="none">
           <rect x="20" y="6" width="40" height="36" rx="2"/>
@@ -375,23 +261,26 @@ function PresetCard({ k, p, selected, onClick, showAuthor }: {
   selected: boolean; onClick: () => void; showAuthor?: boolean;
 }) {
   return (
-    <button type="button" onClick={onClick}
-      className="s-card"
-      style={{ textAlign: "left" as const, padding: "10px 12px", borderRadius: 7,
-        border: selected ? `1.5px solid ${C.ink900}` : `1px solid ${C.line}`,
-        background: selected ? C.white : "transparent",
-        cursor: "pointer", position: "relative" as const }}>
-      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-        <span style={{ width: 16, height: 16, borderRadius: 3, background: p.tokens.bg, border: "1px solid rgba(0,0,0,0.08)" }}/>
-        <span style={{ width: 16, height: 16, borderRadius: 3, background: p.tokens.surface, border: "1px solid rgba(0,0,0,0.08)" }}/>
-        <span style={{ width: 16, height: 16, borderRadius: 3, background: p.tokens.ink }}/>
-        <span style={{ width: 16, height: 16, borderRadius: 3, background: p.tokens.accent }}/>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative cursor-pointer rounded-lg border p-2.5 text-left transition-colors duration-150",
+        selected
+          ? "border-foreground bg-card"
+          : "border-border bg-transparent hover:border-muted-foreground/40 hover:bg-card"
+      )}
+    >
+      <div className="mb-2 flex gap-1">
+        <span className="size-4 rounded-sm border border-black/8" style={{ background: p.tokens.bg }}/>
+        <span className="size-4 rounded-sm border border-black/8" style={{ background: p.tokens.surface }}/>
+        <span className="size-4 rounded-sm" style={{ background: p.tokens.ink }}/>
+        <span className="size-4 rounded-sm" style={{ background: p.tokens.accent }}/>
       </div>
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: C.ink900, letterSpacing: "-0.005em" }}>{p.label}</div>
-      <div style={{ fontSize: 10.5, color: C.ink500, marginTop: 2, lineHeight: 1.3 }}>{p.sub}</div>
+      <div className="text-[12.5px] font-semibold text-foreground tracking-tight">{p.label}</div>
+      <div className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">{p.sub}</div>
       {showAuthor && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8,
-          fontFamily: F.mono, fontSize: 9.5, color: "#8d8b83", letterSpacing: "0.04em" }}>
+        <div className="mt-2 flex items-center justify-between font-mono text-[9.5px] tracking-wide text-muted-foreground/70">
           <span>{p.author}</span>
           <span>♥ {p.likes?.toLocaleString()}</span>
         </div>
@@ -401,14 +290,6 @@ function PresetCard({ k, p, selected, onClick, showAuthor }: {
 }
 
 /* ─── Question row ────────────────────────────────────────────────────────── */
-
-const ICON_BTN = (disabled: boolean): React.CSSProperties => ({
-  width: 24, height: 24, fontFamily: F.mono, fontSize: 11,
-  color: disabled ? "#c6c4bc" : C.ink700,
-  background: "transparent", border: `1px solid ${C.lineSoft}`, borderRadius: 4,
-  cursor: disabled ? "not-allowed" : "pointer", padding: 0,
-  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-});
 
 const TYPE_LABELS: Record<string, string> = {
   shorttext: "Short text", longtext: "Paragraph", stars: "★ Stars",
@@ -425,58 +306,56 @@ function QuestionRow({ q, index, total, questions, onUpdate, onRemove, onMove }:
   const otherQs = questions.filter(x => x.id !== q.id);
 
   return (
-    <div style={{ border: `1px solid ${C.line}`, borderRadius: 6, background: C.white, overflow: "hidden",
-      transition: "border-color 0.16s ease, box-shadow 0.16s ease",
-      boxShadow: open ? "0 2px 8px rgba(0,0,0,0.05)" : "none" }}>
-      <div style={{ display: "flex", alignItems: "center", padding: "8px 10px", gap: 8 }}>
-        <div style={{ fontFamily: F.mono, fontSize: 10.5, color: C.ink500, minWidth: 18 }}>
+    <div className={cn(
+      "rounded-lg border bg-card transition-[border-color,box-shadow] duration-150",
+      open ? "border-border shadow-sm" : "border-border"
+    )}>
+      <div className="flex items-center gap-2 px-2.5 py-2">
+        <div className="min-w-[18px] font-mono text-[10.5px] text-muted-foreground">
           {String(index + 1).padStart(2, "0")}
         </div>
-        <div style={{ flex: 1, fontSize: 12, color: C.ink900,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+        <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-foreground">
           {q.label}
-          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.ink500, marginTop: 1,
-            display: "flex", gap: 6, alignItems: "center" }}>
+          <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
             {TYPE_LABELS[q.type] || q.type}
-            {hasLogic && <span className="s-badge s-badge-warn">IF</span>}
+            {hasLogic && <Badge variant="destructive" className="rounded-sm px-1 py-px text-[9px] font-semibold tracking-wide">IF</Badge>}
           </div>
         </div>
-        <button type="button" onClick={() => onMove(-1)} disabled={index === 0} className="s-icon-btn" style={ICON_BTN(index === 0)}>↑</button>
-        <button type="button" onClick={() => onMove(1)} disabled={index === total - 1} className="s-icon-btn" style={ICON_BTN(index === total - 1)}>↓</button>
-        <button type="button" onClick={() => setOpen(!open)} className="s-icon-btn" style={ICON_BTN(false)}>{open ? "✕" : "✎"}</button>
+        <Button variant="outline" size="icon-xs" onClick={() => onMove(-1)} disabled={index === 0} className="font-mono text-[11px]">↑</Button>
+        <Button variant="outline" size="icon-xs" onClick={() => onMove(1)} disabled={index === total - 1} className="font-mono text-[11px]">↓</Button>
+        <Button variant="outline" size="icon-xs" onClick={() => setOpen(!open)} className="font-mono text-[11px]">{open ? "✕" : "✎"}</Button>
       </div>
-      <div className="s-qrow-body" {...(open ? { "data-open": "" } : {})}>
-        <div className="s-qrow-inner">
-        <div style={{ padding: "10px 10px 12px", borderTop: `1px solid ${C.pillBg}`, background: C.paper }}>
-          <Row label="Label">
-            <StudioTextInput value={q.label} onChange={v => onUpdate({ label: v })} />
-          </Row>
-          {(q.type === "shorttext" || q.type === "longtext" || q.type === "file") && (
-            <Row label="Placeholder">
-              <StudioTextInput value={q.placeholder || ""} onChange={v => onUpdate({ placeholder: v })} />
+      <div className="studio-collapse" {...(open ? {} : { "data-closed": "" })}>
+        <div className="studio-collapse-inner">
+          <div className="border-t border-border/60 bg-background px-2.5 py-2.5 pb-3">
+            <Row label="Label">
+              <StudioTextInput value={q.label} onChange={v => onUpdate({ label: v })} />
             </Row>
-          )}
-          {(q.type === "radio" || q.type === "checkbox" || q.type === "dropdown") && (
-            <Row label="Options (one per line)">
-              <textarea value={(q.options || []).join("\n")}
-                onChange={e => onUpdate({ options: e.target.value.split("\n").filter(x => x.trim()) })}
-                rows={4}
-                style={{ width: "100%", padding: "8px 10px",
-                  fontFamily: F.mono, fontSize: 12,
-                  background: C.white, border: `1px solid ${C.line}`, borderRadius: 6,
-                  outline: "none", resize: "vertical" as const }} />
-            </Row>
-          )}
-          <ConditionalLogicEditor q={q} otherQs={otherQs} onUpdate={onUpdate} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: C.ink700, cursor: "pointer" }}>
-              <input type="checkbox" className="s-checkbox" checked={!!q.required} onChange={e => onUpdate({ required: e.target.checked })} />
-              Required
-            </label>
-            <div style={{ flex: 1 }} />
-            <button type="button" onClick={onRemove} className="s-btn-destructive">Delete</button>
+            {(q.type === "shorttext" || q.type === "longtext" || q.type === "file") && (
+              <Row label="Placeholder">
+                <StudioTextInput value={q.placeholder || ""} onChange={v => onUpdate({ placeholder: v })} />
+              </Row>
+            )}
+            {(q.type === "radio" || q.type === "checkbox" || q.type === "dropdown") && (
+              <Row label="Options (one per line)">
+                <textarea
+                  value={(q.options || []).join("\n")}
+                  onChange={e => onUpdate({ options: e.target.value.split("\n").filter(x => x.trim()) })}
+                  rows={4}
+                  className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                />
+              </Row>
+            )}
+            <ConditionalLogicEditor q={q} otherQs={otherQs} onUpdate={onUpdate} />
+            <div className="mt-2 flex items-center gap-2">
+              <Label className="flex items-center gap-1.5 text-[11.5px] cursor-pointer">
+                <Checkbox checked={!!q.required} onCheckedChange={v => onUpdate({ required: !!v })} />
+                Required
+              </Label>
+              <div className="flex-1" />
+              <Button variant="destructive" size="xs" onClick={onRemove}>Delete</Button>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
@@ -510,30 +389,22 @@ function ConditionalLogicEditor({ q, otherQs, onUpdate }: {
   };
 
   return (
-    <div style={{ marginTop: 12, padding: 10, background: C.white, border: `1px solid ${C.lineSoft}`, borderRadius: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: enabled ? 10 : 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: F.mono, fontSize: 9.5, letterSpacing: "0.08em",
-            textTransform: "uppercase" as const, color: C.ink500 }}>Conditional logic</span>
-          {enabled && <span className="s-badge s-badge-warn">ON</span>}
+    <div className="mt-3 rounded-lg border border-border/60 bg-card p-2.5">
+      <div className={cn("flex items-center justify-between", enabled && "mb-2.5")}>
+        <div className="flex items-center gap-2">
+          <span className="label-quiet">Conditional logic</span>
+          {enabled && <Badge variant="destructive" className="rounded-sm px-1 py-px text-[9px] font-semibold tracking-wide">ON</Badge>}
         </div>
         {enabled ? (
-          <button type="button" onClick={toggle} className="s-btn-destructive">Remove</button>
+          <Button variant="destructive" size="xs" onClick={toggle}>Remove</Button>
         ) : (
-          <button type="button" onClick={toggle} disabled={!otherQs.length}
-            style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500,
-              color: C.ink900, background: "transparent",
-              border: `1px solid ${C.line}`,
-              borderRadius: 5, padding: "3px 8px", cursor: otherQs.length ? "pointer" : "not-allowed",
-              opacity: otherQs.length ? 1 : 0.5,
-              transition: "background 0.14s, border-color 0.14s",
-            }}>+ Add rule</button>
+          <Button variant="outline" size="xs" onClick={toggle} disabled={!otherQs.length}>+ Add rule</Button>
         )}
       </div>
       {enabled && (
         <>
-          <div style={{ fontSize: 11, color: C.ink700, marginBottom: 8 }}>Show this only when…</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+          <div className="mb-2 text-[11px] text-foreground/80">Show this only when…</div>
+          <div className="grid grid-cols-1 gap-1.5">
             <StudioSelect value={s.questionId} onChange={v => {
               const nq = otherQs.find(x => x.id === v);
               const nop = (opsByType[nq?.type ?? ""]?.[0]?.[0] || "eq") as ShowIfOp;
@@ -567,19 +438,25 @@ function AddQuestion({ onAdd }: { onAdd: (type: string) => void }) {
   ];
   return (
     <div>
-      <button type="button" onClick={() => setOpen(!open)} style={{
-        width: "100%", padding: "10px 12px",
-        fontFamily: F.sans, fontSize: 12, fontWeight: 500,
-        color: C.ink900, background: "transparent",
-        border: `1.5px dashed ${C.ink300}`, borderRadius: 6, cursor: "pointer" }}>+ Add question</button>
+      <Button
+        variant="outline"
+        className="w-full border-dashed border-muted-foreground/40 text-xs font-medium"
+        onClick={() => setOpen(!open)}
+      >
+        + Add question
+      </Button>
       {open && (
-        <div className="s-add-grid" style={{ marginTop: 6, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4,
-          padding: 6, background: C.pillBg, borderRadius: 6 }}>
+        <div className="mt-1.5 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1.5 animate-fade-up">
           {types.map(([v, l]) => (
-            <button key={v} type="button" onClick={() => { onAdd(v); setOpen(false); }} className="s-pill" style={{
-              padding: "8px 10px", fontSize: 11.5, color: C.ink900, background: C.white,
-              border: `1px solid ${C.line}`, borderRadius: 5, cursor: "pointer",
-              textAlign: "left" as const, fontFamily: F.sans }}>{l}</button>
+            <Button
+              key={v}
+              variant="outline"
+              size="sm"
+              className="justify-start text-[11.5px]"
+              onClick={() => { onAdd(v); setOpen(false); }}
+            >
+              {l}
+            </Button>
           ))}
         </div>
       )}
@@ -629,25 +506,18 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
   ];
 
   return (
-    <div className="studio-panel" style={{ height: "100%", overflowY: "auto" as const,
-      background: C.panelBg, fontFamily: F.sans, containerType: "inline-size" as React.CSSProperties["containerType"],
-      containerName: "studio-panel" }}>
-      <StudioStyles />
+    <div className="h-full overflow-y-auto bg-sidebar font-sans [container-type:inline-size] [container-name:studio-panel]">
       {/* ─── Header ──────────────────────────────────────── */}
-      <div style={{ padding: "18px 20px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          width: 26, height: 26, borderRadius: 6, background: C.ink900,
-          color: C.paper, display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: F.sans, fontSize: 15, fontWeight: 700, letterSpacing: "-0.04em",
-        }}>T</div>
+      <div className="flex items-center gap-2.5 px-5 pt-4.5 pb-3">
+        <div className="flex size-[26px] items-center justify-center rounded-md bg-primary text-primary-foreground text-[15px] font-bold tracking-tighter">T</div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.ink900, letterSpacing: "-0.02em" }}>Tresta Studio</div>
-          <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.ink500, marginTop: 1, letterSpacing: "0.06em" }}>v0.5 · PREVIEW</div>
+          <div className="text-sm font-bold text-foreground tracking-tight">Tresta Studio</div>
+          <div className="mt-px font-mono text-[9.5px] text-muted-foreground tracking-wider">v0.5 · PREVIEW</div>
         </div>
       </div>
 
       {/* ─── Device toggle ───────────────────────────────── */}
-      <div style={{ padding: "0 20px 14px" }}>
+      <div className="px-5 pb-3.5">
         <Pills
           options={devices.map(d => ({ value: d.key, label: d.label }))}
           value={device}
@@ -656,32 +526,28 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
       </div>
 
       {/* ─── Remix / Reset ───────────────────────────────── */}
-      <div style={{ padding: "0 20px 6px", display: "flex", gap: 8 }}>
-        <button type="button" onClick={handleRandomize} className="s-pill" style={{
-          flex: 1, padding: "10px 0", fontFamily: F.sans, fontSize: 12.5, fontWeight: 600,
-          color: C.ink900, background: C.white, border: `1px solid ${C.line}`, borderRadius: 6, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          ↻ Remix
-        </button>
-        <button type="button" onClick={handleReset} className="s-pill" style={{
-          flex: 1, padding: "10px 0", fontFamily: F.sans, fontSize: 12.5, fontWeight: 600,
-          color: C.ink500, background: "transparent", border: `1px solid ${C.line}`, borderRadius: 6, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          ↺ Reset
-        </button>
+      <div className="flex gap-2 px-5 pb-1.5">
+        <Button variant="outline" className="flex-1 text-[12.5px] font-semibold" onClick={handleRandomize}>↻ Remix</Button>
+        <Button variant="ghost" className="flex-1 text-[12.5px] font-semibold text-muted-foreground" onClick={handleReset}>↺ Reset</Button>
       </div>
 
       {/* ─── Layout ──────────────────────────────────────── */}
       <SectionCollapsible title="Layout">
-        <div className="s-layout-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
+        <div className="studio-layout-grid mb-3.5 grid grid-cols-3 gap-1.5">
           {Object.keys(LAYOUT_PRESETS).map(id => (
-            <button key={id} type="button" onClick={() => applyLayoutPreset(formId, id)}
-              className="s-card"
-              style={{ padding: 6, border: draft.layoutPreset === id ? `1.5px solid ${C.ink900}` : `1px solid ${C.line}`,
-                borderRadius: 6, background: draft.layoutPreset === id ? C.white : "transparent", cursor: "pointer" }}>
+            <button
+              key={id}
+              type="button"
+              onClick={() => applyLayoutPreset(formId, id)}
+              className={cn(
+                "cursor-pointer rounded-md border p-1.5 transition-colors duration-150",
+                draft.layoutPreset === id
+                  ? "border-foreground bg-card"
+                  : "border-border bg-transparent hover:border-muted-foreground/40 hover:bg-card"
+              )}
+            >
               <MemoLayoutThumbnail kind={id} selected={draft.layoutPreset === id} />
-              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.ink700,
-                textAlign: "center" as const, marginTop: 4, letterSpacing: "0.04em" }}>
+              <div className="mt-1 text-center font-mono text-[9.5px] text-foreground/70 tracking-wide">
                 {LAYOUT_PRESETS[id].label}
               </div>
             </button>
@@ -712,7 +578,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
 
       {/* ─── House styles ────────────────────────────────── */}
       <SectionCollapsible title="House styles">
-        <div className="s-presets-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="studio-presets-grid grid grid-cols-2 gap-2">
           {Object.entries(STYLE_PRESETS).map(([k, p]) => (
             <MemoPresetCard key={k} k={k} p={p} selected={draft.preset === k}
               onClick={() => applyStylePreset(formId, k)} />
@@ -722,7 +588,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
 
       {/* ─── Community presets ────────────────────────────── */}
       <SectionCollapsible title="Community" tag="NEW" defaultOpen={false}>
-        <div className="s-presets-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="studio-presets-grid grid grid-cols-2 gap-2">
           {Object.entries(COMMUNITY_PRESETS).map(([k, p]) => (
             <MemoPresetCard key={k} k={k} p={p} selected={draft.preset === k}
               onClick={() => applyStylePreset(formId, k)} showAuthor />
@@ -812,10 +678,12 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
           <StudioTextInput value={draft.headline} onChange={v => setHeadline(formId, v)} />
         </Row>
         <Row label="Subhead">
-          <textarea value={draft.subhead} onChange={e => setSubhead(formId, e.target.value)} rows={3}
-            style={{ width: "100%", padding: "8px 10px", fontFamily: F.mono, fontSize: 12,
-              background: C.white, border: `1px solid ${C.line}`, borderRadius: 6, outline: "none",
-              resize: "vertical" as const }} />
+          <textarea
+            value={draft.subhead}
+            onChange={e => setSubhead(formId, e.target.value)}
+            rows={3}
+            className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          />
         </Row>
         <Row label="Brand name">
           <StudioTextInput value={draft.brandName} onChange={v => setBrandName(formId, v)} />
@@ -824,7 +692,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
 
       {/* ─── Questions & Logic ───────────────────────────── */}
       <SectionCollapsible title="Questions & Logic" tag={String(draft.questions.length)}>
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 12 }}>
+        <div className="mb-3 flex flex-col gap-2">
           {draft.questions.map((q, i) => (
             <MemoQuestionRow key={q.id} q={q} index={i} total={draft.questions.length}
               questions={draft.questions}
@@ -852,7 +720,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
         }} />
       </SectionCollapsible>
 
-      <div style={{ height: 60 }} />
+      <div className="h-15" />
     </div>
   );
 });

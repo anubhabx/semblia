@@ -3,18 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  LayoutListIcon,
-  LayoutGridIcon,
-  PlusIcon,
-  SearchIcon,
-  MessageSquareTextIcon,
-  PuzzleIcon,
-  GlobeIcon,
-  LockIcon,
-  UsersIcon,
-  ArrowRightIcon,
-  XIcon,
-} from "lucide-react";
+  SquaresFour as LayoutGridIcon,
+  ListBullets as LayoutListIcon,
+  Plus as PlusIcon,
+  MagnifyingGlass as SearchIcon,
+  ChatText as MessageSquareTextIcon,
+  PuzzlePiece as PuzzleIcon,
+  Globe as GlobeIcon,
+  Lock as LockIcon,
+  Users as UsersIcon,
+  ArrowRight as ArrowRightIcon,
+  X as XIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
