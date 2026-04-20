@@ -21,6 +21,7 @@ import {
   Quotes as QuoteIcon,
 } from "@phosphor-icons/react";
 
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +30,6 @@ import { cn } from "@/lib/utils";
 import {
   type MockTestimonial,
   type ModerationStatus,
-  timeAgo,
 } from "@/lib/mock-data";
 
 // ── Status config ─────────────────────────────────────────────────────────────────
@@ -411,28 +411,28 @@ export function TestimonialDetail({
         >
           <div className="flex items-center gap-2">
             {isActionable && onApprove && (
-              <Button
+              <ActionButton
                 size="sm"
-                variant="outline"
-                className="flex-1 gap-1.5 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
+                tone="success"
+                className="flex-1 gap-1.5"
                 onClick={() => onApprove(t.id)}
               >
                 <CheckCircle2Icon className="size-3.5" />
                 Approve
                 {!isPage && <Kbd className="ml-auto">a</Kbd>}
-              </Button>
+              </ActionButton>
             )}
             {isActionable && onReject && (
-              <Button
+              <ActionButton
                 size="sm"
-                variant="outline"
-                className="flex-1 gap-1.5 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
+                tone="danger"
+                className="flex-1 gap-1.5"
                 onClick={() => onReject(t.id)}
               >
                 <XCircleIcon className="size-3.5" />
                 Reject
                 {!isPage && <Kbd className="ml-auto">r</Kbd>}
-              </Button>
+              </ActionButton>
             )}
             {onTogglePublish && (
               <Button

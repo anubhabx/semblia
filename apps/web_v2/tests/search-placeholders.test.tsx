@@ -40,7 +40,7 @@ describe("search placeholders", () => {
   });
 
   it("renders the testimonials search placeholder with an ellipsis glyph", async () => {
-    render(<TestimonialsClient projectId="launchpad" projectSlug="launchpad" />);
+    render(<TestimonialsClient projectId="launchpad" />);
 
     await screen.findByText("No testimonials yet");
 

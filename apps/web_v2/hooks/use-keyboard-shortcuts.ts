@@ -47,26 +47,29 @@ function normalizeKey(e: KeyboardEvent): string {
  * Automatically skips events when focus is in an input/textarea.
  */
 export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
-  const shortcutsRef = React.useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
+  const shortcutsRef = React.useRef(shortcuts)
 
   React.useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (isEditableTarget(e.target)) return;
+    shortcutsRef.current = shortcuts
+  }, [shortcuts])
 
-      const pressed = normalizeKey(e);
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (isEditableTarget(e.target)) return
 
-      for (const s of shortcutsRef.current) {
-        if (s.key.toLowerCase() === pressed.toLowerCase()) {
-          if (s.enabled && !s.enabled()) continue;
-          e.preventDefault();
-          s.action();
-          return;
+      const pressed = normalizeKey(e)
+
+      for (const shortcut of shortcutsRef.current) {
+        if (shortcut.key.toLowerCase() === pressed.toLowerCase()) {
+          if (shortcut.enabled && !shortcut.enabled()) continue
+          e.preventDefault()
+          shortcut.action()
+          return
         }
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [])
 }

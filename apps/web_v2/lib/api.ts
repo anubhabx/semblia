@@ -137,23 +137,27 @@ export async function apiGetTestimonials(
 }
 
 export async function apiApproveTestimonial(
-  _id: string
+  id: string
 ): Promise<{ success: boolean }> {
+  void id;
   await sleep(320);
   return { success: true };
 }
 
 export async function apiRejectTestimonial(
-  _id: string
+  id: string
 ): Promise<{ success: boolean }> {
+  void id;
   await sleep(320);
   return { success: true };
 }
 
 export async function apiPublishTestimonial(
-  _id: string,
-  _published: boolean
+  id: string,
+  published: boolean
 ): Promise<{ success: boolean }> {
+  void id;
+  void published;
   await sleep(280);
   return { success: true };
 }

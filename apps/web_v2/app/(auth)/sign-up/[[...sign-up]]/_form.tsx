@@ -51,7 +51,6 @@ export function SignUpForm() {
 
   useEffect(() => {
     if (!resendCooldown) return;
-    setResendTimer(30);
     const interval = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
@@ -124,6 +123,7 @@ export function SignUpForm() {
       setError(errMsg(sendErr));
       return;
     }
+    setResendTimer(30);
     setResendCooldown(true);
   }
 

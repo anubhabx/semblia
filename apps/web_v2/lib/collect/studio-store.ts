@@ -12,7 +12,6 @@ import {
   buildDefaultStudioConfig,
   DEFAULT_LAYOUT,
   LAYOUT_PRESETS,
-  STYLE_PRESETS,
   ALL_PRESETS,
   randomTokens,
 } from "./studio-presets";
@@ -207,7 +206,8 @@ export const useStudioStore = create<StudioStore>()(
       deleteForm: (slug, formId) => {
         set((s) => {
           const forms = (s.formsByProject[slug] ?? []).filter((f) => f.id !== formId);
-          const { [formId]: _removed, ...remaining } = s.snapshots;
+          const remaining = { ...s.snapshots };
+          delete remaining[formId];
           return {
             formsByProject: { ...s.formsByProject, [slug]: forms },
             snapshots: remaining,

@@ -5,18 +5,10 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import type { FormConfigEntry } from "@/lib/collect/studio-types";
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
 import {
   PlusIcon,
   PencilIcon,
@@ -163,28 +155,31 @@ const FormItem = React.memo(function FormItem({
 
       {/* Actions — always visible */}
       <div className="mt-3 flex flex-wrap items-center gap-1">
-        <Button
+        <ActionButton
+          tone="neutral"
           variant="ghost"
           size="xs"
-          className="gap-1 text-muted-foreground hover:text-foreground"
+          className="gap-1"
           onClick={onEdit}
         >
           <PencilIcon className="size-3" aria-hidden="true" />
           Edit
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
+          tone="neutral"
           variant="ghost"
           size="xs"
-          className="gap-1 text-muted-foreground hover:text-foreground"
+          className="gap-1"
           onClick={onDuplicate}
         >
           <CopyIcon className="size-3" aria-hidden="true" />
           Duplicate
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
+          tone={entry.isActive ? "warning" : "success"}
           variant="ghost"
           size="xs"
-          className="gap-1 text-muted-foreground hover:text-foreground"
+          className="gap-1"
           onClick={onToggleActive}
         >
           {entry.isActive ? (
@@ -193,35 +188,34 @@ const FormItem = React.memo(function FormItem({
             <PlayIcon className="size-3" aria-hidden="true" />
           )}
           {entry.isActive ? "Pause" : "Activate"}
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
+          tone="danger"
           variant="ghost"
           size="xs"
-          className="gap-1 text-destructive/70 hover:text-destructive"
+          className="gap-1"
           onClick={() => setDeleteOpen(true)}
         >
           <TrashIcon className="size-3" aria-hidden="true" />
           Delete
-        </Button>
+        </ActionButton>
       </div>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete &ldquo;{entry.name}&rdquo;?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove this form configuration and its
-              draft. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        intent="danger"
+        title={<>Delete &ldquo;{entry.name}&rdquo;?</>}
+        description={
+          <>
+            This permanently removes this form configuration and its draft.
+            This action cannot be undone.
+          </>
+        }
+        cancelLabel="Keep form"
+        confirmLabel="Delete form"
+        onConfirm={onDelete}
+      />
     </div>
   );
 });
@@ -304,8 +298,6 @@ export function FormConfigList({ slug }: { slug: string }) {
     },
     [slug, updateFormEntry]
   );
-
-  const activeForms = normalizedForms.filter((f) => f.isActive).length;
 
   // A/B weight summary
   const totalActiveWeight = normalizedForms

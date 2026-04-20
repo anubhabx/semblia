@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useStudioStore } from "@/lib/collect/studio-store";
 import { StudioControls } from "@/components/collect/studio/studio-controls";
 
@@ -7,6 +7,12 @@ const SLUG = "test-project";
 let formId: string;
 
 beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: vi.fn(),
+    writable: true,
+  });
+
   // Reset store between tests
   useStudioStore.setState({
     formsByProject: {},
@@ -54,13 +60,19 @@ describe("<StudioControls /> — rendering", () => {
 });
 
 describe("<StudioControls /> — select components", () => {
+  function getSelectTrigger(value: string) {
+    const valueNode = screen.getByText(value);
+    const trigger = valueNode.closest("[data-slot='select-trigger']");
+    expect(trigger).toBeTruthy();
+    return trigger as HTMLElement;
+  }
+
   it("renders Flow select with correct options", () => {
     render(<StudioControls formId={formId} />);
-    const flowSelect = screen.getByDisplayValue("All at once");
-    expect(flowSelect).toBeInTheDocument();
-    expect(flowSelect.tagName).toBe("SELECT");
+    const flowSelect = getSelectTrigger("All at once");
+    fireEvent.click(flowSelect);
 
-    const options = within(flowSelect as HTMLElement).getAllByRole("option");
+    const options = screen.getAllByRole("option");
     expect(options).toHaveLength(4);
     expect(options.map((o) => o.textContent)).toEqual([
       "All at once",
@@ -72,10 +84,10 @@ describe("<StudioControls /> — select components", () => {
 
   it("renders Container select with correct options", () => {
     render(<StudioControls formId={formId} />);
-    const containerSelect = screen.getByDisplayValue("Boxed");
-    expect(containerSelect).toBeInTheDocument();
+    const containerSelect = getSelectTrigger("Boxed");
+    fireEvent.click(containerSelect);
 
-    const options = within(containerSelect as HTMLElement).getAllByRole("option");
+    const options = screen.getAllByRole("option");
     expect(options.map((o) => o.textContent)).toEqual([
       "Boxed",
       "Split",
@@ -86,8 +98,9 @@ describe("<StudioControls /> — select components", () => {
 
   it("updates store when Flow select changes", () => {
     render(<StudioControls formId={formId} />);
-    const flowSelect = screen.getByDisplayValue("All at once");
-    fireEvent.change(flowSelect, { target: { value: "stepped" } });
+    const flowSelect = getSelectTrigger("All at once");
+    fireEvent.click(flowSelect);
+    fireEvent.click(screen.getByRole("option", { name: "Stepped" }));
 
     const snap = useStudioStore.getState().snapshots[formId];
     expect(snap?.draft.layout.flow).toBe("stepped");
@@ -125,14 +138,6 @@ describe("<StudioControls /> — section collapse/expand", () => {
     expect(collapseEl!.hasAttribute("data-closed")).toBe(true);
   });
 });
-
-function getQuestionCollapses(container: HTMLElement) {
-  // Question row collapses are .studio-collapse elements that are NOT inside a section
-  // (section collapses live in border-t containers, question collapses live in cards)
-  return Array.from(container.querySelectorAll(".studio-collapse")).filter(
-    (el) => el.closest(".studio-collapse")?.parentElement?.querySelector(".studio-collapse-inner") === el.querySelector(".studio-collapse-inner")
-  );
-}
 
 describe("<StudioControls /> — question row accordion", () => {
   it("renders all question rows collapsed by default", () => {

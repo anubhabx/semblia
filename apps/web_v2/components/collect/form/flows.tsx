@@ -271,14 +271,14 @@ export function FlowCards({ questions, stickyProgress }: FlowProps) {
 /* ─── FlowConvo — progressive reveal ─────────────────────────────────────── */
 
 export function FlowConvo({ questions }: FlowProps) {
-  const { values, errors, submit } = useFormContext();
+  const { values } = useFormContext();
   const [revealed, setRevealed] = React.useState(1);
   const shown = questions.slice(0, revealed);
   const isComplete = revealed >= questions.length;
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   const tryRevealNext = React.useCallback(
-    (qId: string, qType: StudioQuestion["type"], required: boolean) => {
+    (qId: string) => {
       const q = questions.find((q) => q.id === qId);
       if (!q) return;
       const err = validateQuestion(q, values[qId]);
@@ -298,7 +298,7 @@ export function FlowConvo({ questions }: FlowProps) {
     const curr = values[lastShown.id];
     if (curr !== prev && curr !== null && curr !== undefined) {
       const timer = setTimeout(() => {
-        tryRevealNext(lastShown.id, lastShown.type, lastShown.required);
+        tryRevealNext(lastShown.id);
       }, 400);
       return () => clearTimeout(timer);
     }
@@ -321,7 +321,6 @@ export function FlowConvo({ questions }: FlowProps) {
     <div style={{ display: "flex", flexDirection: "column", gap }}>
       {shown.map((q, i) => {
         const isLast = i === shown.length - 1;
-        const hasValue = values[q.id] !== undefined && values[q.id] !== null && values[q.id] !== "";
         const canContinue = isLast && !isComplete;
         return (
           <div
@@ -335,7 +334,7 @@ export function FlowConvo({ questions }: FlowProps) {
             {canContinue && !AUTO_ADVANCE_TYPES.includes(q.type) && (
               <button
                 type="button"
-                onClick={() => tryRevealNext(q.id, q.type, q.required)}
+                onClick={() => tryRevealNext(q.id)}
                 style={{
                   display: "block",
                   marginTop: 12,

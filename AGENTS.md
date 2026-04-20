@@ -55,6 +55,7 @@ Hard constraints:
 - In `apps/web_v2`, use `apps/api_v2` endpoints only.
 - In Next.js 16 routes/layouts, `params` is a Promise: always `await props.params`.
 - Typecheck `web_v2` with `cd apps/web_v2 && pnpm exec tsc --noEmit`.
+- Ensure linting passes with `cd apps/web_v2 && pnpm exec eslint . --ext .ts,.tsx`.
 
 Next.js warning:
 
@@ -67,7 +68,7 @@ When testing the application the test user credentials are as follows:
 email: test+clerk_test@tresta.app
 password: Password@123
 
-For creaing a new user, use any email appened with +clerk_test@tresta.app. Use the common test password "Password@123". OTP for this test user format is always 424242.
+For creating a new user, use any email appended with +clerk_test@tresta.app. Use the common test password "Password@123". OTP for this test user format is always 424242.
 
 ## graphify
 

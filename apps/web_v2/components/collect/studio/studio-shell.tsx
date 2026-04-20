@@ -28,6 +28,7 @@ import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import { StudioControls } from "./studio-controls";
 import { StudioPreview } from "./studio-preview";
 import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { cn } from "@/lib/utils";
 
 /* ─── Hook: track if we're above `lg` breakpoint ─────────────────────────── */
@@ -57,6 +58,7 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
   const [mobileTab, setMobileTab] = React.useState<MobileTab>("preview");
   // Desktop: whether the sidebar is collapsed
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
 
   // ─── Granular selectors — avoid full-store subscription ────────────────
   const dirty = useStudioStore((s) => {
@@ -105,13 +107,16 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
   const handleClose = React.useCallback(() => {
     const snap = useStudioStore.getState().snapshots[formId];
     if (snap && isStudioDirty(snap)) {
-      const confirmed = window.confirm(
-        "You have unsaved changes. Are you sure you want to leave?",
-      );
-      if (!confirmed) return;
+      setLeaveConfirmOpen(true);
+      return;
     }
     router.push(`/projects/${slug}/collect`);
   }, [router, slug, formId]);
+
+  const handleConfirmLeave = React.useCallback(() => {
+    setLeaveConfirmOpen(false);
+    router.push(`/projects/${slug}/collect`);
+  }, [router, slug]);
 
   // ─── Keyboard shortcuts ───────────────────────────────────────────────
   React.useEffect(() => {
@@ -142,6 +147,17 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
       tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col bg-background outline-none"
     >
+      <ConfirmationDialog
+        open={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        intent="warning"
+        size="sm"
+        title="Leave studio without saving?"
+        description="You have unsaved changes in this form. Leaving now will discard them."
+        cancelLabel="Keep editing"
+        confirmLabel="Leave anyway"
+        onConfirm={handleConfirmLeave}
+      />
       {/* Google Fonts for studio preview — React 19 hoists to <head> */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link

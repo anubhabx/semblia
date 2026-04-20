@@ -21,6 +21,7 @@ import {
   type MockTestimonial,
   type ModerationStatus,
 } from "@/lib/mock-data";
+import { ActionButton } from "@/components/ui/action-button";
 
 // ── Status config (single source of truth) ────────────────────────────────────
 
@@ -246,22 +247,26 @@ export function ModerationItem({
         )}
 
         <div className="mt-2 flex items-center gap-1.5">
-          <button
+          <ActionButton
             onClick={() => onApprove(t.id)}
             disabled={isResolving}
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-all duration-150 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
+            tone="success"
+            size="xs"
+            className="gap-1 text-[10px]"
           >
             <CheckIcon className="size-3" />
             Approve
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => onReject(t.id)}
             disabled={isResolving}
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-all duration-150 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
+            tone="danger"
+            size="xs"
+            className="gap-1 text-[10px]"
           >
             <XIcon className="size-3" />
             Reject
-          </button>
+          </ActionButton>
           <span className="ml-auto text-[9px] tabular-nums text-muted-foreground">
             {timeAgo(t.createdAt)}
           </span>

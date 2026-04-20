@@ -26,14 +26,14 @@ export function useAnimatedStep<T>(initial: T, exitDuration = 180) {
   const [activeStep, setActiveStep] = useState<T>(initial);
   const [isLeaving, setIsLeaving] = useState(false);
   const [direction, setDirection] = useState<Direction>("forward");
-  const hasTransitioned = useRef(false);
+  const [hasTransitioned, setHasTransitioned] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const go = useCallback(
     (next: T, dir: Direction = "forward") => {
       if (isLeaving) return;
       if (timerRef.current) clearTimeout(timerRef.current);
-      hasTransitioned.current = true;
+      setHasTransitioned(true);
       setDirection(dir);
       setIsLeaving(true);
       timerRef.current = setTimeout(() => {
@@ -50,6 +50,6 @@ export function useAnimatedStep<T>(initial: T, exitDuration = 180) {
     direction,
     go,
     /** True only before the first `go()` call — use for initial mount animation. */
-    isFirstRender: !hasTransitioned.current,
+    isFirstRender: !hasTransitioned,
   };
 }

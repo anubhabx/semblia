@@ -36,7 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 
 /* ─── Shared small primitives ─────────────────────────────────────────────── */
 
@@ -159,15 +158,6 @@ function StudioSelect<T extends string>({ value, onChange, options }: {
   );
 }
 
-function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <Label className="flex items-center justify-between rounded-lg border border-border bg-card px-2.5 py-2 text-[11.5px] cursor-pointer">
-      {label}
-      <Switch size="sm" checked={value} onCheckedChange={onChange} />
-    </Label>
-  );
-}
-
 function Pills<T extends string>({
   options,
   value,
@@ -262,8 +252,8 @@ function LayoutThumbnail({ kind, selected }: { kind: string; selected: boolean }
 
 /* ─── Style preset card ───────────────────────────────────────────────────── */
 
-function PresetCard({ k, p, selected, onClick, showAuthor }: {
-  k: string; p: { label: string; sub: string; tokens: DesignTokens; author?: string; likes?: number };
+function PresetCard({ p, selected, onClick, showAuthor }: {
+  p: { label: string; sub: string; tokens: DesignTokens; author?: string; likes?: number };
   selected: boolean; onClick: () => void; showAuthor?: boolean;
 }) {
   return (
@@ -586,7 +576,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
       <SectionCollapsible title="House styles">
         <div className="studio-presets-grid grid grid-cols-2 gap-2">
           {Object.entries(STYLE_PRESETS).map(([k, p]) => (
-            <MemoPresetCard key={k} k={k} p={p} selected={draft.preset === k}
+            <MemoPresetCard key={k} p={p} selected={draft.preset === k}
               onClick={() => applyStylePreset(formId, k)} />
           ))}
         </div>
@@ -596,7 +586,7 @@ export const StudioControls = React.memo(function StudioControls({ formId }: { f
       <SectionCollapsible title="Community" tag="NEW" defaultOpen={false}>
         <div className="studio-presets-grid grid grid-cols-2 gap-2">
           {Object.entries(COMMUNITY_PRESETS).map(([k, p]) => (
-            <MemoPresetCard key={k} k={k} p={p} selected={draft.preset === k}
+            <MemoPresetCard key={k} p={p} selected={draft.preset === k}
               onClick={() => applyStylePreset(formId, k)} showAuthor />
           ))}
         </div>

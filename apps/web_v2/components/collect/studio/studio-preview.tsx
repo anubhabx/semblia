@@ -6,12 +6,10 @@
  */
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { DeviceFrame } from "@/components/collect/device-frame";
 import type { StudioDevice } from "@/lib/collect/studio-types";
 import { useStudioStore } from "@/lib/collect/studio-store";
 import { TestimonialForm } from "@/components/collect/form";
-import { Monitor as MonitorIcon, DeviceTablet as TabletIcon, DeviceMobile as SmartphoneIcon } from "@phosphor-icons/react";
 
 /* ─── Device size map ─────────────────────────────────────────────────────── */
 
@@ -20,49 +18,6 @@ const DEVICE_DIMS: Record<StudioDevice, { w: number; h: number }> = {
   tablet: { w: 768, h: 1024 },
   mobile: { w: 393, h: 852 },
 };
-
-/* ─── Device switcher ─────────────────────────────────────────────────────── */
-
-function DeviceSwitcher({
-  device,
-  onChange,
-}: {
-  device: StudioDevice;
-  onChange: (d: StudioDevice) => void;
-}) {
-  const buttons: { id: StudioDevice; icon: React.ReactNode; label: string }[] = [
-    { id: "desktop", icon: <MonitorIcon className="size-4" aria-hidden="true" />, label: "Desktop" },
-    { id: "tablet", icon: <TabletIcon className="size-4" aria-hidden="true" />, label: "Tablet" },
-    { id: "mobile", icon: <SmartphoneIcon className="size-4" aria-hidden="true" />, label: "Mobile" },
-  ];
-
-  return (
-    <div
-      className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/40 p-0.5"
-      role="group"
-      aria-label="Preview device"
-    >
-      {buttons.map((b) => (
-        <button
-          key={b.id}
-          type="button"
-          onClick={() => onChange(b.id)}
-          aria-label={b.label}
-          aria-pressed={device === b.id}
-          className={cn(
-            "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-medium transition-all sm:px-2.5",
-            device === b.id
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {b.icon}
-          <span className="hidden sm:inline">{b.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /* ─── Scaled device frame wrapper ─────────────────────────────────────────── */
 

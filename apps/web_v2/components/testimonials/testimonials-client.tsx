@@ -14,6 +14,7 @@ import {
   Check as CheckIcon,
 } from "@phosphor-icons/react";
 
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -93,7 +94,6 @@ function TestimonialSkeleton() {
 
 interface TestimonialRowProps {
   t: MockTestimonial;
-  index: number;
   isSelected?: boolean;
   isBulkSelected?: boolean;
   bulkMode?: boolean;
@@ -105,7 +105,6 @@ interface TestimonialRowProps {
 
 function TestimonialRow({
   t,
-  index,
   isSelected,
   isBulkSelected,
   bulkMode,
@@ -143,7 +142,6 @@ function TestimonialRow({
             ? "bg-brand/[0.04]"
             : "hover:bg-muted/30"
       )}
-      aria-selected={isSelected}
     >
       {/* Checkbox / avatar */}
       {bulkMode ? (
@@ -205,30 +203,34 @@ function TestimonialRow({
       {!bulkMode && isActionable && (onInlineApprove || onInlineReject) && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
           {onInlineApprove && (
-            <button
+            <ActionButton
               onClick={(e) => {
                 e.stopPropagation();
                 onInlineApprove(t.id);
               }}
-              className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border transition-all duration-150 hover:bg-success/10 hover:text-success hover:ring-success/30 active:scale-[0.93]"
+              tone="success"
+              size="icon-sm"
+              className="rounded-md bg-muted"
               aria-label={`Approve ${t.authorName}`}
               title="Approve"
             >
               <CheckCircle2Icon className="size-3.5" />
-            </button>
+            </ActionButton>
           )}
           {onInlineReject && (
-            <button
+            <ActionButton
               onClick={(e) => {
                 e.stopPropagation();
                 onInlineReject(t.id);
               }}
-              className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border transition-all duration-150 hover:bg-destructive/8 hover:text-destructive hover:ring-destructive/30 active:scale-[0.93]"
+              tone="danger"
+              size="icon-sm"
+              className="rounded-md bg-muted"
               aria-label={`Reject ${t.authorName}`}
               title="Reject"
             >
               <XCircleIcon className="size-3.5" />
-            </button>
+            </ActionButton>
           )}
         </div>
       )}
@@ -331,8 +333,6 @@ function BulkToolbar({
 
 interface Props {
   projectId: string;
-  projectSlug: string;
-  totalCount?: number;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onInlineApprove?: (id: string) => void;
@@ -342,7 +342,6 @@ interface Props {
 
 export function TestimonialsClient({
   projectId,
-  projectSlug,
   selectedId,
   onSelect,
   onInlineApprove,
@@ -389,7 +388,7 @@ export function TestimonialsClient({
     };
   }, [projectId, status, sort, debouncedSearch, page]);
 
-  const items = result?.items ?? [];
+  const items = React.useMemo(() => result?.items ?? [], [result]);
 
   // Report visible item IDs for keyboard navigation
   React.useEffect(() => {
@@ -558,11 +557,10 @@ export function TestimonialsClient({
           <EmptyState filter={status} />
         ) : (
           <div className="divide-y divide-border/60 list-content-enter">
-            {items.map((t, i) => (
+            {items.map((t) => (
               <TestimonialRow
                 key={t.id}
                 t={t}
-                index={i}
                 isSelected={selectedId === t.id}
                 isBulkSelected={bulkSelected.has(t.id)}
                 bulkMode={bulkMode}

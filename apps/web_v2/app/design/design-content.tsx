@@ -155,14 +155,12 @@ import {
 // ── Icons ──────────────────────────────────────────────────────
 import {
   Info,
-  Warning as AlertTriangle,
   CheckCircle as CheckCircle2,
   XCircle,
   BellRinging as BellRing,
   CaretRight as ChevronRight,
   DotsThree as MoreHorizontal,
   Star,
-  Heart,
   TextB as Bold,
   TextItalic as Italic,
   TextUnderline as Underline,
@@ -171,12 +169,9 @@ import {
   TextAlignRight as AlignRight,
   Copy,
   Pencil,
-  Trash as Trash2,
   GearSix as Settings,
   User,
   SignOut as LogOut,
-  Envelope as Mail,
-  Phone,
   MagnifyingGlass as Search,
   Plus,
   DownloadSimple as Download,
@@ -1057,7 +1052,7 @@ export function DesignSystemContent() {
                   <CardHeader>
                     <CardTitle>Small Card</CardTitle>
                     <CardDescription>
-                      size="sm" reduces internal padding.
+                      size=&ldquo;sm&rdquo; reduces internal padding.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1295,7 +1290,7 @@ export function DesignSystemContent() {
                         <DialogTitle>Dialog Title</DialogTitle>
                         <DialogDescription>
                           This is the dialog description. It provides context
-                          about the dialog's purpose.
+                          about the dialog&apos;s purpose.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="py-2 text-sm text-muted-foreground">

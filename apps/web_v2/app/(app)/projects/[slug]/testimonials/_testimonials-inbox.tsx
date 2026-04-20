@@ -279,8 +279,6 @@ export function TestimonialsInbox({
         <div className="flex flex-1 flex-col min-w-0">
           <TestimonialsClient
             projectId={projectId}
-            projectSlug={projectSlug}
-            totalCount={totalCount}
             selectedId={selectedId}
             onSelect={handleSelect}
             onInlineApprove={handleInlineApprove}
