@@ -116,6 +116,11 @@
       "sourceType": "github",
       "computedHash": "746432275018adb16be89276afa95cd6f868a38598cf7075294973ce0e757919"
     },
+    "modern-best-practice-react-components": {
+      "source": "academind/ai-config",
+      "sourceType": "github",
+      "computedHash": "44bc7b360768e9c1f498b76efcf827cc6303842f7358fd3a5d44c6017bb568cc"
+    },
     "nestjs-best-practices": {
       "source": "kadajett/agent-nestjs-skills",
       "sourceType": "github",
@@ -130,6 +135,11 @@
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "04c1df896cc2c9ef824d618b95d21686c5b8e24e5cb32b3d6fe9d97d4b661536"
+    },
+    "nextjs-best-practices": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "3c40a7ea604cdbee772bd7b3efe59aafd6fedf62252a76d43b9f835a6adc92cd"
     },
     "optimize": {
       "source": "pbakaus/impeccable",
@@ -165,6 +175,16 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "c2b06cf395b04471bdd4cb07b71b49e3bce50800acdfa773a824d1c46d0661d3"
+    },
+    "react-component-architecture": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "computedHash": "1efc7d4774ceb431883cd5d19019d4c0fc96186dce2aec71a9c93dab8234c2d9"
+    },
+    "react-component-performance": {
+      "source": "dimillian/skills",
+      "sourceType": "github",
+      "computedHash": "6cb83a04cf770839b5da2385a7153cc2267c36c5573adfc38cf80934a24a6041"
     },
     "shape": {
       "source": "pbakaus/impeccable",
