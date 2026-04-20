@@ -6,7 +6,6 @@ import { useStudioStore } from "@/lib/collect/studio-store";
 import {
   STYLE_PRESETS,
   COMMUNITY_PRESETS,
-  ALL_PRESETS,
   LAYOUT_PRESETS,
   FONT_CHOICES,
 } from "@/lib/collect/studio-presets";

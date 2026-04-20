@@ -139,6 +139,11 @@ export const useStudioStore = create<StudioStore>()(
                 abWeight: 100,
                 createdAt: now,
                 updatedAt: now,
+                submissions: 142,
+                views: 1_830,
+                responseRate: 7.8,
+                avgRating: 4.6,
+                lastSubmissionAt: now - 3_600_000 * 2,
               },
             ],
           },
@@ -159,6 +164,11 @@ export const useStudioStore = create<StudioStore>()(
           abWeight: 0,
           createdAt: now,
           updatedAt: now,
+          submissions: 0,
+          views: 0,
+          responseRate: 0,
+          avgRating: 0,
+          lastSubmissionAt: null,
         };
         set((s) => ({
           formsByProject: {
@@ -197,6 +207,11 @@ export const useStudioStore = create<StudioStore>()(
           abWeight: 0,
           createdAt: now,
           updatedAt: now,
+          submissions: 0,
+          views: 0,
+          responseRate: 0,
+          avgRating: 0,
+          lastSubmissionAt: null,
         };
         set((s) => ({
           formsByProject: {
@@ -356,6 +371,11 @@ export const useStudioStore = create<StudioStore>()(
                 abWeight: 100,
                 createdAt: snap.savedAt ?? Date.now(),
                 updatedAt: snap.savedAt ?? Date.now(),
+                submissions: 0,
+                views: 0,
+                responseRate: 0,
+                avgRating: 0,
+                lastSubmissionAt: null,
               },
             ];
             snapshots[formId] = {

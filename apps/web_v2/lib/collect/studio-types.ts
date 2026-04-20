@@ -119,6 +119,16 @@ export interface FormConfigEntry {
   abWeight: number;
   createdAt: number;
   updatedAt: number;
+  /** Total form submissions received. */
+  submissions: number;
+  /** Total form impressions / views. */
+  views: number;
+  /** Submission-to-view conversion rate (0–100). */
+  responseRate: number;
+  /** Average star rating from submissions (0–5). */
+  avgRating: number;
+  /** Timestamp of the most recent submission, or null if none. */
+  lastSubmissionAt: number | null;
 }
 
 // ── Device preview ──────────────────────────────────────────────────────────
