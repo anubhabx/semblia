@@ -62,6 +62,20 @@ function timeAgo(ts: number | null): string {
   });
 }
 
+function normalizeEntryMetrics(entry: FormConfigEntry): FormConfigEntry {
+  return {
+    ...entry,
+    submissions: Number.isFinite(entry.submissions) ? entry.submissions : 0,
+    views: Number.isFinite(entry.views) ? entry.views : 0,
+    responseRate: Number.isFinite(entry.responseRate) ? entry.responseRate : 0,
+    avgRating: Number.isFinite(entry.avgRating) ? entry.avgRating : 0,
+    lastSubmissionAt:
+      typeof entry.lastSubmissionAt === "number" && Number.isFinite(entry.lastSubmissionAt)
+        ? entry.lastSubmissionAt
+        : null,
+  };
+}
+
 /* ─── Weight bar (A/B traffic indicator) ──────────────────────────────────── */
 
 function WeightBar({ weight, isActive }: { weight: number; isActive: boolean }) {
@@ -372,6 +386,10 @@ export function FormConfigList({ slug }: { slug: string }) {
   const updateFormEntry = useStudioStore((s) => s.updateFormEntry);
 
   const [hydrated, setHydrated] = React.useState(false);
+  const normalizedForms = React.useMemo(
+    () => forms.map(normalizeEntryMetrics),
+    [forms],
+  );
 
   // Ensure at least one form exists
   React.useEffect(() => {
@@ -415,16 +433,16 @@ export function FormConfigList({ slug }: { slug: string }) {
   );
 
   // Aggregate metrics
-  const totalSubmissions = forms.reduce((s, f) => s + f.submissions, 0);
-  const totalViews = forms.reduce((s, f) => s + f.views, 0);
+  const totalSubmissions = normalizedForms.reduce((s, f) => s + f.submissions, 0);
+  const totalViews = normalizedForms.reduce((s, f) => s + f.views, 0);
   const avgResponseRate =
-    forms.length > 0
-      ? forms.reduce((s, f) => s + f.responseRate, 0) / forms.length
+    normalizedForms.length > 0
+      ? normalizedForms.reduce((s, f) => s + f.responseRate, 0) / normalizedForms.length
       : 0;
-  const activeForms = forms.filter((f) => f.isActive).length;
+  const activeForms = normalizedForms.filter((f) => f.isActive).length;
 
   // A/B weight summary
-  const totalActiveWeight = forms
+  const totalActiveWeight = normalizedForms
     .filter((f) => f.isActive)
     .reduce((sum, f) => sum + f.abWeight, 0);
 
@@ -436,7 +454,7 @@ export function FormConfigList({ slug }: { slug: string }) {
           <h1 className="text-sm font-semibold tracking-tight text-foreground">
             Collection Forms
             <span className="ml-2 text-xs font-normal text-muted-foreground">
-              {forms.length} form{forms.length !== 1 ? "s" : ""}
+              {normalizedForms.length} form{normalizedForms.length !== 1 ? "s" : ""}
               {activeForms > 0 && (
                 <>
                   {" \u00b7 "}
@@ -448,7 +466,7 @@ export function FormConfigList({ slug }: { slug: string }) {
             </span>
           </h1>
         </div>
-        {forms.length > 0 && (
+        {normalizedForms.length > 0 && (
           <Button size="sm" className="gap-1.5 text-xs" onClick={handleCreate}>
             <PlusIcon className="size-3.5" aria-hidden="true" />
             New form
@@ -471,7 +489,7 @@ export function FormConfigList({ slug }: { slug: string }) {
               <FormCardSkeleton />
             </div>
           </div>
-        ) : forms.length === 0 ? (
+        ) : normalizedForms.length === 0 ? (
           <EmptyState onCreate={handleCreate} />
         ) : (
           <div className="space-y-5">
@@ -500,7 +518,7 @@ export function FormConfigList({ slug }: { slug: string }) {
             </div>
 
             {/* A/B weight warning */}
-            {forms.length > 1 &&
+            {normalizedForms.length > 1 &&
               totalActiveWeight !== 100 &&
               totalActiveWeight > 0 && (
                 <div
@@ -519,7 +537,7 @@ export function FormConfigList({ slug }: { slug: string }) {
               role="list"
               aria-label="Form configurations"
             >
-              {forms.map((entry, i) => (
+              {normalizedForms.map((entry, i) => (
                 <div key={entry.id} role="listitem">
                   <FormCard
                     entry={entry}

@@ -59,6 +59,7 @@ export function AuthField({
         required={required}
         maxLength={maxLength}
         disabled={disabled}
+        suppressHydrationWarning
         className={cn(authInputCls, inputClassName)}
       />
     </div>

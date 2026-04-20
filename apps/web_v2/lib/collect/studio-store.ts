@@ -80,6 +80,34 @@ function newFormId(): string {
   return `f_${Date.now()}_${_idCounter}`;
 }
 
+const DEFAULT_FORM_METRICS = {
+  submissions: 0,
+  views: 0,
+  responseRate: 0,
+  avgRating: 0,
+  lastSubmissionAt: null,
+} as const;
+
+function normalizeFormEntry(entry: FormConfigEntry): FormConfigEntry {
+  return {
+    ...entry,
+    submissions: Number.isFinite(entry.submissions)
+      ? entry.submissions
+      : DEFAULT_FORM_METRICS.submissions,
+    views: Number.isFinite(entry.views) ? entry.views : DEFAULT_FORM_METRICS.views,
+    responseRate: Number.isFinite(entry.responseRate)
+      ? entry.responseRate
+      : DEFAULT_FORM_METRICS.responseRate,
+    avgRating: Number.isFinite(entry.avgRating)
+      ? entry.avgRating
+      : DEFAULT_FORM_METRICS.avgRating,
+    lastSubmissionAt:
+      typeof entry.lastSubmissionAt === "number" && Number.isFinite(entry.lastSubmissionAt)
+        ? entry.lastSubmissionAt
+        : DEFAULT_FORM_METRICS.lastSubmissionAt,
+  };
+}
+
 function patchDraft(
   state: StudioStore,
   formId: string,
@@ -164,11 +192,7 @@ export const useStudioStore = create<StudioStore>()(
           abWeight: 0,
           createdAt: now,
           updatedAt: now,
-          submissions: 0,
-          views: 0,
-          responseRate: 0,
-          avgRating: 0,
-          lastSubmissionAt: null,
+          ...DEFAULT_FORM_METRICS,
         };
         set((s) => ({
           formsByProject: {
@@ -207,11 +231,7 @@ export const useStudioStore = create<StudioStore>()(
           abWeight: 0,
           createdAt: now,
           updatedAt: now,
-          submissions: 0,
-          views: 0,
-          responseRate: 0,
-          avgRating: 0,
-          lastSubmissionAt: null,
+          ...DEFAULT_FORM_METRICS,
         };
         set((s) => ({
           formsByProject: {
@@ -371,11 +391,7 @@ export const useStudioStore = create<StudioStore>()(
                 abWeight: 100,
                 createdAt: snap.savedAt ?? Date.now(),
                 updatedAt: snap.savedAt ?? Date.now(),
-                submissions: 0,
-                views: 0,
-                responseRate: 0,
-                avgRating: 0,
-                lastSubmissionAt: null,
+                ...DEFAULT_FORM_METRICS,
               },
             ];
             snapshots[formId] = {
@@ -390,6 +406,25 @@ export const useStudioStore = create<StudioStore>()(
           return { formsByProject, snapshots, device: "desktop" } as unknown as StudioStore;
         }
         return persisted as StudioStore;
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<StudioStore> | undefined;
+        const persistedFormsByProject =
+          (persisted?.formsByProject as Record<string, FormConfigEntry[]> | undefined) ??
+          currentState.formsByProject;
+
+        return {
+          ...currentState,
+          ...persisted,
+          formsByProject: Object.fromEntries(
+            Object.entries(persistedFormsByProject).map(([slug, entries]) => [
+              slug,
+              (entries ?? []).map(normalizeFormEntry),
+            ]),
+          ),
+          snapshots: persisted?.snapshots ?? currentState.snapshots,
+          device: currentState.device,
+        } as StudioStore;
       },
       partialize: (state) => ({
         formsByProject: state.formsByProject,

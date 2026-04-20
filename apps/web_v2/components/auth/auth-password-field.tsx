@@ -78,6 +78,7 @@ export function AuthPasswordField({
           autoComplete={autoComplete}
           required={required}
           disabled={disabled}
+          suppressHydrationWarning
           className={cn(authInputCls, "pr-10")}
         />
         <button
