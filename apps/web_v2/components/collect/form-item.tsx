@@ -12,7 +12,7 @@ import {
   CopyIcon,
   TrashIcon,
   PauseIcon,
-  PlayIcon
+  PlayIcon,
 } from "@phosphor-icons/react";
 import { InlineName } from "./inline-name";
 
@@ -55,19 +55,37 @@ export function FormItemSkeleton() {
 
 /* ─── Inline metric ──────────────────────────────────────────────────────── */
 
-function MetricRow({ views, submissions, rate, muted }: { views: number; submissions: number; rate: number; muted?: boolean }) {
+function MetricRow({
+  views,
+  submissions,
+  rate,
+  muted,
+}: {
+  views: number;
+  submissions: number;
+  rate: number;
+  muted?: boolean;
+}) {
   return (
-    <div className={cn(
-      "flex shrink-0 items-baseline gap-1 font-mono text-[11.5px] tracking-tight",
-      muted && "opacity-50",
-    )}>
-      <span className="font-semibold tabular-nums text-foreground">{fmtNum(views)}</span>
+    <div
+      className={cn(
+        "flex shrink-0 items-baseline gap-1 font-mono text-[11.5px] tracking-tight",
+        muted && "opacity-50",
+      )}
+    >
+      <span className="font-semibold tabular-nums text-foreground">
+        {fmtNum(views)}
+      </span>
       <span className="text-muted-foreground/60">visits</span>
       <span className="px-1 text-border">&middot;</span>
-      <span className="font-semibold tabular-nums text-foreground">{fmtNum(submissions)}</span>
+      <span className="font-semibold tabular-nums text-foreground">
+        {fmtNum(submissions)}
+      </span>
       <span className="text-muted-foreground/60">submissions</span>
       <span className="px-1 text-border">&middot;</span>
-      <span className="font-semibold tabular-nums text-foreground">{rate.toFixed(1)}%</span>
+      <span className="font-semibold tabular-nums text-foreground">
+        {rate.toFixed(1)}%
+      </span>
       <span className="text-muted-foreground/60">conversion</span>
     </div>
   );
@@ -107,10 +125,12 @@ export const FormItem = React.memo(function FormItem({
             onCommit={onRename}
           />
           {entry.description && (
-            <p className={cn(
-              "mt-0.5 truncate text-xs",
-              inactive ? "text-muted-foreground/50" : "text-muted-foreground",
-            )}>
+            <p
+              className={cn(
+                "mt-0.5 truncate text-xs",
+                inactive ? "text-muted-foreground/50" : "text-muted-foreground",
+              )}
+            >
               {entry.description}
             </p>
           )}
@@ -128,11 +148,23 @@ export const FormItem = React.memo(function FormItem({
       <div className="mt-3 flex items-center">
         {/* Primary + secondary grouped tight */}
         <div className="flex items-center gap-1">
-          <ActionButton tone="neutral" variant="ghost" size="xs" className="gap-1" onClick={onEdit}>
+          <ActionButton
+            tone="neutral"
+            variant="ghost"
+            size="xs"
+            className="gap-1"
+            onClick={onEdit}
+          >
             <PencilIcon className="size-3" aria-hidden="true" />
             Edit
           </ActionButton>
-          <ActionButton tone="neutral" variant="ghost" size="xs" className="gap-1" onClick={onDuplicate}>
+          <ActionButton
+            tone="neutral"
+            variant="ghost"
+            size="xs"
+            className="gap-1"
+            onClick={onDuplicate}
+          >
             <CopyIcon className="size-3" aria-hidden="true" />
             Duplicate
           </ActionButton>
@@ -178,8 +210,8 @@ export const FormItem = React.memo(function FormItem({
         title={<>Delete &ldquo;{entry.name}&rdquo;?</>}
         description={
           <>
-            This permanently removes this form configuration and its draft.
-            This action cannot be undone.
+            This permanently removes this form configuration and its draft. This
+            action cannot be undone.
           </>
         }
         cancelLabel="Keep form"

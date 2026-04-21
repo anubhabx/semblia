@@ -10,7 +10,12 @@ import {
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { projectInitials } from "@/lib/format";
-import { PROJECT_TYPE_LABELS, timeAgo, type MockProject, type ProjectVisibility } from "@/lib/mock-data";
+import {
+  PROJECT_TYPE_LABELS,
+  timeAgo,
+  type MockProject,
+  type ProjectVisibility,
+} from "@/lib/mock-data";
 
 // ── Visibility icons ───────────────────────────────────────────────────────────
 
@@ -46,10 +51,12 @@ export function ProjectRow({
     >
       <span
         className="flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white transition-shadow duration-200 group-hover:shadow-[0_2px_8px_var(--tw-shadow-color)]"
-        style={{
-          backgroundColor: project.brandColorPrimary ?? "var(--brand)",
-          "--tw-shadow-color": project.brandColorPrimary ?? "var(--brand)",
-        } as React.CSSProperties}
+        style={
+          {
+            backgroundColor: project.brandColorPrimary ?? "var(--brand)",
+            "--tw-shadow-color": project.brandColorPrimary ?? "var(--brand)",
+          } as React.CSSProperties
+        }
       >
         {initials}
       </span>

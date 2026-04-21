@@ -77,7 +77,7 @@ export async function apiGetProject(slug: string): Promise<MockProject | null> {
 
 export async function apiGetTestimonials(
   projectId: string,
-  filter: TestimonialsFilter = {}
+  filter: TestimonialsFilter = {},
 ): Promise<PaginatedResponse<MockTestimonial>> {
   await simulateLatency();
 
@@ -85,7 +85,7 @@ export async function apiGetTestimonials(
 
   if (filter.status && filter.status !== "ALL") {
     testimonials = testimonials.filter(
-      (t) => t.moderationStatus === filter.status
+      (t) => t.moderationStatus === filter.status,
     );
   }
 
@@ -100,16 +100,20 @@ export async function apiGetTestimonials(
         t.authorName.toLowerCase().includes(q) ||
         t.content.toLowerCase().includes(q) ||
         t.authorRole?.toLowerCase().includes(q) ||
-        t.authorCompany?.toLowerCase().includes(q)
+        t.authorCompany?.toLowerCase().includes(q),
     );
   }
 
   switch (filter.sort ?? "newest") {
     case "newest":
-      testimonials.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      testimonials.sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
       break;
     case "oldest":
-      testimonials.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      testimonials.sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      );
       break;
     case "rating_desc":
       testimonials.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -137,7 +141,7 @@ export async function apiGetTestimonials(
 }
 
 export async function apiApproveTestimonial(
-  id: string
+  id: string,
 ): Promise<{ success: boolean }> {
   void id;
   await sleep(320);
@@ -145,7 +149,7 @@ export async function apiApproveTestimonial(
 }
 
 export async function apiRejectTestimonial(
-  id: string
+  id: string,
 ): Promise<{ success: boolean }> {
   void id;
   await sleep(320);
@@ -154,7 +158,7 @@ export async function apiRejectTestimonial(
 
 export async function apiPublishTestimonial(
   id: string,
-  published: boolean
+  published: boolean,
 ): Promise<{ success: boolean }> {
   void id;
   void published;
@@ -164,7 +168,7 @@ export async function apiPublishTestimonial(
 
 export async function apiGetTestimonial(
   projectId: string,
-  testimonialId: string
+  testimonialId: string,
 ): Promise<MockTestimonial | null> {
   await simulateLatency();
   return getTestimonialById(projectId, testimonialId);

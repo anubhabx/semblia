@@ -1,10 +1,10 @@
-import * as React from "react"
+import * as React from "react";
 
 interface ProjectPageShellProps {
-  title: string
-  description?: React.ReactNode
-  headerAction?: React.ReactNode
-  children: React.ReactNode
+  title: string;
+  description?: React.ReactNode;
+  headerAction?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export function ProjectPageShell({
@@ -32,5 +32,5 @@ export function ProjectPageShell({
       </header>
       <div className="flex-1 px-6 py-8">{children}</div>
     </div>
-  )
+  );
 }

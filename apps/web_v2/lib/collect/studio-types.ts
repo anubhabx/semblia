@@ -19,14 +19,7 @@ export type QuestionType =
   | "dropdown"
   | "file";
 
-export type ShowIfOp =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "lt"
-  | "gte"
-  | "lte"
-  | "includes";
+export type ShowIfOp = "eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "includes";
 
 export interface ShowIfRule {
   questionId: string;

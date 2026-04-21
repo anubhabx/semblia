@@ -6,7 +6,7 @@ interface TestimonialsLayoutProps {
 }
 
 export default async function TestimonialsLayout({
-  children
+  children,
 }: TestimonialsLayoutProps) {
   return <>{children}</>;
 }

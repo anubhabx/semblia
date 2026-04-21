@@ -118,7 +118,11 @@ function ensurePreviewCss() {
   document.head.appendChild(style);
 }
 
-export const StudioPreview = React.memo(function StudioPreview({ formId }: { formId: string }) {
+export const StudioPreview = React.memo(function StudioPreview({
+  formId,
+}: {
+  formId: string;
+}) {
   const draft = useStudioStore((s) => s.snapshots[formId]?.draft);
   const device = useStudioStore((s) => s.device);
 
@@ -127,22 +131,40 @@ export const StudioPreview = React.memo(function StudioPreview({ formId }: { for
   if (!draft) return null;
 
   return (
-    <div className="studio-stage flex h-full flex-col" style={{ background: "var(--stage-bg, #eae7df)" }}>
+    <div
+      className="studio-stage flex h-full flex-col"
+      style={{ background: "var(--stage-bg, #eae7df)" }}
+    >
       {/* Stage chrome — live indicator + label */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 20px",
-        fontFamily: '"Geist Mono", ui-monospace, monospace',
-        fontSize: 10.5, letterSpacing: "0.06em", color: "var(--stage-chrome, #8d8b83)",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 20px",
+          fontFamily: '"Geist Mono", ui-monospace, monospace',
+          fontSize: 10.5,
+          letterSpacing: "0.06em",
+          color: "var(--stage-chrome, #8d8b83)",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span className="stage-live-dot" style={{
-            width: 7, height: 7, borderRadius: "50%",
-            background: "#4ade80", boxShadow: "0 0 6px #4ade8060",
-          }} />
+          <span
+            className="stage-live-dot"
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#4ade80",
+              boxShadow: "0 0 6px #4ade8060",
+            }}
+          />
           LIVE PREVIEW
         </div>
-        <span style={{ transition: "opacity 0.2s" }}>{device.toUpperCase()} · {DEVICE_DIMS[device].w}×{DEVICE_DIMS[device].h}</span>
+        <span style={{ transition: "opacity 0.2s" }}>
+          {device.toUpperCase()} · {DEVICE_DIMS[device].w}×
+          {DEVICE_DIMS[device].h}
+        </span>
       </div>
 
       {/* Stage area — warm paper background */}
@@ -153,11 +175,16 @@ export const StudioPreview = React.memo(function StudioPreview({ formId }: { for
       </div>
 
       {/* Stage tip */}
-      <div style={{
-        textAlign: "center" as const, padding: "8px 0 12px",
-        fontFamily: '"Geist Mono", ui-monospace, monospace',
-        fontSize: 10, color: "var(--stage-tip, #b8b7b1)", letterSpacing: "0.04em",
-      }}>
+      <div
+        style={{
+          textAlign: "center" as const,
+          padding: "8px 0 12px",
+          fontFamily: '"Geist Mono", ui-monospace, monospace',
+          fontSize: 10,
+          color: "var(--stage-tip, #b8b7b1)",
+          letterSpacing: "0.04em",
+        }}
+      >
         Changes apply instantly · Cmd+S to save
       </div>
     </div>

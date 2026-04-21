@@ -55,7 +55,10 @@ export function HelpFab() {
   }, [open]);
 
   return (
-    <div ref={ref} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+    <div
+      ref={ref}
+      className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2"
+    >
       {/* Menu items */}
       {open && (
         <div className="flex flex-col gap-1 help-fab-menu-enter">
@@ -64,7 +67,11 @@ export function HelpFab() {
               key={link.label}
               href={link.href}
               target={link.href.startsWith("mailto") ? undefined : "_blank"}
-              rel={link.href.startsWith("mailto") ? undefined : "noopener noreferrer"}
+              rel={
+                link.href.startsWith("mailto")
+                  ? undefined
+                  : "noopener noreferrer"
+              }
               className="flex items-center gap-2.5 rounded-lg bg-popover px-3.5 py-2.5 text-xs font-medium text-popover-foreground shadow-md ring-1 ring-foreground/[0.06] transition-all duration-150 hover:bg-muted/80 active:scale-[0.97] help-fab-item-enter"
               style={{
                 animationDelay: `${i * 50}ms`,
@@ -86,7 +93,7 @@ export function HelpFab() {
           "flex size-10 items-center justify-center rounded-full shadow-lg ring-1 ring-foreground/[0.06] transition-all duration-200",
           open
             ? "bg-foreground text-background rotate-0"
-            : "bg-popover text-muted-foreground hover:text-foreground hover:shadow-xl"
+            : "bg-popover text-muted-foreground hover:text-foreground hover:shadow-xl",
         )}
         aria-label={open ? "Close help menu" : "Help & resources"}
         aria-expanded={open}

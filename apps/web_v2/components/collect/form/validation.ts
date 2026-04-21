@@ -19,7 +19,8 @@ export function validateQuestion(q: StudioQuestion, value: unknown): string {
     case "stars":
     case "nps":
     case "emoji": {
-      if (value === null || value === undefined) return "Please make a selection.";
+      if (value === null || value === undefined)
+        return "Please make a selection.";
       return "";
     }
     case "radio":

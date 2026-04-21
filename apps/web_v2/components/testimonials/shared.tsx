@@ -63,7 +63,7 @@ export function StatusPill({ status }: { status: ModerationStatus }) {
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-        cfg.pill
+        cfg.pill,
       )}
     >
       <cfg.icon className="size-3 shrink-0" />
@@ -97,7 +97,7 @@ export function Stars({
               iconSize,
               i < rating
                 ? "fill-warning text-warning"
-                : "fill-muted text-muted"
+                : "fill-muted text-muted",
             )}
           />
         ))}
@@ -126,7 +126,7 @@ export function FeedRow({ t, slug, index, animate = true }: FeedRowProps) {
       href={`/projects/${slug}/testimonials/${t.id}`}
       className={cn(
         "group tactile flex gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-muted/40",
-        animate && "animate-fade-up"
+        animate && "animate-fade-up",
       )}
       style={
         animate
@@ -211,7 +211,7 @@ export function ModerationItem({
     <div
       className={cn(
         "flex items-start gap-2.5 rounded-lg px-3 py-2.5 transition-all duration-200 animate-fade-up",
-        isResolving && "opacity-40 pointer-events-none"
+        isResolving && "opacity-40 pointer-events-none",
       )}
       style={{
         animationDelay: `${80 + index * 60}ms`,
@@ -231,9 +231,7 @@ export function ModerationItem({
           className="group block"
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium truncate">
-              {t.authorName}
-            </span>
+            <span className="text-xs font-medium truncate">{t.authorName}</span>
             <StatusPill status={t.moderationStatus} />
           </div>
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">

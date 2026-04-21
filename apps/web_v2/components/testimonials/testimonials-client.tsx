@@ -89,10 +89,13 @@ export function TestimonialsClient({
   const [page, setPage] = React.useState(1);
 
   const [loading, setLoading] = React.useState(true);
-  const [result, setResult] = React.useState<PaginatedResponse<MockTestimonial> | null>(null);
+  const [result, setResult] =
+    React.useState<PaginatedResponse<MockTestimonial> | null>(null);
 
   // Bulk selection
-  const [bulkSelected, setBulkSelected] = React.useState<Set<string>>(new Set());
+  const [bulkSelected, setBulkSelected] = React.useState<Set<string>>(
+    new Set(),
+  );
   const bulkMode = bulkSelected.size > 0;
 
   const debouncedSearch = useDebounce(search, 300);
@@ -130,8 +133,7 @@ export function TestimonialsClient({
     onItemsChange?.(items.map((t) => t.id));
   }, [items, onItemsChange]);
 
-  const sortLabel =
-    SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
+  const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
 
   // Bulk toggle
   const handleBulkToggle = React.useCallback((id: string) => {
@@ -167,7 +169,8 @@ export function TestimonialsClient({
   // Select-all for current page
   const handleSelectAll = React.useCallback(() => {
     const actionable = items.filter(
-      (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
+      (t) =>
+        t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED",
     );
     const allSelected = actionable.every((t) => bulkSelected.has(t.id));
     if (allSelected) {
@@ -178,7 +181,7 @@ export function TestimonialsClient({
   }, [items, bulkSelected]);
 
   const hasActionable = items.some(
-    (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED"
+    (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED",
   );
 
   return (
@@ -186,7 +189,10 @@ export function TestimonialsClient({
       {/* ── Filter + search bar — sits below the sticky page header (h-14 = 56px) ── */}
       <div className="sticky top-14 z-10 border-b border-border bg-background/95 backdrop-blur-sm">
         {/* Status tabs */}
-        <div className="flex items-center gap-0 overflow-x-auto px-6" style={{ scrollbarWidth: 'none' }}>
+        <div
+          className="flex items-center gap-0 overflow-x-auto px-6"
+          style={{ scrollbarWidth: "none" }}
+        >
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
@@ -195,7 +201,7 @@ export function TestimonialsClient({
                 "shrink-0 border-b-2 px-3 py-3 text-xs font-medium transition-colors duration-150",
                 status === tab.key
                   ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
               )}
               aria-current={status === tab.key ? "page" : undefined}
             >
@@ -228,7 +234,11 @@ export function TestimonialsClient({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="xs" className="gap-1.5 text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="xs"
+                className="gap-1.5 text-muted-foreground"
+              >
                 <FilterIcon className="size-3 shrink-0" />
                 {sortLabel}
                 <ChevronDownIcon className="size-3 shrink-0" />
@@ -321,25 +331,28 @@ export function TestimonialsClient({
                 <PaginationPrevious
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   aria-disabled={!result.hasPrev}
-                  className={cn(!result.hasPrev && "pointer-events-none opacity-40")}
+                  className={cn(
+                    !result.hasPrev && "pointer-events-none opacity-40",
+                  )}
                 />
               </PaginationItem>
 
-              {buildPageNumbers(result.page, result.totalPages).map((item, i) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${i}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <PaginationLink
-                      isActive={item === result.page}
-                      onClick={() => setPage(item)}
-                    >
-                      {item}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
+              {buildPageNumbers(result.page, result.totalPages).map(
+                (item, i) =>
+                  item === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        isActive={item === result.page}
+                        onClick={() => setPage(item)}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
               )}
 
               <PaginationItem>
@@ -348,7 +361,9 @@ export function TestimonialsClient({
                     setPage((p) => Math.min(result.totalPages, p + 1))
                   }
                   aria-disabled={!result.hasNext}
-                  className={cn(!result.hasNext && "pointer-events-none opacity-40")}
+                  className={cn(
+                    !result.hasNext && "pointer-events-none opacity-40",
+                  )}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -358,4 +373,3 @@ export function TestimonialsClient({
     </div>
   );
 }
-

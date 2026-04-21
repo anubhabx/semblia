@@ -23,7 +23,8 @@ export default async function WidgetsPage(props: {
       title="Widgets"
       description={
         <>
-          {project._count.widgets} widget{project._count.widgets !== 1 ? "s" : ""} - {project.name}
+          {project._count.widgets} widget
+          {project._count.widgets !== 1 ? "s" : ""} - {project.name}
         </>
       }
     >

@@ -1,12 +1,12 @@
-import * as React from "react"
+import * as React from "react";
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-type ActionTone = "neutral" | "success" | "warning" | "danger"
+type ActionTone = "neutral" | "success" | "warning" | "danger";
 
 interface ActionButtonProps extends React.ComponentProps<typeof Button> {
-  tone?: ActionTone
+  tone?: ActionTone;
 }
 
 const toneClasses: Record<ActionTone, string> = {
@@ -17,7 +17,7 @@ const toneClasses: Record<ActionTone, string> = {
     "text-muted-foreground hover:border-warning/35 hover:bg-warning/10 hover:text-warning",
   danger:
     "text-muted-foreground hover:border-destructive/30 hover:bg-destructive/6 hover:text-destructive",
-}
+};
 
 function ActionButton({
   tone = "neutral",
@@ -31,7 +31,7 @@ function ActionButton({
       className={cn("active:scale-[0.97]", toneClasses[tone], className)}
       {...props}
     />
-  )
+  );
 }
 
-export { ActionButton }
+export { ActionButton };

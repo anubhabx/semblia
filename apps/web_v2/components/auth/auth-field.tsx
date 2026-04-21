@@ -6,7 +6,7 @@ export const authInputCls = cn(
   "text-sm text-foreground placeholder:text-muted-foreground/60",
   "focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand/40",
   "transition-all duration-150",
-  "auth-input-focus"
+  "auth-input-focus",
 );
 
 interface AuthFieldProps {

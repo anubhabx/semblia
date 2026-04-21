@@ -11,7 +11,11 @@ interface WelcomeStepProps {
   onSkip: () => void;
 }
 
-export function WelcomeStep({ firstName, onContinue, onSkip }: WelcomeStepProps) {
+export function WelcomeStep({
+  firstName,
+  onContinue,
+  onSkip,
+}: WelcomeStepProps) {
   return (
     <div>
       <div className="mb-8">

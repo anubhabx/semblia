@@ -19,7 +19,7 @@ export function AuthBackBtn({
       className={cn(
         "flex items-center gap-1.5 text-[13px] text-muted-foreground",
         "hover:text-foreground transition-colors duration-150 auth-btn",
-        className
+        className,
       )}
     >
       <ArrowLeft size={13} />

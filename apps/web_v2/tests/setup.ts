@@ -12,7 +12,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-if (typeof (globalThis as unknown as { ResizeObserver?: unknown }).ResizeObserver === "undefined") {
+if (
+  typeof (globalThis as unknown as { ResizeObserver?: unknown })
+    .ResizeObserver === "undefined"
+) {
   class ResizeObserverMock {
     observe() {}
     unobserve() {}
@@ -36,7 +39,11 @@ if (typeof window !== "undefined" && !window.matchMedia) {
     }) as unknown as MediaQueryList;
 }
 
-if (typeof (globalThis as unknown as { structuredClone?: unknown }).structuredClone === "undefined") {
-  (globalThis as unknown as { structuredClone: <T>(v: T) => T }).structuredClone =
-    <T>(v: T): T => JSON.parse(JSON.stringify(v));
+if (
+  typeof (globalThis as unknown as { structuredClone?: unknown })
+    .structuredClone === "undefined"
+) {
+  (
+    globalThis as unknown as { structuredClone: <T>(v: T) => T }
+  ).structuredClone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 }

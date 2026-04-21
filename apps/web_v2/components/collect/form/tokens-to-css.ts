@@ -41,36 +41,59 @@ function fieldRadius(t: DesignTokens): string {
 }
 
 function fieldPad(t: DesignTokens): string {
-  const v = t.density === "compact" ? 8 : t.density === "cozy" ? 14 : t.density === "airy" ? 18 : 11;
+  const v =
+    t.density === "compact"
+      ? 8
+      : t.density === "cozy"
+        ? 14
+        : t.density === "airy"
+          ? 18
+          : 11;
   return `${v}px`;
 }
 
 function fieldGap(t: DesignTokens): string {
-  const v = t.density === "compact" ? 16 : t.density === "cozy" ? 22 : t.density === "airy" ? 28 : 20;
+  const v =
+    t.density === "compact"
+      ? 16
+      : t.density === "cozy"
+        ? 22
+        : t.density === "airy"
+          ? 28
+          : 20;
   return `${v}px`;
 }
 
 function containerShadow(t: DesignTokens): string {
   switch (t.shadow) {
-    case "sm":   return `0 2px 8px ${hexAlpha(t.ink, 0.08)}`;
-    case "soft": return `0 8px 32px ${hexAlpha(t.ink, 0.06)}`;
-    case "hard": return `5px 5px 0 ${t.ink}`;
-    case "glow": return `0 0 40px ${hexAlpha(t.accent, 0.15)}`;
-    default:     return "none";
+    case "sm":
+      return `0 2px 8px ${hexAlpha(t.ink, 0.08)}`;
+    case "soft":
+      return `0 8px 32px ${hexAlpha(t.ink, 0.06)}`;
+    case "hard":
+      return `5px 5px 0 ${t.ink}`;
+    case "glow":
+      return `0 0 40px ${hexAlpha(t.accent, 0.15)}`;
+    default:
+      return "none";
   }
 }
 
 function btnShadow(t: DesignTokens): string {
   switch (t.shadow) {
-    case "hard": return `3px 3px 0 ${t.ink}`;
-    case "soft": return `0 4px 14px ${hexAlpha(t.accent, 0.3)}`;
-    case "glow": return `0 0 20px ${hexAlpha(t.accent, 0.4)}`;
-    default:     return "none";
+    case "hard":
+      return `3px 3px 0 ${t.ink}`;
+    case "soft":
+      return `0 4px 14px ${hexAlpha(t.accent, 0.3)}`;
+    case "glow":
+      return `0 0 20px ${hexAlpha(t.accent, 0.4)}`;
+    default:
+      return "none";
   }
 }
 
 function btnRadius(t: DesignTokens): string {
-  if (t.buttonStyle === "pill")  return "999px";
+  if (t.buttonStyle === "pill") return "999px";
   if (t.buttonStyle === "block") return "0px";
   return `${t.radius}px`;
 }
@@ -79,51 +102,51 @@ function btnRadius(t: DesignTokens): string {
 
 export function tokensToCssVars(t: DesignTokens): React.CSSProperties {
   return {
-    "--f-bg":           t.bg,
-    "--f-surface":      t.surface,
-    "--f-ink":          t.ink,
-    "--f-ink-soft":     t.inkSoft,
-    "--f-line":         t.line,
-    "--f-accent":       t.accent,
-    "--f-accent-ink":   t.accentInk,
+    "--f-bg": t.bg,
+    "--f-surface": t.surface,
+    "--f-ink": t.ink,
+    "--f-ink-soft": t.inkSoft,
+    "--f-line": t.line,
+    "--f-accent": t.accent,
+    "--f-accent-ink": t.accentInk,
     // alpha variants (pre-computed, avoids repeating hexAlpha in field components)
-    "--f-surface-60":   hexAlpha(t.surface, 0.6),
-    "--f-line-50":      hexAlpha(t.line, 0.5),
-    "--f-line-30":      hexAlpha(t.line, 0.3),
-    "--f-ink-soft-50":  hexAlpha(t.inkSoft, 0.5),
-    "--f-ink-soft-30":  hexAlpha(t.inkSoft, 0.3),
-    "--f-accent-08":    hexAlpha(t.accent, 0.08),
+    "--f-surface-60": hexAlpha(t.surface, 0.6),
+    "--f-line-50": hexAlpha(t.line, 0.5),
+    "--f-line-30": hexAlpha(t.line, 0.3),
+    "--f-ink-soft-50": hexAlpha(t.inkSoft, 0.5),
+    "--f-ink-soft-30": hexAlpha(t.inkSoft, 0.3),
+    "--f-accent-08": hexAlpha(t.accent, 0.08),
     "--f-accent-ink-80": hexAlpha(t.accentInk, 0.8),
     // typography
-    "--f-font-head":    t.fontHead,
-    "--f-font-body":    t.fontBody,
-    "--f-font-mono":    t.fontMono || "ui-monospace, monospace",
-    "--f-size-base":    `${t.sizeBase}px`,
-    "--f-size-head":    `${t.sizeHead}px`,
-    "--f-size-sm":      `${t.sizeBase * 0.85}px`,
-    "--f-size-xs":      `${t.sizeBase * 0.7}px`,
-    "--f-weight-head":  t.weightHead,
-    "--f-weight-body":  t.weightBody,
+    "--f-font-head": t.fontHead,
+    "--f-font-body": t.fontBody,
+    "--f-font-mono": t.fontMono || "ui-monospace, monospace",
+    "--f-size-base": `${t.sizeBase}px`,
+    "--f-size-head": `${t.sizeHead}px`,
+    "--f-size-sm": `${t.sizeBase * 0.85}px`,
+    "--f-size-xs": `${t.sizeBase * 0.7}px`,
+    "--f-weight-head": t.weightHead,
+    "--f-weight-body": t.weightBody,
     "--f-tracking-head": `${t.trackingHead}em`,
     // geometry
-    "--f-radius":       `${t.radius}px`,
+    "--f-radius": `${t.radius}px`,
     "--f-field-radius": fieldRadius(t),
-    "--f-field-pad":    fieldPad(t),
-    "--f-gap":          fieldGap(t),
-    "--f-btn-radius":   btnRadius(t),
+    "--f-field-pad": fieldPad(t),
+    "--f-gap": fieldGap(t),
+    "--f-btn-radius": btnRadius(t),
     // surfaces
-    "--f-shadow":       containerShadow(t),
-    "--f-btn-shadow":   btnShadow(t),
-    "--f-texture":      textureBg(t.texture, t.ink),
+    "--f-shadow": containerShadow(t),
+    "--f-btn-shadow": btnShadow(t),
+    "--f-texture": textureBg(t.texture, t.ink),
     // field shape flag for underline variant
     "--f-is-underline": t.fieldShape === "underline" ? "1" : "0",
     "--f-btn-uppercase": t.buttonStyle === "block" ? "uppercase" : "none",
-    "--f-btn-tracking":  t.buttonStyle === "block" ? "0.08em" : "normal",
-    "--f-btn-bg":        t.buttonStyle === "ghost" ? "transparent" : t.accent,
-    "--f-btn-color":     t.buttonStyle === "ghost" ? t.accent : t.accentInk,
-    "--f-btn-border-w":  t.buttonStyle === "ghost" ? "1.5px" : "0",
-    "--f-btn-border-s":  t.buttonStyle === "ghost" ? "solid" : "none",
-    "--f-btn-border-c":  t.buttonStyle === "ghost" ? t.accent : "transparent",
-    "--f-btn-width":     t.buttonStyle === "block" ? "100%" : "auto",
+    "--f-btn-tracking": t.buttonStyle === "block" ? "0.08em" : "normal",
+    "--f-btn-bg": t.buttonStyle === "ghost" ? "transparent" : t.accent,
+    "--f-btn-color": t.buttonStyle === "ghost" ? t.accent : t.accentInk,
+    "--f-btn-border-w": t.buttonStyle === "ghost" ? "1.5px" : "0",
+    "--f-btn-border-s": t.buttonStyle === "ghost" ? "solid" : "none",
+    "--f-btn-border-c": t.buttonStyle === "ghost" ? t.accent : "transparent",
+    "--f-btn-width": t.buttonStyle === "block" ? "100%" : "auto",
   } as React.CSSProperties;
 }

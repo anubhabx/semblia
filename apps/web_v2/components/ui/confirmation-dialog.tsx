@@ -1,8 +1,8 @@
-import * as React from "react"
+import * as React from "react";
 import {
   Warning as WarningIcon,
   WarningOctagon as WarningOctagonIcon,
-} from "@phosphor-icons/react"
+} from "@phosphor-icons/react";
 
 import {
   AlertDialog,
@@ -14,21 +14,21 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
-type ConfirmationIntent = "danger" | "warning"
+type ConfirmationIntent = "danger" | "warning";
 
 interface ConfirmationDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  intent?: ConfirmationIntent
-  title: React.ReactNode
-  description: React.ReactNode
-  confirmLabel: React.ReactNode
-  cancelLabel?: React.ReactNode
-  onConfirm: () => void
-  size?: "default" | "sm"
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  intent?: ConfirmationIntent;
+  title: React.ReactNode;
+  description: React.ReactNode;
+  confirmLabel: React.ReactNode;
+  cancelLabel?: React.ReactNode;
+  onConfirm: () => void;
+  size?: "default" | "sm";
 }
 
 const intentConfig = {
@@ -41,10 +41,9 @@ const intentConfig = {
   warning: {
     Icon: WarningIcon,
     actionVariant: "warning" as const,
-    mediaClassName:
-      "bg-warning/12 text-warning ring-1 ring-warning/15",
+    mediaClassName: "bg-warning/12 text-warning ring-1 ring-warning/15",
   },
-}
+};
 
 export function ConfirmationDialog({
   open,
@@ -57,7 +56,7 @@ export function ConfirmationDialog({
   onConfirm,
   size = "default",
 }: ConfirmationDialogProps) {
-  const { Icon, actionVariant, mediaClassName } = intentConfig[intent]
+  const { Icon, actionVariant, mediaClassName } = intentConfig[intent];
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -77,5 +76,5 @@ export function ConfirmationDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

@@ -23,7 +23,8 @@ export default async function ApiKeysPage(props: {
       title="API Keys"
       description={
         <>
-          {project._count.apiKeys} key{project._count.apiKeys !== 1 ? "s" : ""} - {project.name}
+          {project._count.apiKeys} key{project._count.apiKeys !== 1 ? "s" : ""}{" "}
+          - {project.name}
         </>
       }
     >

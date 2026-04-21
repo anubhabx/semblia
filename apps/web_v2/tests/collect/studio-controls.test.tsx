@@ -149,7 +149,8 @@ describe("<StudioControls /> — question row accordion", () => {
     editButtons.forEach((btn) => {
       // Walk up to find the studio-collapse sibling
       const parent = btn.parentElement;
-      const collapseEl = parent?.parentElement?.querySelector(".studio-collapse");
+      const collapseEl =
+        parent?.parentElement?.querySelector(".studio-collapse");
       expect(collapseEl).toBeTruthy();
       expect(collapseEl!.hasAttribute("data-closed")).toBe(true);
     });
@@ -182,8 +183,14 @@ describe("<StudioControls /> — question row accordion", () => {
     fireEvent.click(editButtons[0]);
     fireEvent.click(editButtons[1]);
 
-    const collapse0 = editButtons[0].parentElement?.parentElement?.querySelector(".studio-collapse");
-    const collapse1 = editButtons[1].parentElement?.parentElement?.querySelector(".studio-collapse");
+    const collapse0 =
+      editButtons[0].parentElement?.parentElement?.querySelector(
+        ".studio-collapse",
+      );
+    const collapse1 =
+      editButtons[1].parentElement?.parentElement?.querySelector(
+        ".studio-collapse",
+      );
     expect(collapse0!.hasAttribute("data-closed")).toBe(false);
     expect(collapse1!.hasAttribute("data-closed")).toBe(false);
   });
@@ -206,7 +213,8 @@ describe("<StudioControls /> — question row accordion", () => {
 
   it("deletes a question via Delete button", () => {
     render(<StudioControls formId={formId} />);
-    const countBefore = useStudioStore.getState().snapshots[formId]!.draft.questions.length;
+    const countBefore =
+      useStudioStore.getState().snapshots[formId]!.draft.questions.length;
 
     const editButtons = screen.getAllByRole("button", { name: "✎" });
     fireEvent.click(editButtons[0]);
@@ -214,13 +222,15 @@ describe("<StudioControls /> — question row accordion", () => {
     const deleteBtn = screen.getAllByRole("button", { name: "Delete" })[0];
     fireEvent.click(deleteBtn);
 
-    const countAfter = useStudioStore.getState().snapshots[formId]!.draft.questions.length;
+    const countAfter =
+      useStudioStore.getState().snapshots[formId]!.draft.questions.length;
     expect(countAfter).toBe(countBefore - 1);
   });
 
   it("adds a new question via + Add question", () => {
     render(<StudioControls formId={formId} />);
-    const countBefore = useStudioStore.getState().snapshots[formId]!.draft.questions.length;
+    const countBefore =
+      useStudioStore.getState().snapshots[formId]!.draft.questions.length;
 
     const addBtn = screen.getByRole("button", { name: /Add question/ });
     fireEvent.click(addBtn);
@@ -230,7 +240,8 @@ describe("<StudioControls /> — question row accordion", () => {
     expect(shortTextBtn).toBeInTheDocument();
 
     fireEvent.click(shortTextBtn);
-    const countAfter = useStudioStore.getState().snapshots[formId]!.draft.questions.length;
+    const countAfter =
+      useStudioStore.getState().snapshots[formId]!.draft.questions.length;
     expect(countAfter).toBe(countBefore + 1);
     expect(
       useStudioStore.getState().snapshots[formId]!.draft.questions.at(-1)?.type,

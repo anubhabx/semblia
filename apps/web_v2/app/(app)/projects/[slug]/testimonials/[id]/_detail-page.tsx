@@ -6,7 +6,7 @@ import { TestimonialDetail } from "@/components/testimonials/testimonial-detail"
 import {
   apiApproveTestimonial,
   apiRejectTestimonial,
-  apiPublishTestimonial
+  apiPublishTestimonial,
 } from "@/lib/api";
 import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
 
@@ -24,7 +24,7 @@ export function TestimonialDetailPage({ testimonial, projectSlug }: Props) {
     setT((prev) => ({
       ...prev,
       moderationStatus: "APPROVED" as ModerationStatus,
-      isApproved: true
+      isApproved: true,
     }));
   }, []);
 
@@ -32,7 +32,7 @@ export function TestimonialDetailPage({ testimonial, projectSlug }: Props) {
     apiRejectTestimonial(id);
     setT((prev) => ({
       ...prev,
-      moderationStatus: "REJECTED" as ModerationStatus
+      moderationStatus: "REJECTED" as ModerationStatus,
     }));
   }, []);
 
@@ -41,7 +41,7 @@ export function TestimonialDetailPage({ testimonial, projectSlug }: Props) {
       apiPublishTestimonial(id, published);
       setT((prev) => ({ ...prev, isPublished: published }));
     },
-    []
+    [],
   );
 
   return (

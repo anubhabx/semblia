@@ -5,7 +5,13 @@ import type { StudioConfig } from "@/lib/collect/studio-types";
 
 /* ─── Brand pill (top identity mark) ─────────────────────────────────────── */
 
-export function BrandPill({ name, logoUrl }: { name: string; logoUrl?: string | null }) {
+export function BrandPill({
+  name,
+  logoUrl,
+}: {
+  name: string;
+  logoUrl?: string | null;
+}) {
   return (
     <div
       style={{
@@ -42,7 +48,11 @@ export function BrandPill({ name, logoUrl }: { name: string; logoUrl?: string | 
       >
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img
+            src={logoUrl}
+            alt={name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         ) : (
           name.charAt(0)
         )}
@@ -67,7 +77,9 @@ export function PoweredBy() {
       }}
     >
       Powered by{" "}
-      <strong style={{ fontWeight: 600, color: "var(--f-ink-soft)" }}>Tresta</strong>
+      <strong style={{ fontWeight: 600, color: "var(--f-ink-soft)" }}>
+        Tresta
+      </strong>
     </div>
   );
 }
@@ -91,7 +103,8 @@ function HeadlineBlock({
           style={{
             fontFamily: "var(--f-font-head)",
             fontSize: "var(--f-size-head)",
-            fontWeight: "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
+            fontWeight:
+              "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
             letterSpacing: "var(--f-tracking-head)",
             lineHeight: 1.1,
             color: "var(--f-ink)",
@@ -107,7 +120,8 @@ function HeadlineBlock({
           style={{
             fontFamily: "var(--f-font-body)",
             fontSize: "var(--f-size-base)",
-            fontWeight: "var(--f-weight-body)" as React.CSSProperties["fontWeight"],
+            fontWeight:
+              "var(--f-weight-body)" as React.CSSProperties["fontWeight"],
             color: "var(--f-ink-soft)",
             lineHeight: 1.6,
             marginTop: 10,
@@ -170,7 +184,8 @@ export function HeroSide({ config }: { config: StudioConfig }) {
             style={{
               fontFamily: "var(--f-font-head)",
               fontSize: "var(--f-size-head)",
-              fontWeight: "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
+              fontWeight:
+                "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
               letterSpacing: "var(--f-tracking-head)",
               lineHeight: 1.15,
               color: "var(--f-accent-ink)",
@@ -239,7 +254,8 @@ export function HeroFloating({ config }: { config: StudioConfig }) {
           style={{
             fontFamily: "var(--f-font-head)",
             fontSize: "calc(var(--f-size-head) * 0.55)",
-            fontWeight: "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
+            fontWeight:
+              "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
             color: "var(--f-ink)",
             margin: "8px 0 0",
             lineHeight: 1.2,
@@ -288,12 +304,12 @@ export function ContainerCentered({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ContainerFullbleed({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "40px 32px", width: "100%" }}>
-      {children}
-    </div>
-  );
+export function ContainerFullbleed({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div style={{ padding: "40px 32px", width: "100%" }}>{children}</div>;
 }
 
 export function ContainerSplit({

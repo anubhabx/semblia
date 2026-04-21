@@ -1,7 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Eye, EyeSlash as EyeOff, CheckCircle as CheckCircle2 } from "@phosphor-icons/react";
+import {
+  Eye,
+  EyeSlash as EyeOff,
+  CheckCircle as CheckCircle2,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { authInputCls } from "./auth-field";
 
@@ -100,7 +104,7 @@ export function AuthPasswordField({
                 key={level}
                 className={cn(
                   "h-[3px] flex-1 rounded-full transition-all duration-300",
-                  strength >= level ? STRENGTH_COLOR[level] : "bg-border"
+                  strength >= level ? STRENGTH_COLOR[level] : "bg-border",
                 )}
               />
             ))}
@@ -112,7 +116,7 @@ export function AuthPasswordField({
                 "text-[11px]",
                 strength > 0
                   ? STRENGTH_TEXT_COLOR[strength as 1 | 2 | 3]
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               {STRENGTH_LABEL[strength as 1 | 2 | 3]}

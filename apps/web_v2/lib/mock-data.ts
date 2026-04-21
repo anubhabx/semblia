@@ -465,7 +465,11 @@ export const MOCK_TESTIMONIALS: Record<string, MockTestimonial[]> = {
       oauthProvider: null,
       moderationStatus: "FLAGGED",
       moderationScore: 0.87,
-      moderationFlags: ["spam_patterns", "excessive_punctuation", "promotional_language"],
+      moderationFlags: [
+        "spam_patterns",
+        "excessive_punctuation",
+        "promotional_language",
+      ],
       autoPublished: false,
       createdAt: new Date("2024-12-10T06:12:00Z"),
       updatedAt: new Date("2024-12-10T06:12:00Z"),
@@ -848,9 +852,7 @@ export function getWidgetById(
   projectId: string,
   widgetId: string,
 ): MockWidget | null {
-  return (
-    (MOCK_WIDGETS[projectId] ?? []).find((w) => w.id === widgetId) ?? null
-  );
+  return (MOCK_WIDGETS[projectId] ?? []).find((w) => w.id === widgetId) ?? null;
 }
 
 /** Returns widgets for a project */

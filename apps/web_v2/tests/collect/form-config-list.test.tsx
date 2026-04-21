@@ -32,7 +32,11 @@ describe("<FormConfigList />", () => {
       .flatMap((args) => args.map(String))
       .join("\n");
 
-    expect(consoleOutput).not.toContain("The result of getSnapshot should be cached");
-    expect(consoleOutput).not.toContain("The result of getServerSnapshot should be cached");
+    expect(consoleOutput).not.toContain(
+      "The result of getSnapshot should be cached",
+    );
+    expect(consoleOutput).not.toContain(
+      "The result of getServerSnapshot should be cached",
+    );
   });
 });

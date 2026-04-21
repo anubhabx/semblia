@@ -24,9 +24,9 @@ export default async function AnalyticsPage(props: {
       description={<>Performance metrics - {project.name}</>}
     >
       <p className="text-sm text-muted-foreground">
-        Unified analytics dashboard: form impressions funnel, testimonial
-        reach, widget load performance (device/country/time), and API usage
-        trends will be built here.
+        Unified analytics dashboard: form impressions funnel, testimonial reach,
+        widget load performance (device/country/time), and API usage trends will
+        be built here.
       </p>
     </ProjectPageShell>
   );

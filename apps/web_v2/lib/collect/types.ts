@@ -1,4 +1,7 @@
-import type { FormConfig as LegacyFormConfig, MockProject } from "@/lib/mock-data";
+import type {
+  FormConfig as LegacyFormConfig,
+  MockProject,
+} from "@/lib/mock-data";
 
 export type FieldKey =
   | "name"
@@ -20,7 +23,10 @@ export type Shadow = "none" | "subtle" | "medium";
 export type Density = "compact" | "default" | "spacious";
 export type HeaderAlignment = "left" | "center";
 export type HeadingWeight = "light" | "normal" | "semibold" | "bold";
-export type WatermarkPosition = "bottom-left" | "bottom-right" | "bottom-center";
+export type WatermarkPosition =
+  | "bottom-left"
+  | "bottom-right"
+  | "bottom-center";
 export type OAuthProvider = "google" | "github";
 export type ModerationMode = "auto" | "manual";
 export type ConsentMode = "declaration" | "checkbox";
@@ -143,7 +149,8 @@ export const DEFAULT_CONFIG: FormConfig = {
 };
 
 export function buildInitialConfig(project: MockProject): FormConfig {
-  const primary = project.brandColorPrimary ?? DEFAULT_CONFIG.branding.colors.primary;
+  const primary =
+    project.brandColorPrimary ?? DEFAULT_CONFIG.branding.colors.primary;
   const accent =
     project.brandColorSecondary ?? DEFAULT_CONFIG.branding.colors.accent;
 
@@ -159,10 +166,8 @@ export function buildInitialConfig(project: MockProject): FormConfig {
       headerTitle:
         legacy?.headerTitle ?? `Share your ${project.name} experience`,
       headerDescription:
-        legacy?.headerDescription ??
-        `Tell us how ${project.name} helped you.`,
-      thankYouMessage:
-        legacy?.thankYouMessage ?? base.content.thankYouMessage,
+        legacy?.headerDescription ?? `Tell us how ${project.name} helped you.`,
+      thankYouMessage: legacy?.thankYouMessage ?? base.content.thankYouMessage,
     },
     branding: {
       ...base.branding,
@@ -259,9 +264,12 @@ export function isFieldEnabled(config: FormConfig, key: FieldKey): boolean {
 export function isFieldRequired(config: FormConfig, key: FieldKey): boolean {
   if (key === "name" || key === "content") return true;
   if (key === "consent") {
-    return config.fields.consent.enabled && config.fields.consent.mode === "checkbox";
+    return (
+      config.fields.consent.enabled && config.fields.consent.mode === "checkbox"
+    );
   }
-  const f = config.fields[key as Exclude<FieldKey, "name" | "content" | "consent">];
+  const f =
+    config.fields[key as Exclude<FieldKey, "name" | "content" | "consent">];
   return "required" in f ? f.required : false;
 }
 
@@ -280,7 +288,9 @@ export function deepMerge<T>(target: T, patch: DeepPartial<T>): T {
   ) {
     return patch as T;
   }
-  const out: Record<string, unknown> = { ...(target as Record<string, unknown>) };
+  const out: Record<string, unknown> = {
+    ...(target as Record<string, unknown>),
+  };
   for (const key of Object.keys(patch) as Array<keyof T>) {
     const pv = patch[key];
     if (pv === undefined) continue;
@@ -315,7 +325,12 @@ export function deepEqual<T>(a: T, b: T): boolean {
   const bk = Object.keys(b as object);
   if (ak.length !== bk.length) return false;
   for (const k of ak) {
-    if (!deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])) {
+    if (
+      !deepEqual(
+        (a as Record<string, unknown>)[k],
+        (b as Record<string, unknown>)[k],
+      )
+    ) {
       return false;
     }
   }

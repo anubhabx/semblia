@@ -13,62 +13,74 @@ import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
  */
 export function useTestimonialModeration(
   detail: MockTestimonial | null,
-  setDetail: React.Dispatch<React.SetStateAction<MockTestimonial | null>>
+  setDetail: React.Dispatch<React.SetStateAction<MockTestimonial | null>>,
 ) {
-  const handleApprove = React.useCallback((id: string) => {
-    apiApproveTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            moderationStatus: "APPROVED" as ModerationStatus,
-            isApproved: true,
-          }
-        : prev
-    );
-  }, [setDetail]);
+  const handleApprove = React.useCallback(
+    (id: string) => {
+      apiApproveTestimonial(id);
+      setDetail((prev) =>
+        prev && prev.id === id
+          ? {
+              ...prev,
+              moderationStatus: "APPROVED" as ModerationStatus,
+              isApproved: true,
+            }
+          : prev,
+      );
+    },
+    [setDetail],
+  );
 
-  const handleReject = React.useCallback((id: string) => {
-    apiRejectTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-        : prev
-    );
-  }, [setDetail]);
+  const handleReject = React.useCallback(
+    (id: string) => {
+      apiRejectTestimonial(id);
+      setDetail((prev) =>
+        prev && prev.id === id
+          ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
+          : prev,
+      );
+    },
+    [setDetail],
+  );
 
   const handleTogglePublish = React.useCallback(
     (id: string, published: boolean) => {
       apiPublishTestimonial(id, published);
       setDetail((prev) =>
-        prev && prev.id === id ? { ...prev, isPublished: published } : prev
+        prev && prev.id === id ? { ...prev, isPublished: published } : prev,
       );
     },
-    [setDetail]
+    [setDetail],
   );
 
   // Inline actions from list (optimistic) — same logic, reused
-  const handleInlineApprove = React.useCallback((id: string) => {
-    apiApproveTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            moderationStatus: "APPROVED" as ModerationStatus,
-            isApproved: true,
-          }
-        : prev
-    );
-  }, [setDetail]);
+  const handleInlineApprove = React.useCallback(
+    (id: string) => {
+      apiApproveTestimonial(id);
+      setDetail((prev) =>
+        prev && prev.id === id
+          ? {
+              ...prev,
+              moderationStatus: "APPROVED" as ModerationStatus,
+              isApproved: true,
+            }
+          : prev,
+      );
+    },
+    [setDetail],
+  );
 
-  const handleInlineReject = React.useCallback((id: string) => {
-    apiRejectTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-        : prev
-    );
-  }, [setDetail]);
+  const handleInlineReject = React.useCallback(
+    (id: string) => {
+      apiRejectTestimonial(id);
+      setDetail((prev) =>
+        prev && prev.id === id
+          ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
+          : prev,
+      );
+    },
+    [setDetail],
+  );
 
   return {
     handleApprove,

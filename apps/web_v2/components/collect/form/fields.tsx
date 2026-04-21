@@ -193,7 +193,11 @@ function StarRating({ q }: { q: StudioQuestion }) {
 
   return (
     <FieldWrapper q={q}>
-      <div style={{ display: "flex", gap: 6 }} role="group" aria-label={q.label}>
+      <div
+        style={{ display: "flex", gap: 6 }}
+        role="group"
+        aria-label={q.label}
+      >
         {[0, 1, 2, 3, 4].map((i) => {
           const active = i <= (hovered >= 0 ? hovered : selected);
           return (
@@ -246,7 +250,11 @@ function NpsField({ q }: { q: StudioQuestion }) {
 
   return (
     <FieldWrapper q={q}>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }} role="group" aria-label={q.label}>
+      <div
+        style={{ display: "flex", gap: 4, flexWrap: "wrap" }}
+        role="group"
+        aria-label={q.label}
+      >
         {Array.from({ length: 11 }, (_, i) => {
           const active = selected === i;
           return (
@@ -363,7 +371,10 @@ function RadioField({ q }: { q: StudioQuestion }) {
 
   return (
     <FieldWrapper q={q}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="radiogroup">
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        role="radiogroup"
+      >
         {opts.map((opt) => {
           const active = selected === opt;
           return (
@@ -380,7 +391,9 @@ function RadioField({ q }: { q: StudioQuestion }) {
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                backgroundColor: active ? "var(--f-accent-08)" : "var(--f-surface-60)",
+                backgroundColor: active
+                  ? "var(--f-accent-08)"
+                  : "var(--f-surface-60)",
                 borderColor: active ? "var(--f-accent)" : "var(--f-line-50)",
               }}
             >
@@ -391,7 +404,9 @@ function RadioField({ q }: { q: StudioQuestion }) {
                   borderRadius: "50%",
                   borderWidth: 1.5,
                   borderStyle: "solid",
-                  borderColor: active ? "var(--f-accent)" : "var(--f-ink-soft-50)",
+                  borderColor: active
+                    ? "var(--f-accent)"
+                    : "var(--f-ink-soft-50)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -459,7 +474,9 @@ function CheckboxField({ q }: { q: StudioQuestion }) {
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                backgroundColor: checked ? "var(--f-accent-08)" : "var(--f-surface-60)",
+                backgroundColor: checked
+                  ? "var(--f-accent-08)"
+                  : "var(--f-surface-60)",
                 borderColor: checked ? "var(--f-accent)" : "var(--f-line-50)",
               }}
             >
@@ -470,7 +487,9 @@ function CheckboxField({ q }: { q: StudioQuestion }) {
                   borderRadius: 3,
                   borderWidth: 1.5,
                   borderStyle: "solid",
-                  borderColor: checked ? "var(--f-accent)" : "var(--f-ink-soft-50)",
+                  borderColor: checked
+                    ? "var(--f-accent)"
+                    : "var(--f-ink-soft-50)",
                   backgroundColor: checked ? "var(--f-accent)" : "transparent",
                   display: "inline-flex",
                   alignItems: "center",
@@ -601,7 +620,9 @@ function FileUpload({ q }: { q: StudioQuestion }) {
         >
           <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L9 7m3-3l3 3" />
         </svg>
-        <span>{file ? file.name : q.placeholder ?? "Click or drop file here"}</span>
+        <span>
+          {file ? file.name : (q.placeholder ?? "Click or drop file here")}
+        </span>
       </button>
       <input
         ref={inputRef}
@@ -617,17 +638,31 @@ function FileUpload({ q }: { q: StudioQuestion }) {
 
 /* ─── Field dispatcher ────────────────────────────────────────────────────── */
 
-export const Field = React.memo(function Field({ question }: { question: StudioQuestion }) {
+export const Field = React.memo(function Field({
+  question,
+}: {
+  question: StudioQuestion;
+}) {
   switch (question.type) {
-    case "shorttext":    return <ShortTextField q={question} />;
-    case "longtext":     return <LongTextField q={question} />;
-    case "stars":        return <StarRating q={question} />;
-    case "nps":          return <NpsField q={question} />;
-    case "emoji":        return <EmojiScale q={question} />;
-    case "radio":        return <RadioField q={question} />;
-    case "checkbox":     return <CheckboxField q={question} />;
-    case "dropdown":     return <DropdownField q={question} />;
-    case "file":         return <FileUpload q={question} />;
-    default:             return null;
+    case "shorttext":
+      return <ShortTextField q={question} />;
+    case "longtext":
+      return <LongTextField q={question} />;
+    case "stars":
+      return <StarRating q={question} />;
+    case "nps":
+      return <NpsField q={question} />;
+    case "emoji":
+      return <EmojiScale q={question} />;
+    case "radio":
+      return <RadioField q={question} />;
+    case "checkbox":
+      return <CheckboxField q={question} />;
+    case "dropdown":
+      return <DropdownField q={question} />;
+    case "file":
+      return <FileUpload q={question} />;
+    default:
+      return null;
   }
 });

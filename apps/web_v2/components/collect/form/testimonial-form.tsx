@@ -122,14 +122,16 @@ export const TestimonialForm = React.memo(function TestimonialForm({
   if (formState.status === "success") {
     return (
       <div ref={rootRef} style={rootStyle}>
-        <div style={{
-          flex: 1,
-          overflowY: "auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "24px 0",
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px 0",
+          }}
+        >
           <ContainerBoxed>
             <ThankYou brandName={brandName} />
           </ContainerBoxed>
@@ -139,7 +141,9 @@ export const TestimonialForm = React.memo(function TestimonialForm({
   }
 
   // Visible questions (conditional logic applied)
-  const visibleQuestions = questions.filter((q) => evalShowIf(q, formState.values));
+  const visibleQuestions = questions.filter((q) =>
+    evalShowIf(q, formState.values),
+  );
 
   // Hero node (for non-split containers)
   const heroNode =
@@ -151,7 +155,9 @@ export const TestimonialForm = React.memo(function TestimonialForm({
 
   // Inner form content (questions + footer)
   const formContent = (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--f-gap)" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--f-gap)" }}
+    >
       {layout.hero === "top" && heroNode}
 
       <Flow
@@ -191,21 +197,21 @@ export const TestimonialForm = React.memo(function TestimonialForm({
 
         {isSplit ? (
           /* Split takes full height, manages its own scroll */
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {containerNode}
-          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>{containerNode}</div>
         ) : (
           /* Other layouts: scrollable, vertically centered */
-          <div style={{
-            flex: 1,
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "stretch",
-            justifyContent: "center",
-            padding: "24px 0",
-            minHeight: 0,
-          }}>
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "stretch",
+              justifyContent: "center",
+              padding: "24px 0",
+              minHeight: 0,
+            }}
+          >
             {containerNode}
           </div>
         )}

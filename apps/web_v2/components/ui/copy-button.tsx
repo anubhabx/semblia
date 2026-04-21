@@ -30,7 +30,7 @@ export function CopyButton({
         copied
           ? "text-success"
           : "text-muted-foreground hover:bg-background hover:text-foreground",
-        className
+        className,
       )}
       aria-label={copied ? "Copied!" : `Copy ${label}`}
     >

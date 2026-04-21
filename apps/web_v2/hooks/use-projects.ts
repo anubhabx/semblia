@@ -37,17 +37,17 @@ export function useProjects() {
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.shortDescription?.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
+        p.tags.some((t) => t.toLowerCase().includes(q)),
     );
   }, [projects, search]);
 
   const totalTestimonials = projects.reduce(
     (s, p) => s + p._count.testimonials,
-    0
+    0,
   );
   const totalPending = projects.reduce(
     (s, p) => s + p._count.pendingModeration,
-    0
+    0,
   );
 
   return {

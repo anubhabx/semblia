@@ -41,7 +41,7 @@ export function useAnimatedStep<T>(initial: T, exitDuration = 180) {
         setIsLeaving(false);
       }, exitDuration);
     },
-    [isLeaving, exitDuration]
+    [isLeaving, exitDuration],
   );
 
   return {

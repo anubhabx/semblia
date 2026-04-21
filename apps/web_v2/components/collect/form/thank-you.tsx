@@ -35,7 +35,8 @@ export function ThankYou({ brandName }: { brandName?: string }) {
         style={{
           fontFamily: "var(--f-font-head)",
           fontSize: "var(--f-size-head)",
-          fontWeight: "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
+          fontWeight:
+            "var(--f-weight-head)" as React.CSSProperties["fontWeight"],
           letterSpacing: "var(--f-tracking-head)",
           color: "var(--f-ink)",
           margin: 0,
@@ -48,7 +49,8 @@ export function ThankYou({ brandName }: { brandName?: string }) {
         style={{
           fontFamily: "var(--f-font-body)",
           fontSize: "var(--f-size-base)",
-          fontWeight: "var(--f-weight-body)" as React.CSSProperties["fontWeight"],
+          fontWeight:
+            "var(--f-weight-body)" as React.CSSProperties["fontWeight"],
           color: "var(--f-ink-soft)",
           maxWidth: 360,
           lineHeight: 1.6,

@@ -30,10 +30,14 @@ export const SubmitButton = React.memo(function SubmitButton({
         cursor: loading ? "wait" : "pointer",
         transition: "all .2s",
         width: "var(--f-btn-width)",
-        borderWidth: "var(--f-btn-border-w)" as unknown as React.CSSProperties["borderWidth"],
-        borderStyle: "var(--f-btn-border-s)" as unknown as React.CSSProperties["borderStyle"],
-        borderColor: "var(--f-btn-border-c)" as unknown as React.CSSProperties["borderColor"],
-        textTransform: "var(--f-btn-uppercase)" as React.CSSProperties["textTransform"],
+        borderWidth:
+          "var(--f-btn-border-w)" as unknown as React.CSSProperties["borderWidth"],
+        borderStyle:
+          "var(--f-btn-border-s)" as unknown as React.CSSProperties["borderStyle"],
+        borderColor:
+          "var(--f-btn-border-c)" as unknown as React.CSSProperties["borderColor"],
+        textTransform:
+          "var(--f-btn-uppercase)" as React.CSSProperties["textTransform"],
         letterSpacing: "var(--f-btn-tracking)",
         backgroundColor: "var(--f-btn-bg)",
         color: "var(--f-btn-color)",

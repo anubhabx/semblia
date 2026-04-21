@@ -2,7 +2,10 @@ import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { Field } from "@/components/collect/form/fields";
-import { FormContext, type FormContextValue } from "@/components/collect/form/form-context";
+import {
+  FormContext,
+  type FormContextValue,
+} from "@/components/collect/form/form-context";
 import type { StudioQuestion } from "@/lib/collect/studio-types";
 
 const starQuestion: StudioQuestion = {

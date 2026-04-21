@@ -10,7 +10,7 @@ import { SubmitButton } from "./submit-button";
 /* ─── Shared types ────────────────────────────────────────────────────────── */
 
 interface FlowProps {
-  questions: StudioQuestion[];   // already filtered by showIf + sorted
+  questions: StudioQuestion[]; // already filtered by showIf + sorted
   stickyProgress?: boolean;
 }
 
@@ -171,9 +171,7 @@ export function FlowStepped({ questions, stickyProgress }: FlowProps) {
         {isLast ? (
           <SubmitButton />
         ) : (
-          <NavBtn onClick={() => goNext()}>
-            Next →
-          </NavBtn>
+          <NavBtn onClick={() => goNext()}>Next →</NavBtn>
         )}
       </div>
 
@@ -227,7 +225,9 @@ export function FlowCards({ questions, stickyProgress }: FlowProps) {
             }}
           >
             {i === 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              >
                 <Field question={q} />
                 <div
                   style={{
@@ -246,9 +246,7 @@ export function FlowCards({ questions, stickyProgress }: FlowProps) {
                   {isLast ? (
                     <SubmitButton />
                   ) : (
-                    <NavBtn onClick={() => goNext()}>
-                      Next →
-                    </NavBtn>
+                    <NavBtn onClick={() => goNext()}>Next →</NavBtn>
                   )}
                 </div>
               </div>
@@ -322,8 +320,7 @@ export function FlowConvo({ questions }: FlowProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [revealed]);
 
-  const gap =
-    "calc(var(--f-gap) * 1.4)";
+  const gap = "calc(var(--f-gap) * 1.4)";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap }}>
@@ -383,9 +380,13 @@ interface FlowRendererProps extends FlowProps {
 export function Flow({ flow, questions, stickyProgress }: FlowRendererProps) {
   switch (flow) {
     case "stepped":
-      return <FlowStepped questions={questions} stickyProgress={stickyProgress} />;
+      return (
+        <FlowStepped questions={questions} stickyProgress={stickyProgress} />
+      );
     case "cards":
-      return <FlowCards questions={questions} stickyProgress={stickyProgress} />;
+      return (
+        <FlowCards questions={questions} stickyProgress={stickyProgress} />
+      );
     case "conversational":
       return <FlowConvo questions={questions} />;
     default:

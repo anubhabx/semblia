@@ -36,7 +36,13 @@ import { cn } from "@/lib/utils";
 
 type MobileTab = "design" | "preview";
 
-export function StudioShell({ slug, formId }: { slug: string; formId: string }) {
+export function StudioShell({
+  slug,
+  formId,
+}: {
+  slug: string;
+  formId: string;
+}) {
   const router = useRouter();
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
@@ -168,12 +174,19 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
           {/* Desktop sidebar toggle */}
           {isDesktop && (
             <>
-              <span className="mx-1.5 hidden h-4 w-px bg-border/60 lg:block" aria-hidden="true" />
+              <span
+                className="mx-1.5 hidden h-4 w-px bg-border/60 lg:block"
+                aria-hidden="true"
+              />
               <Button
                 variant="ghost"
                 size="icon-xs"
                 onClick={() => setSidebarOpen((o) => !o)}
-                aria-label={sidebarOpen ? "Collapse controls panel" : "Expand controls panel"}
+                aria-label={
+                  sidebarOpen
+                    ? "Collapse controls panel"
+                    : "Expand controls panel"
+                }
                 className="hidden lg:flex"
               >
                 {sidebarOpen ? (
@@ -188,7 +201,9 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
 
         {/* Center: title + dirty dot */}
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-xs font-medium sm:text-sm">Testimonial Studio</span>
+          <span className="truncate text-xs font-medium sm:text-sm">
+            Testimonial Studio
+          </span>
           {dirty && (
             <span
               className="size-1.5 shrink-0 rounded-full bg-amber-500"
@@ -290,7 +305,10 @@ export function StudioShell({ slug, formId }: { slug: string; formId: string }) 
               <SlidersHorizontalIcon className="size-4" aria-hidden="true" />
               Design
             </button>
-            <span className="w-px self-stretch bg-border/60" aria-hidden="true" />
+            <span
+              className="w-px self-stretch bg-border/60"
+              aria-hidden="true"
+            />
             <button
               type="button"
               role="tab"

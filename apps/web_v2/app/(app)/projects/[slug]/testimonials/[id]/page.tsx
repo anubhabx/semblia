@@ -12,7 +12,7 @@ export async function generateMetadata(props: {
   return {
     title: testimonial
       ? `${testimonial.authorName} — ${project!.name}`
-      : "Testimonial"
+      : "Testimonial",
   };
 }
 

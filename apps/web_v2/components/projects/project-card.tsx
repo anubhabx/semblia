@@ -6,7 +6,11 @@ import {
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { projectInitials } from "@/lib/format";
-import { PROJECT_TYPE_LABELS, timeAgo, type MockProject } from "@/lib/mock-data";
+import {
+  PROJECT_TYPE_LABELS,
+  timeAgo,
+  type MockProject,
+} from "@/lib/mock-data";
 
 // ── Project card (card view) ───────────────────────────────────────────────────
 

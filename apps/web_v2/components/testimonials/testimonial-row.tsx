@@ -63,7 +63,7 @@ export function TestimonialRow({
           ? "bg-muted/60"
           : isBulkSelected
             ? "bg-brand/[0.04]"
-            : "hover:bg-muted/30"
+            : "hover:bg-muted/30",
       )}
     >
       {/* Checkbox / avatar */}
@@ -73,7 +73,7 @@ export function TestimonialRow({
             "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150",
             isBulkSelected
               ? "border-brand bg-brand text-brand-foreground"
-              : "border-border bg-background text-transparent hover:border-muted-foreground/40"
+              : "border-border bg-background text-transparent hover:border-muted-foreground/40",
           )}
         >
           <CheckIcon className="size-3.5" />
@@ -84,7 +84,7 @@ export function TestimonialRow({
             "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold select-none transition-colors duration-150",
             isSelected
               ? "bg-foreground text-background"
-              : "bg-muted text-muted-foreground"
+              : "bg-muted text-muted-foreground",
           )}
         >
           {t.authorName[0].toUpperCase()}

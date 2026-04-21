@@ -23,7 +23,7 @@ function normalizeEntryMetrics(entry: FormConfigEntry): FormConfigEntry {
       typeof entry.lastSubmissionAt === "number" &&
       Number.isFinite(entry.lastSubmissionAt)
         ? entry.lastSubmissionAt
-        : null
+        : null,
   };
 }
 
@@ -44,7 +44,7 @@ export function FormConfigList({ slug }: { slug: string }) {
   const [hydrated, setHydrated] = React.useState(false);
   const normalizedForms = React.useMemo(
     () => forms.map(normalizeEntryMetrics),
-    [forms]
+    [forms],
   );
 
   React.useEffect(() => {
@@ -63,28 +63,28 @@ export function FormConfigList({ slug }: { slug: string }) {
     (formId: string) => {
       router.push(`/projects/${slug}/collect/${formId}`);
     },
-    [slug, router]
+    [slug, router],
   );
 
   const handleDuplicate = React.useCallback(
     (formId: string) => {
       duplicateForm(slug, formId);
     },
-    [slug, duplicateForm]
+    [slug, duplicateForm],
   );
 
   const handleDelete = React.useCallback(
     (formId: string) => {
       deleteForm(slug, formId);
     },
-    [slug, deleteForm]
+    [slug, deleteForm],
   );
 
   const handleToggleActive = React.useCallback(
     (formId: string, isActive: boolean) => {
       updateFormEntry(slug, formId, { isActive: !isActive });
     },
-    [slug, updateFormEntry]
+    [slug, updateFormEntry],
   );
 
   const totalActiveWeight = normalizedForms
@@ -151,9 +151,7 @@ export function FormConfigList({ slug }: { slug: string }) {
                   onToggleActive={() =>
                     handleToggleActive(entry.id, entry.isActive)
                   }
-                  onRename={(name) =>
-                    updateFormEntry(slug, entry.id, { name })
-                  }
+                  onRename={(name) => updateFormEntry(slug, entry.id, { name })}
                 />
               </div>
             ))}

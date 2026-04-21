@@ -28,7 +28,7 @@ export function TestimonialsInbox({
   projectId,
   projectSlug,
   totalCount,
-  pendingCount
+  pendingCount,
 }: TestimonialsInboxProps) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -100,7 +100,7 @@ export function TestimonialsInbox({
         router.push(`/projects/${projectSlug}/testimonials/${id}`);
       }
     },
-    [isDesktop, projectSlug, router]
+    [isDesktop, projectSlug, router],
   );
 
   const handleCloseDetail = React.useCallback(() => {
@@ -113,7 +113,6 @@ export function TestimonialsInbox({
       setPanelVisible(false);
     }, 200);
   }, []);
-
 
   // ── Clear selection when switching to mobile ──
   React.useEffect(() => {
@@ -149,7 +148,9 @@ export function TestimonialsInbox({
       group: "Navigation",
       action: () => {
         if (visibleIds.length === 0) return;
-        const idx = selectedId ? visibleIds.indexOf(selectedId) : visibleIds.length;
+        const idx = selectedId
+          ? visibleIds.indexOf(selectedId)
+          : visibleIds.length;
         const prev = visibleIds[Math.max(idx - 1, 0)];
         if (prev) handleSelect(prev);
       },
@@ -168,7 +169,11 @@ export function TestimonialsInbox({
       label: "Approve",
       group: "Actions",
       action: () => {
-        if (detail && (detail.moderationStatus === "PENDING" || detail.moderationStatus === "FLAGGED")) {
+        if (
+          detail &&
+          (detail.moderationStatus === "PENDING" ||
+            detail.moderationStatus === "FLAGGED")
+        ) {
           handleApprove(detail.id);
         }
       },
@@ -179,7 +184,11 @@ export function TestimonialsInbox({
       label: "Reject",
       group: "Actions",
       action: () => {
-        if (detail && (detail.moderationStatus === "PENDING" || detail.moderationStatus === "FLAGGED")) {
+        if (
+          detail &&
+          (detail.moderationStatus === "PENDING" ||
+            detail.moderationStatus === "FLAGGED")
+        ) {
           handleReject(detail.id);
         }
       },
@@ -243,7 +252,7 @@ export function TestimonialsInbox({
               "hidden lg:flex lg:w-[420px] lg:shrink-0 flex-col border-l border-border bg-background overflow-hidden",
               panelClosing
                 ? "detail-panel-slide-exit"
-                : "detail-panel-slide-enter"
+                : "detail-panel-slide-enter",
             )}
           >
             <TestimonialDetail

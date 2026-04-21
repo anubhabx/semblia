@@ -15,7 +15,7 @@ export function AppFooter() {
     <footer
       className={cn(
         "border-t border-border bg-muted/20 px-6 py-4",
-        inProject && "lg:pl-[calc(14rem+1.5rem)]"
+        inProject && "lg:pl-[calc(14rem+1.5rem)]",
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">

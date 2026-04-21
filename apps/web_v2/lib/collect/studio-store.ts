@@ -46,11 +46,17 @@ interface StudioStore {
   updateFormEntry: (
     slug: string,
     formId: string,
-    patch: Partial<Pick<FormConfigEntry, "name" | "description" | "isActive" | "abWeight">>,
+    patch: Partial<
+      Pick<FormConfigEntry, "name" | "description" | "isActive" | "abWeight">
+    >,
   ) => void;
 
   // ─── Draft-level actions (keyed by formId) ───────────────
-  setToken: <K extends keyof DesignTokens>(formId: string, key: K, value: DesignTokens[K]) => void;
+  setToken: <K extends keyof DesignTokens>(
+    formId: string,
+    key: K,
+    value: DesignTokens[K],
+  ) => void;
   setTokens: (formId: string, tokens: DesignTokens) => void;
   applyStylePreset: (formId: string, presetId: string) => void;
   applyLayoutPreset: (formId: string, presetId: string) => void;
@@ -93,7 +99,9 @@ function normalizeFormEntry(entry: FormConfigEntry): FormConfigEntry {
     submissions: Number.isFinite(entry.submissions)
       ? entry.submissions
       : DEFAULT_FORM_METRICS.submissions,
-    views: Number.isFinite(entry.views) ? entry.views : DEFAULT_FORM_METRICS.views,
+    views: Number.isFinite(entry.views)
+      ? entry.views
+      : DEFAULT_FORM_METRICS.views,
     responseRate: Number.isFinite(entry.responseRate)
       ? entry.responseRate
       : DEFAULT_FORM_METRICS.responseRate,
@@ -101,7 +109,8 @@ function normalizeFormEntry(entry: FormConfigEntry): FormConfigEntry {
       ? entry.avgRating
       : DEFAULT_FORM_METRICS.avgRating,
     lastSubmissionAt:
-      typeof entry.lastSubmissionAt === "number" && Number.isFinite(entry.lastSubmissionAt)
+      typeof entry.lastSubmissionAt === "number" &&
+      Number.isFinite(entry.lastSubmissionAt)
         ? entry.lastSubmissionAt
         : DEFAULT_FORM_METRICS.lastSubmissionAt,
   };
@@ -205,7 +214,9 @@ export const useStudioStore = create<StudioStore>()(
 
       deleteForm: (slug, formId) => {
         set((s) => {
-          const forms = (s.formsByProject[slug] ?? []).filter((f) => f.id !== formId);
+          const forms = (s.formsByProject[slug] ?? []).filter(
+            (f) => f.id !== formId,
+          );
           const remaining = { ...s.snapshots };
           delete remaining[formId];
           return {
@@ -403,15 +414,20 @@ export const useStudioStore = create<StudioStore>()(
             };
           }
 
-          return { formsByProject, snapshots, device: "desktop" } as unknown as StudioStore;
+          return {
+            formsByProject,
+            snapshots,
+            device: "desktop",
+          } as unknown as StudioStore;
         }
         return persisted as StudioStore;
       },
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<StudioStore> | undefined;
         const persistedFormsByProject =
-          (persisted?.formsByProject as Record<string, FormConfigEntry[]> | undefined) ??
-          currentState.formsByProject;
+          (persisted?.formsByProject as
+            | Record<string, FormConfigEntry[]>
+            | undefined) ?? currentState.formsByProject;
 
         return {
           ...currentState,

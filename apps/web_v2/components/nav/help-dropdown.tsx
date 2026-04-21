@@ -74,7 +74,11 @@ export function HelpDropdown() {
               <a
                 href={link.href}
                 target={link.href.startsWith("mailto") ? undefined : "_blank"}
-                rel={link.href.startsWith("mailto") ? undefined : "noopener noreferrer"}
+                rel={
+                  link.href.startsWith("mailto")
+                    ? undefined
+                    : "noopener noreferrer"
+                }
                 className="gap-2 text-xs"
               >
                 <link.icon className="size-3.5 text-muted-foreground" />

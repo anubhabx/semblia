@@ -24,7 +24,7 @@ export function ProgressDots({ current, total }: ProgressDotsProps) {
               ? "w-5 bg-brand"
               : i < current
                 ? "w-1.5 bg-brand/40"
-                : "w-1.5 bg-border"
+                : "w-1.5 bg-border",
           )}
         />
       ))}

@@ -56,7 +56,7 @@ export function ProjectsToolbar({
             "flex size-6 items-center justify-center rounded-md transition-colors duration-150",
             view === "list"
               ? "bg-background text-foreground shadow-[0_1px_2px_oklch(0_0_0/8%)]"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
           title="List view"
         >
@@ -69,7 +69,7 @@ export function ProjectsToolbar({
             "flex size-6 items-center justify-center rounded-md transition-colors duration-150",
             view === "card"
               ? "bg-background text-foreground shadow-[0_1px_2px_oklch(0_0_0/8%)]"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
           title="Card view"
         >

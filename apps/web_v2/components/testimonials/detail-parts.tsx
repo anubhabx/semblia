@@ -65,7 +65,9 @@ export function MetaRow({
   return (
     <div className="flex items-center gap-3 py-1.5">
       <Icon className="size-3.5 shrink-0 text-muted-foreground/60" />
-      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">
+        {label}
+      </span>
       <span className="text-[11px] font-medium text-foreground">{value}</span>
     </div>
   );

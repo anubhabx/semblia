@@ -30,11 +30,26 @@ const notifIcon: Record<
   NotificationType,
   { Icon: React.ComponentType<{ className?: string }>; tone: string }
 > = {
-  NEW_TESTIMONIAL: { Icon: MessageSquareTextIcon, tone: "text-brand bg-brand/12" },
-  TESTIMONIAL_FLAGGED: { Icon: ShieldAlertIcon, tone: "text-warning bg-warning/12" },
-  TESTIMONIAL_APPROVED: { Icon: CircleCheckIcon, tone: "text-success bg-success/12" },
-  TESTIMONIAL_REJECTED: { Icon: ShieldAlertIcon, tone: "text-destructive bg-destructive/10" },
-  SECURITY_ALERT: { Icon: ShieldAlertIcon, tone: "text-destructive bg-destructive/10" },
+  NEW_TESTIMONIAL: {
+    Icon: MessageSquareTextIcon,
+    tone: "text-brand bg-brand/12",
+  },
+  TESTIMONIAL_FLAGGED: {
+    Icon: ShieldAlertIcon,
+    tone: "text-warning bg-warning/12",
+  },
+  TESTIMONIAL_APPROVED: {
+    Icon: CircleCheckIcon,
+    tone: "text-success bg-success/12",
+  },
+  TESTIMONIAL_REJECTED: {
+    Icon: ShieldAlertIcon,
+    tone: "text-destructive bg-destructive/10",
+  },
+  SECURITY_ALERT: {
+    Icon: ShieldAlertIcon,
+    tone: "text-destructive bg-destructive/10",
+  },
 };
 
 // ── Notification bell ──────────────────────────────────────────────────────────
@@ -52,7 +67,9 @@ export function NotificationBell() {
           variant="ghost"
           size="icon-sm"
           className="relative text-muted-foreground hover:text-foreground"
-          aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}
+          aria-label={
+            unread > 0 ? `${unread} unread notifications` : "Notifications"
+          }
         >
           <BellIcon className="size-4" />
           {unread > 0 && (
@@ -75,7 +92,9 @@ export function NotificationBell() {
         <DropdownMenuSeparator className="m-0" />
         {recent.length === 0 ? (
           <div className="px-3 py-6 text-center">
-            <p className="text-xs text-muted-foreground">No notifications yet.</p>
+            <p className="text-xs text-muted-foreground">
+              No notifications yet.
+            </p>
           </div>
         ) : (
           <ul className="max-h-[360px] divide-y divide-border/60 overflow-y-auto">
@@ -90,7 +109,7 @@ export function NotificationBell() {
                     <span
                       className={cn(
                         "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
-                        cfg.tone
+                        cfg.tone,
                       )}
                     >
                       <cfg.Icon className="size-3" />

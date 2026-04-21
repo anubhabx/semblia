@@ -9,7 +9,7 @@ import {
   PuzzlePieceIcon as PuzzleIcon,
   ChartBarIcon as BarChart3Icon,
   KeyIcon as KeyRoundIcon,
-  SlidersHorizontalIcon as SlidersHorizontalIcon
+  SlidersHorizontalIcon as SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
 
 import { getProjectBySlug, type MockProject } from "@/lib/mock-data";
@@ -33,33 +33,33 @@ function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
       label: "Testimonials",
       href: `/projects/${slug}/testimonials`,
       icon: MessageSquareTextIcon,
-      badge: project._count.pendingModeration || null
+      badge: project._count.pendingModeration || null,
     },
     {
       label: "Collect",
       href: `/projects/${slug}/collect`,
-      icon: RadioIcon
+      icon: RadioIcon,
     },
     {
       label: "Widgets",
       href: `/projects/${slug}/widgets`,
-      icon: PuzzleIcon
+      icon: PuzzleIcon,
     },
     {
       label: "Analytics",
       href: `/projects/${slug}/analytics`,
-      icon: BarChart3Icon
+      icon: BarChart3Icon,
     },
     {
       label: "API Keys",
       href: `/projects/${slug}/api-keys`,
-      icon: KeyRoundIcon
+      icon: KeyRoundIcon,
     },
     {
       label: "Settings",
       href: `/projects/${slug}/settings`,
-      icon: SlidersHorizontalIcon
-    }
+      icon: SlidersHorizontalIcon,
+    },
   ];
 }
 
@@ -68,7 +68,7 @@ function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
 function NavRow({
   item,
   active,
-  onNavigate
+  onNavigate,
 }: {
   item: ProjectNavItem;
   active: boolean;
@@ -85,7 +85,7 @@ function NavRow({
         "focus-visible:ring-2 focus-visible:ring-ring/50",
         active
           ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
     >
       {active && (
@@ -97,7 +97,7 @@ function NavRow({
       <Icon
         className={cn(
           "size-3.5 shrink-0 transition-colors",
-          active ? "text-foreground" : "text-muted-foreground/80"
+          active ? "text-foreground" : "text-muted-foreground/80",
         )}
       />
       <span className="flex-1 truncate">{item.label}</span>
@@ -105,7 +105,7 @@ function NavRow({
         <span
           className={cn(
             "inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-bold tabular-nums",
-            "bg-warning/15 text-warning"
+            "bg-warning/15 text-warning",
           )}
         >
           {item.badge}
@@ -119,7 +119,7 @@ function NavRow({
 
 export function ProjectSidebarNav({
   slug,
-  onNavigate
+  onNavigate,
 }: {
   slug: string;
   onNavigate?: () => void;
@@ -143,7 +143,7 @@ export function ProjectSidebarNav({
           <span
             className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
             style={{
-              backgroundColor: project.brandColorPrimary ?? "var(--brand)"
+              backgroundColor: project.brandColorPrimary ?? "var(--brand)",
             }}
           >
             {projectInitials(project.name)}
@@ -201,7 +201,7 @@ export function ProjectSidebar({ slug }: { slug: string }) {
     <aside
       style={{ top: "3.5rem", height: "calc(100svh - 3.5rem)" }}
       className={cn(
-        "fixed left-0 z-20 hidden w-56 overflow-y-auto border-r border-border bg-background lg:flex lg:flex-col"
+        "fixed left-0 z-20 hidden w-56 overflow-y-auto border-r border-border bg-background lg:flex lg:flex-col",
       )}
       aria-label="Project sidebar"
     >

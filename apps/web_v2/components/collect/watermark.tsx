@@ -18,7 +18,7 @@ export function Watermark({
         position === "bottom-left" && "bottom-3 left-3",
         position === "bottom-right" && "bottom-3 right-3",
         position === "bottom-center" && "bottom-3 left-1/2 -translate-x-1/2",
-        className
+        className,
       )}
     >
       <span className="inline-block size-1.5 rounded-full bg-amber-500" />

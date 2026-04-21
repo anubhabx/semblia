@@ -25,8 +25,8 @@ export default async function SettingsPage(props: {
     >
       <p className="text-sm text-muted-foreground">
         Project name, slug, description, branding (colors, logo), visibility,
-        moderation settings, social links, and danger zone (delete project)
-        will be built here.
+        moderation settings, social links, and danger zone (delete project) will
+        be built here.
       </p>
     </ProjectPageShell>
   );

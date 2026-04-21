@@ -24,7 +24,11 @@ import { Kbd } from "@/components/kbd-shortcuts-dialog";
 import { cn } from "@/lib/utils";
 import { type MockTestimonial } from "@/lib/mock-data";
 import { Stars, STATUS_CONFIG } from "@/components/testimonials/shared";
-import { DetailEmpty, DetailBodySkeleton, MetaRow } from "@/components/testimonials/detail-parts";
+import {
+  DetailEmpty,
+  DetailBodySkeleton,
+  MetaRow,
+} from "@/components/testimonials/detail-parts";
 
 // ── Main detail component ─────────────────────────────────────────────────────
 
@@ -67,7 +71,7 @@ export function TestimonialDetail({
       <div
         className={cn(
           "flex items-center gap-2 border-b border-border shrink-0",
-          isPage ? "px-6 h-12" : "px-5 h-11"
+          isPage ? "px-6 h-12" : "px-5 h-11",
         )}
       >
         {showBack && (
@@ -172,7 +176,7 @@ export function TestimonialDetail({
                   <span
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                      cfg.pill
+                      cfg.pill,
                     )}
                   >
                     <cfg.icon className="size-3.5 shrink-0" />
@@ -184,7 +188,7 @@ export function TestimonialDetail({
                       "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium",
                       t.isPublished
                         ? "text-success bg-success/10"
-                        : "text-muted-foreground bg-muted"
+                        : "text-muted-foreground bg-muted",
                     )}
                   >
                     {t.isPublished ? (
@@ -256,11 +260,7 @@ export function TestimonialDetail({
                   })}
                 />
                 {t.source && (
-                  <MetaRow
-                    icon={GlobeIcon}
-                    label="Source"
-                    value={t.source}
-                  />
+                  <MetaRow icon={GlobeIcon} label="Source" value={t.source} />
                 )}
               </div>
             </div>
@@ -273,7 +273,7 @@ export function TestimonialDetail({
         <div
           className={cn(
             "shrink-0 border-t border-border bg-background/95 backdrop-blur-sm",
-            isPage ? "px-6 py-4" : "px-5 py-3"
+            isPage ? "px-6 py-4" : "px-5 py-3",
           )}
         >
           <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export function TestimonialDetail({
                   "gap-1.5 active:scale-[0.97]",
                   isActionable
                     ? "text-muted-foreground hover:text-foreground"
-                    : "flex-1"
+                    : "flex-1",
                 )}
                 onClick={() => onTogglePublish(t.id, !t.isPublished)}
               >

@@ -1,7 +1,11 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Sun as SunIcon, Moon as MoonIcon, Monitor as MonitorIcon } from "@phosphor-icons/react";
+import {
+  Sun as SunIcon,
+  Moon as MoonIcon,
+  Monitor as MonitorIcon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,7 +32,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           size="icon-sm"
           className={cn(
             "text-sidebar-foreground/50 transition-colors hover:text-sidebar-foreground",
-            className
+            className,
           )}
           aria-label="Toggle colour theme"
         >
@@ -36,11 +40,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           <MoonIcon className="absolute size-3.5 scale-0 transition-transform dark:scale-100" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        sideOffset={6}
-        className="w-36"
-      >
+      <DropdownMenuContent align="end" sideOffset={6} className="w-36">
         {THEMES.map(({ key, label, Icon }) => (
           <DropdownMenuItem
             key={key}

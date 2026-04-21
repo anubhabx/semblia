@@ -31,7 +31,8 @@ export default async function WidgetDetailPage(props: {
       title="Widget Editor"
       description={
         <>
-          {widget.config.layoutType} · {widget.config.theme} theme - {project.name}
+          {widget.config.layoutType} · {widget.config.theme} theme -{" "}
+          {project.name}
         </>
       }
     >

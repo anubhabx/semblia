@@ -14,16 +14,16 @@ export interface FormPreset {
  */
 export function detectActivePreset(config: FormConfig): string | null {
   for (const preset of FORM_PRESETS) {
-    const match = (Object.keys(preset.branding) as Array<keyof typeof preset.branding>).every(
-      (k) => {
-        const pv = preset.branding[k];
-        const cv = config.branding[k];
-        if (typeof pv === "object" && pv !== null) {
-          return JSON.stringify(pv) === JSON.stringify(cv);
-        }
-        return pv === cv;
+    const match = (
+      Object.keys(preset.branding) as Array<keyof typeof preset.branding>
+    ).every((k) => {
+      const pv = preset.branding[k];
+      const cv = config.branding[k];
+      if (typeof pv === "object" && pv !== null) {
+        return JSON.stringify(pv) === JSON.stringify(cv);
       }
-    );
+      return pv === cv;
+    });
     if (match) return preset.id;
   }
   return null;
@@ -33,10 +33,7 @@ export function detectActivePreset(config: FormConfig): string | null {
  * Apply a preset to a config. Replaces all branding properties except `logoUrl`
  * (which is the user's own brand asset and should survive preset changes).
  */
-export function applyPreset(
-  current: FormConfig,
-  presetId: string
-): FormConfig {
+export function applyPreset(current: FormConfig, presetId: string): FormConfig {
   const preset = FORM_PRESETS.find((p) => p.id === presetId);
   if (!preset) return current;
   return {

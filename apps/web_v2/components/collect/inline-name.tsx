@@ -42,7 +42,10 @@ export function InlineName({
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
-          if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
         }}
         className={cn(
           "truncate bg-transparent text-[13px] font-medium outline-none",
@@ -57,13 +60,17 @@ export function InlineName({
   return (
     <button
       type="button"
-      onClick={() => { setDraft(value); setEditing(true); }}
+      onClick={() => {
+        setDraft(value);
+        setEditing(true);
+      }}
       className={cn(
         "truncate text-left text-[13px] font-medium",
         muted ? "text-muted-foreground" : "text-foreground",
       )}
     >
-      {value}{dirty && <span className="text-muted-foreground">*</span>}
+      {value}
+      {dirty && <span className="text-muted-foreground">*</span>}
     </button>
   );
 }
