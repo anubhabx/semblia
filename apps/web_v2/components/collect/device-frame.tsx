@@ -140,13 +140,17 @@ export const DeviceFrame = React.memo(function DeviceFrame({
 
       <div
         className={cn(
-          "relative flex-1 overflow-auto",
+          "relative flex-1 overflow-hidden",
           screenRadius,
           screenPadding,
           (isMobile || isTablet) &&
             "bg-background border border-white/[0.06] scrollbar-none",
         )}
-        style={isMobile || isTablet ? { scrollbarWidth: "none" } : undefined}
+        style={{
+          ...(isMobile || isTablet ? { scrollbarWidth: "none" as const } : {}),
+          display: "flex",
+          flexDirection: "column" as const,
+        }}
       >
         {children}
       </div>

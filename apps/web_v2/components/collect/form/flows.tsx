@@ -146,7 +146,13 @@ export function FlowStepped({ questions, stickyProgress }: FlowProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <ProgressBar current={step} total={total} sticky={stickyProgress} />
 
-      <div style={{ minHeight: 120 }}>
+      <div
+        key={current?.id ?? step}
+        style={{
+          minHeight: 120,
+          animation: "step-fade-in .25s ease-out",
+        }}
+      >
         {current && <Field key={current.id} question={current} />}
       </div>
 
@@ -207,7 +213,9 @@ export function FlowCards({ questions, stickyProgress }: FlowProps) {
               inset: i === 0 ? undefined : `${i * 6}px ${i * -3}px auto`,
               zIndex: 10 - i,
               background: "var(--f-surface)",
-              border: "1px solid var(--f-line-30)",
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: "var(--f-line-30)",
               borderRadius: "var(--f-radius)",
               padding: 24,
               opacity: i === 0 ? 1 : 0.55 - i * 0.15,

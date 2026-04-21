@@ -15,7 +15,9 @@ export function BrandPill({ name, logoUrl }: { name: string; logoUrl?: string | 
         padding: "5px 14px 5px 5px",
         borderRadius: 999,
         background: "var(--f-surface-60)",
-        border: "1px solid var(--f-line-30)",
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: "var(--f-line-30)",
         fontSize: "calc(var(--f-size-base) * 0.78)",
         fontFamily: "var(--f-font-body)",
         color: "var(--f-ink-soft)",
@@ -130,7 +132,9 @@ export function HeroTop({ config }: { config: StudioConfig }) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        borderBottom: "1px solid var(--f-line-30)",
+        borderBottomWidth: 1,
+        borderBottomStyle: "solid",
+        borderBottomColor: "var(--f-line-30)",
         marginBottom: 8,
         paddingBottom: 28,
         gap: 14,
@@ -201,7 +205,9 @@ export function HeroSide({ config }: { config: StudioConfig }) {
           fontSize: "calc(var(--f-size-base) * 1.05)",
           lineHeight: 1.6,
           color: "var(--f-accent-ink-80)",
-          borderLeft: "3px solid var(--f-accent-ink-80)",
+          borderLeftWidth: 3,
+          borderLeftStyle: "solid",
+          borderLeftColor: "var(--f-accent-ink-80)",
           paddingLeft: 14,
           margin: "8px 0 0",
           maxWidth: 260,
@@ -256,7 +262,9 @@ export function ContainerBoxed({ children }: { children: React.ReactNode }) {
         margin: "0 auto",
         padding: "40px 36px",
         background: "var(--f-surface)",
-        border: "1px solid var(--f-line-30)",
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: "var(--f-line-30)",
         borderRadius: "var(--f-radius)",
         boxShadow: "var(--f-shadow)",
       }}
@@ -296,8 +304,8 @@ export function ContainerSplit({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", minHeight: "100%", width: "100%" }}>
-      {/* Left hero pane */}
+    <div style={{ display: "flex", height: "100%", width: "100%" }}>
+      {/* Left hero pane — sticky, never scrolls */}
       <div
         style={{
           width: "42%",
@@ -307,13 +315,15 @@ export function ContainerSplit({
           flexDirection: "column",
           justifyContent: "center",
           color: "var(--f-accent-ink)",
-          position: "relative",
+          position: "sticky",
+          top: 0,
+          height: "100%",
           overflow: "hidden",
         }}
       >
         {heroContent}
       </div>
-      {/* Right form pane */}
+      {/* Right form pane — scrolls independently */}
       <div
         style={{
           flex: 1,

@@ -31,17 +31,24 @@ function useContainerWidth<T extends HTMLElement>(): [
 ] {
   const ref = React.useRef<T | null>(null);
   const [width, setWidth] = React.useState(0);
+  const rafRef = React.useRef(0);
 
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setWidth(entry.contentRect.width);
-      }
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          setWidth(entry.contentRect.width);
+        }
+      });
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      observer.disconnect();
+    };
   }, []);
 
   return [ref, width];
@@ -120,13 +127,16 @@ export const TestimonialForm = React.memo(function TestimonialForm({
     () => ({
       ...cssVars,
       width: "100%",
+      height: "100%",
       minHeight: "100%",
       background: tokens.bg,
       backgroundImage: textureImage !== "none" ? textureImage : undefined,
       fontFamily: tokens.fontBody,
       color: tokens.ink,
       position: "relative",
-      overflowY: effectiveContainer === "split" ? "hidden" : "auto",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column" as const,
     }),
     [
       cssVars,
@@ -142,9 +152,18 @@ export const TestimonialForm = React.memo(function TestimonialForm({
   if (formState.status === "success") {
     return (
       <div ref={rootRef} style={rootStyle}>
-        <ContainerBoxed>
-          <ThankYou brandName={brandName} />
-        </ContainerBoxed>
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px 0",
+        }}>
+          <ContainerBoxed>
+            <ThankYou brandName={brandName} />
+          </ContainerBoxed>
+        </div>
       </div>
     );
   }
@@ -191,18 +210,40 @@ export const TestimonialForm = React.memo(function TestimonialForm({
     containerNode = <ContainerBoxed>{formContent}</ContainerBoxed>;
   }
 
+  // Split layout: the container handles its own scroll (hero sticky left, form scrolls right)
+  // All other layouts: wrap in a scrollable flex child that centers content vertically
+  const isSplit = effectiveContainer === "split";
+
   return (
     <FormContext.Provider value={contextValue}>
       <div ref={rootRef} style={rootStyle}>
         {layout.hero === "floating" && heroNode}
 
-        {containerNode}
+        {isSplit ? (
+          /* Split takes full height, manages its own scroll */
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {containerNode}
+          </div>
+        ) : (
+          /* Other layouts: scrollable, vertically centered */
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "stretch",
+            justifyContent: "center",
+            padding: "24px 0",
+            minHeight: 0,
+          }}>
+            {containerNode}
+          </div>
+        )}
 
-        {layout.showBrandPill && effectiveContainer !== "split" && (
+        {layout.showBrandPill && !isSplit && (
           <div
             style={{
-              position: "sticky",
-              bottom: 0,
+              flexShrink: 0,
               display: "flex",
               justifyContent: "center",
               padding: "10px 0 14px",

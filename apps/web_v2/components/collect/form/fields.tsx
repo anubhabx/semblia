@@ -23,8 +23,12 @@ function inputStyle(underline: boolean): React.CSSProperties {
     return {
       ...baseField,
       backgroundColor: "transparent",
-      border: "none",
-      borderBottom: "1.5px solid var(--f-line-50)",
+      borderWidth: 0,
+      borderStyle: "none",
+      borderColor: "transparent",
+      borderBottomWidth: 1.5,
+      borderBottomStyle: "solid",
+      borderBottomColor: "var(--f-line-50)",
       borderRadius: 0,
       padding: "var(--f-field-pad) 0",
     };
@@ -32,7 +36,9 @@ function inputStyle(underline: boolean): React.CSSProperties {
   return {
     ...baseField,
     backgroundColor: "var(--f-surface-60)",
-    border: "1px solid var(--f-line-50)",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "var(--f-line-50)",
     borderRadius: "var(--f-field-radius)",
     padding: "var(--f-field-pad) calc(var(--f-field-pad) + 4px)",
   };
@@ -47,6 +53,10 @@ function inputFocusStyle(underline: boolean): React.CSSProperties {
     boxShadow: "0 0 0 3px var(--f-accent-08)",
   };
 }
+
+/* ─── Stable empty object — avoids re-allocation on every render ─────────── */
+
+const EMPTY_STYLE: React.CSSProperties = {};
 
 /* ─── Field label ─────────────────────────────────────────────────────────── */
 
@@ -140,7 +150,7 @@ function ShortTextField({ q }: { q: StudioQuestion }) {
         onBlur={() => setFocused(false)}
         style={{
           ...inputStyle(underline),
-          ...(focused ? inputFocusStyle(underline) : {}),
+          ...(focused ? inputFocusStyle(underline) : EMPTY_STYLE),
         }}
       />
     </FieldWrapper>
@@ -167,7 +177,7 @@ function LongTextField({ q }: { q: StudioQuestion }) {
           ...inputStyle(underline),
           resize: "none",
           minHeight: 100,
-          ...(focused ? inputFocusStyle(underline) : {}),
+          ...(focused ? inputFocusStyle(underline) : EMPTY_STYLE),
         }}
       />
     </FieldWrapper>
@@ -250,7 +260,9 @@ function NpsField({ q }: { q: StudioQuestion }) {
                 width: 36,
                 height: 36,
                 borderRadius: "var(--f-field-radius)",
-                border: `1px solid ${active ? "var(--f-accent)" : "var(--f-line-50)"}`,
+                borderWidth: 1,
+                borderStyle: "solid",
+                borderColor: active ? "var(--f-accent)" : "var(--f-line-50)",
                 backgroundColor: active ? "var(--f-accent)" : "transparent",
                 color: active ? "var(--f-accent-ink)" : "var(--f-ink)",
                 fontFamily: "var(--f-font-mono)",
@@ -377,7 +389,9 @@ function RadioField({ q }: { q: StudioQuestion }) {
                   width: 16,
                   height: 16,
                   borderRadius: "50%",
-                  border: `1.5px solid ${active ? "var(--f-accent)" : "var(--f-ink-soft-50)"}`,
+                  borderWidth: 1.5,
+                  borderStyle: "solid",
+                  borderColor: active ? "var(--f-accent)" : "var(--f-ink-soft-50)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -454,7 +468,9 @@ function CheckboxField({ q }: { q: StudioQuestion }) {
                   width: 16,
                   height: 16,
                   borderRadius: 3,
-                  border: `1.5px solid ${checked ? "var(--f-accent)" : "var(--f-ink-soft-50)"}`,
+                  borderWidth: 1.5,
+                  borderStyle: "solid",
+                  borderColor: checked ? "var(--f-accent)" : "var(--f-ink-soft-50)",
                   backgroundColor: checked ? "var(--f-accent)" : "transparent",
                   display: "inline-flex",
                   alignItems: "center",
@@ -505,7 +521,7 @@ function DropdownField({ q }: { q: StudioQuestion }) {
             cursor: "pointer",
             appearance: "none",
             paddingRight: "calc(var(--f-field-pad) + 24px)",
-            ...(focused ? inputFocusStyle(underline) : {}),
+            ...(focused ? inputFocusStyle(underline) : EMPTY_STYLE),
           }}
         >
           <option value="">Select…</option>
@@ -567,7 +583,7 @@ function FileUpload({ q }: { q: StudioQuestion }) {
           alignItems: "center",
           justifyContent: "center",
           minHeight: 90,
-          borderStyle: "dashed",
+          borderStyle: "dashed" as const,
           color: "var(--f-ink-soft)",
           fontSize: "var(--f-size-sm)",
           gap: 6,

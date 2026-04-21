@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useStudioStore } from "@/lib/collect/studio-store";
 import { StudioControls } from "@/components/collect/studio/studio-controls";
