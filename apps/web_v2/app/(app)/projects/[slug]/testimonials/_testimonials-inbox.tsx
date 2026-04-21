@@ -8,14 +8,10 @@ import { TestimonialDetail } from "@/components/testimonials/testimonial-detail"
 import { KbdShortcutsDialog } from "@/components/kbd-shortcuts-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import {
-  apiGetTestimonial,
-  apiApproveTestimonial,
-  apiRejectTestimonial,
-  apiPublishTestimonial
-} from "@/lib/api";
-import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
+import { apiGetTestimonial } from "@/lib/api";
+import type { MockTestimonial } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +41,15 @@ export function TestimonialsInbox({
   const [panelClosing, setPanelClosing] = React.useState(false);
   // Track whether panel should render (stays true during exit animation)
   const [panelVisible, setPanelVisible] = React.useState(false);
+
+  // Moderation actions (optimistic)
+  const {
+    handleApprove,
+    handleReject,
+    handleTogglePublish,
+    handleInlineApprove,
+    handleInlineReject,
+  } = useTestimonialModeration(detail, setDetail);
 
   // Keyboard shortcut dialog
   const [kbdOpen, setKbdOpen] = React.useState(false);
@@ -109,62 +114,6 @@ export function TestimonialsInbox({
     }, 200);
   }, []);
 
-  // ── Optimistic moderation for detail panel ──
-  const handleApprove = React.useCallback((id: string) => {
-    apiApproveTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            moderationStatus: "APPROVED" as ModerationStatus,
-            isApproved: true
-          }
-        : prev
-    );
-  }, []);
-
-  const handleReject = React.useCallback((id: string) => {
-    apiRejectTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-        : prev
-    );
-  }, []);
-
-  const handleTogglePublish = React.useCallback(
-    (id: string, published: boolean) => {
-      apiPublishTestimonial(id, published);
-      setDetail((prev) =>
-        prev && prev.id === id ? { ...prev, isPublished: published } : prev
-      );
-    },
-    []
-  );
-
-  // ── Inline actions from list (optimistic) ──
-  const handleInlineApprove = React.useCallback((id: string) => {
-    apiApproveTestimonial(id);
-    // If currently viewing this item in detail, update it too
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            moderationStatus: "APPROVED" as ModerationStatus,
-            isApproved: true
-          }
-        : prev
-    );
-  }, []);
-
-  const handleInlineReject = React.useCallback((id: string) => {
-    apiRejectTestimonial(id);
-    setDetail((prev) =>
-      prev && prev.id === id
-        ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-        : prev
-    );
-  }, []);
 
   // ── Clear selection when switching to mobile ──
   React.useEffect(() => {

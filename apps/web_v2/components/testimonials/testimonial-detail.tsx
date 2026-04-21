@@ -4,10 +4,7 @@ import * as React from "react";
 import {
   CheckCircle as CheckCircle2Icon,
   XCircle as XCircleIcon,
-  Clock as ClockIcon,
-  Warning as AlertTriangleIcon,
   ShieldCheck as ShieldCheckIcon,
-  Star as StarIcon,
   Eye as EyeIcon,
   EyeSlash as EyeOffIcon,
   X as XIcon,
@@ -17,147 +14,17 @@ import {
   Tag as TagIcon,
   ShieldWarning as ShieldAlertIcon,
   ArrowLeft as ArrowLeftIcon,
-  ChatText as MessageSquareTextIcon,
   Quotes as QuoteIcon,
 } from "@phosphor-icons/react";
 
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Kbd } from "@/components/kbd-shortcuts-dialog";
 import { cn } from "@/lib/utils";
-import {
-  type MockTestimonial,
-  type ModerationStatus,
-} from "@/lib/mock-data";
-
-// ── Status config ─────────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<
-  ModerationStatus,
-  {
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    pill: string;
-  }
-> = {
-  APPROVED: {
-    label: "Approved",
-    icon: CheckCircle2Icon,
-    pill: "text-success bg-success/10",
-  },
-  PENDING: {
-    label: "Pending review",
-    icon: ClockIcon,
-    pill: "text-muted-foreground bg-muted",
-  },
-  FLAGGED: {
-    label: "Flagged",
-    icon: AlertTriangleIcon,
-    pill: "text-warning bg-warning/12",
-  },
-  REJECTED: {
-    label: "Rejected",
-    icon: XCircleIcon,
-    pill: "text-destructive bg-destructive/10",
-  },
-};
-
-// ── Stars ─────────────────────────────────────────────────────────────────────
-
-function Stars({ rating }: { rating: number | null }) {
-  if (!rating) return null;
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className="flex items-center gap-0.5"
-        aria-label={`${rating} out of 5 stars`}
-      >
-        {Array.from({ length: 5 }).map((_, i) => (
-          <StarIcon
-            key={i}
-            className={cn(
-              "size-4",
-              i < rating
-                ? "fill-warning text-warning"
-                : "fill-muted text-muted"
-            )}
-          />
-        ))}
-      </span>
-      <span className="text-sm font-semibold tabular-nums text-foreground">
-        {rating}.0
-      </span>
-    </div>
-  );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-function DetailEmpty() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
-      <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted">
-        <MessageSquareTextIcon className="size-4 text-muted-foreground" />
-      </div>
-      <p className="text-sm font-medium text-foreground">
-        No testimonial selected
-      </p>
-      <p className="mt-1 max-w-[200px] text-xs leading-relaxed text-muted-foreground">
-        Select a testimonial from the list to view its details.
-      </p>
-    </div>
-  );
-}
-
-// ── Loading skeleton (body only — header renders separately) ───────────────
-
-function DetailBodySkeleton({ isPage }: { isPage: boolean }) {
-  return (
-    <div className={cn("flex-1 space-y-6", isPage ? "px-6 py-6" : "px-5 py-5")}>
-      {/* Author */}
-      <div className="flex items-start gap-3">
-        <Skeleton className="size-10 rounded-full animate-shimmer" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-4 w-28 animate-shimmer" />
-          <Skeleton className="h-3 w-20 animate-shimmer" />
-        </div>
-      </div>
-      {/* Content */}
-      <div className="space-y-2 pl-3 border-l-2 border-border">
-        <Skeleton className="h-3 w-full animate-shimmer" />
-        <Skeleton className="h-3 w-5/6 animate-shimmer" />
-        <Skeleton className="h-3 w-3/5 animate-shimmer" />
-      </div>
-      {/* Status pills */}
-      <div className="flex gap-2">
-        <Skeleton className="h-6 w-20 rounded-full animate-shimmer" />
-        <Skeleton className="h-6 w-24 rounded-full animate-shimmer" />
-      </div>
-    </div>
-  );
-}
-
-// ── Metadata row helper ───────────────────────────────────────────────────────
-
-function MetaRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-1.5">
-      <Icon className="size-3.5 shrink-0 text-muted-foreground/60" />
-      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">{label}</span>
-      <span className="text-[11px] font-medium text-foreground">{value}</span>
-    </div>
-  );
-}
+import { type MockTestimonial } from "@/lib/mock-data";
+import { Stars, STATUS_CONFIG } from "@/components/testimonials/shared";
+import { DetailEmpty, DetailBodySkeleton, MetaRow } from "@/components/testimonials/detail-parts";
 
 // ── Main detail component ─────────────────────────────────────────────────────
 
@@ -278,7 +145,7 @@ export function TestimonialDetail({
                   className="pb-4 detail-section-enter"
                   style={{ animationDelay: "30ms" }}
                 >
-                  <Stars rating={t.rating} />
+                  <Stars rating={t.rating} size="lg" />
                 </div>
               )}
 

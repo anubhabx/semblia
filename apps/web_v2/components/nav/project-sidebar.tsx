@@ -4,12 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChatText as MessageSquareTextIcon,
-  Broadcast as RadioIcon,
-  PuzzlePiece as PuzzleIcon,
-  ChartBar as BarChart3Icon,
-  Key as KeyRoundIcon,
-  SlidersHorizontal as SlidersHorizontalIcon,
+  ChatTextIcon as MessageSquareTextIcon,
+  BroadcastIcon as RadioIcon,
+  PuzzlePieceIcon as PuzzleIcon,
+  ChartBarIcon as BarChart3Icon,
+  KeyIcon as KeyRoundIcon,
+  SlidersHorizontalIcon as SlidersHorizontalIcon
 } from "@phosphor-icons/react";
 
 import { getProjectBySlug, type MockProject } from "@/lib/mock-data";
@@ -33,33 +33,33 @@ function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
       label: "Testimonials",
       href: `/projects/${slug}/testimonials`,
       icon: MessageSquareTextIcon,
-      badge: project._count.pendingModeration || null,
+      badge: project._count.pendingModeration || null
     },
     {
       label: "Collect",
       href: `/projects/${slug}/collect`,
-      icon: RadioIcon,
+      icon: RadioIcon
     },
     {
       label: "Widgets",
       href: `/projects/${slug}/widgets`,
-      icon: PuzzleIcon,
+      icon: PuzzleIcon
     },
     {
       label: "Analytics",
       href: `/projects/${slug}/analytics`,
-      icon: BarChart3Icon,
+      icon: BarChart3Icon
     },
     {
       label: "API Keys",
       href: `/projects/${slug}/api-keys`,
-      icon: KeyRoundIcon,
+      icon: KeyRoundIcon
     },
     {
       label: "Settings",
       href: `/projects/${slug}/settings`,
-      icon: SlidersHorizontalIcon,
-    },
+      icon: SlidersHorizontalIcon
+    }
   ];
 }
 
@@ -68,7 +68,7 @@ function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
 function NavRow({
   item,
   active,
-  onNavigate,
+  onNavigate
 }: {
   item: ProjectNavItem;
   active: boolean;
@@ -119,7 +119,7 @@ function NavRow({
 
 export function ProjectSidebarNav({
   slug,
-  onNavigate,
+  onNavigate
 }: {
   slug: string;
   onNavigate?: () => void;
@@ -143,7 +143,7 @@ export function ProjectSidebarNav({
           <span
             className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
             style={{
-              backgroundColor: project.brandColorPrimary ?? "var(--brand)",
+              backgroundColor: project.brandColorPrimary ?? "var(--brand)"
             }}
           >
             {projectInitials(project.name)}
@@ -186,8 +186,8 @@ export function ProjectSidebarNav({
       <div className="mt-auto border-t border-border/60 px-4 py-3">
         <p className="text-[10px] leading-snug text-muted-foreground">
           Scoped to{" "}
-          <span className="font-semibold text-foreground">{project.name}</span>
-          . Switch projects from the topbar.
+          <span className="font-semibold text-foreground">{project.name}</span>.
+          Switch projects from the topbar.
         </p>
       </div>
     </div>

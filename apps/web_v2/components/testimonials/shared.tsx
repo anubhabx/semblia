@@ -79,27 +79,35 @@ export function Stars({
   size = "sm",
 }: {
   rating: number | null;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
   if (!rating) return null;
-  const iconSize = size === "md" ? "size-4" : "size-2.5";
+  const iconSize =
+    size === "lg" ? "size-4" : size === "md" ? "size-4" : "size-2.5";
   return (
-    <span
-      className="flex items-center gap-0.5"
-      aria-label={`${rating} out of 5 stars`}
-    >
-      {Array.from({ length: 5 }).map((_, i) => (
-        <StarIcon
-          key={i}
-          className={cn(
-            iconSize,
-            i < rating
-              ? "fill-warning text-warning"
-              : "fill-muted text-muted"
-          )}
-        />
-      ))}
-    </span>
+    <div className="flex items-center gap-2">
+      <span
+        className="flex items-center gap-0.5"
+        aria-label={`${rating} out of 5 stars`}
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <StarIcon
+            key={i}
+            className={cn(
+              iconSize,
+              i < rating
+                ? "fill-warning text-warning"
+                : "fill-muted text-muted"
+            )}
+          />
+        ))}
+      </span>
+      {size === "lg" && (
+        <span className="text-sm font-semibold tabular-nums text-foreground">
+          {rating}.0
+        </span>
+      )}
+    </div>
   );
 }
 

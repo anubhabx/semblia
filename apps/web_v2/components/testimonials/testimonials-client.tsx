@@ -4,20 +4,13 @@ import * as React from "react";
 import {
   MagnifyingGlass as SearchIcon,
   X as XIcon,
-  CheckCircle as CheckCircle2Icon,
-  XCircle as XCircleIcon,
-  ShieldCheck as ShieldCheckIcon,
   Funnel as FilterIcon,
   CaretDown as ChevronDownIcon,
-  CaretRight as ChevronRightIcon,
-  ChatText as MessageSquareTextIcon,
   Check as CheckIcon,
 } from "@phosphor-icons/react";
 
-import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,13 +33,14 @@ import {
   apiRejectTestimonial,
   type PaginatedResponse,
 } from "@/lib/api";
-import {
-  timeAgo,
-  type MockTestimonial,
-  type ModerationStatus,
-} from "@/lib/mock-data";
+import { type MockTestimonial, type ModerationStatus } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { Stars, StatusPill } from "@/components/testimonials/shared";
+import { useDebounce } from "@/hooks/use-debounce";
+import { buildPageNumbers } from "@/lib/pagination";
+import { TestimonialRow } from "./testimonial-row";
+import { TestimonialSkeleton } from "./testimonial-skeleton";
+import { TestimonialEmptyState } from "./testimonial-empty-state";
+import { BulkToolbar } from "./bulk-toolbar";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -69,265 +63,6 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: "rating_desc", label: "Rating: high to low" },
   { key: "rating_asc", label: "Rating: low to high" },
 ];
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function TestimonialSkeleton() {
-  return (
-    <div className="flex items-start gap-3 px-5 py-3.5">
-      <Skeleton className="mt-0.5 size-7 shrink-0 rounded-full animate-shimmer" />
-      <div className="flex-1 space-y-2">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-24 animate-shimmer" />
-          <Skeleton className="h-2.5 w-16 animate-shimmer" />
-        </div>
-        <Skeleton className="h-3 w-full max-w-[260px] animate-shimmer" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3.5 w-12 rounded-full animate-shimmer" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Testimonial row (with inline actions on hover) ────────────────────────
-
-interface TestimonialRowProps {
-  t: MockTestimonial;
-  isSelected?: boolean;
-  isBulkSelected?: boolean;
-  bulkMode?: boolean;
-  onSelect?: (id: string) => void;
-  onBulkToggle?: (id: string) => void;
-  onInlineApprove?: (id: string) => void;
-  onInlineReject?: (id: string) => void;
-}
-
-function TestimonialRow({
-  t,
-  isSelected,
-  isBulkSelected,
-  bulkMode,
-  onSelect,
-  onBulkToggle,
-  onInlineApprove,
-  onInlineReject,
-}: TestimonialRowProps) {
-  const isActionable =
-    t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => {
-        if (bulkMode) {
-          onBulkToggle?.(t.id);
-        } else {
-          onSelect?.(t.id);
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (bulkMode) onBulkToggle?.(t.id);
-          else onSelect?.(t.id);
-        }
-      }}
-      className={cn(
-        "group relative flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-150",
-        isSelected
-          ? "bg-muted/60"
-          : isBulkSelected
-            ? "bg-brand/[0.04]"
-            : "hover:bg-muted/30"
-      )}
-    >
-      {/* Checkbox / avatar */}
-      {bulkMode ? (
-        <span
-          className={cn(
-            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150",
-            isBulkSelected
-              ? "border-brand bg-brand text-brand-foreground"
-              : "border-border bg-background text-transparent hover:border-muted-foreground/40"
-          )}
-        >
-          <CheckIcon className="size-3.5" />
-        </span>
-      ) : (
-        <span
-          className={cn(
-            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold select-none transition-colors duration-150",
-            isSelected
-              ? "bg-foreground text-background"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          {t.authorName[0].toUpperCase()}
-        </span>
-      )}
-
-      <div className="min-w-0 flex-1">
-        {/* Name + role + time */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-foreground truncate">
-            {t.authorName}
-          </span>
-          {t.isOAuthVerified && (
-            <ShieldCheckIcon className="size-3 shrink-0 text-success" />
-          )}
-          {(t.authorRole || t.authorCompany) && (
-            <span className="hidden sm:inline text-[11px] text-muted-foreground truncate">
-              {[t.authorRole, t.authorCompany].filter(Boolean).join(" at ")}
-            </span>
-          )}
-          <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
-            {timeAgo(t.createdAt)}
-          </span>
-        </div>
-
-        {/* Content preview */}
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2">
-          {t.content}
-        </p>
-
-        {/* Compact meta */}
-        <div className="mt-1.5 flex items-center gap-2">
-          <Stars rating={t.rating} />
-          <StatusPill status={t.moderationStatus} />
-        </div>
-      </div>
-
-      {/* Inline actions — appear on hover, only for actionable items */}
-      {!bulkMode && isActionable && (onInlineApprove || onInlineReject) && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
-          {onInlineApprove && (
-            <ActionButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onInlineApprove(t.id);
-              }}
-              tone="success"
-              size="icon-sm"
-              className="rounded-md bg-muted"
-              aria-label={`Approve ${t.authorName}`}
-              title="Approve"
-            >
-              <CheckCircle2Icon className="size-3.5" />
-            </ActionButton>
-          )}
-          {onInlineReject && (
-            <ActionButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onInlineReject(t.id);
-              }}
-              tone="danger"
-              size="icon-sm"
-              className="rounded-md bg-muted"
-              aria-label={`Reject ${t.authorName}`}
-              title="Reject"
-            >
-              <XCircleIcon className="size-3.5" />
-            </ActionButton>
-          )}
-        </div>
-      )}
-
-      {/* Mobile chevron */}
-      {!bulkMode && (
-        <ChevronRightIcon className="mt-2 size-3.5 shrink-0 text-muted-foreground/40 lg:hidden" />
-      )}
-    </div>
-  );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-function EmptyState({ filter }: { filter: StatusFilter }) {
-  const messages: Record<StatusFilter, { title: string; desc: string }> = {
-    ALL: {
-      title: "No testimonials yet",
-      desc: "Share your collection link to start gathering testimonials.",
-    },
-    PENDING: {
-      title: "Nothing pending",
-      desc: "All testimonials have been reviewed.",
-    },
-    FLAGGED: {
-      title: "No flagged items",
-      desc: "Auto-moderation has not flagged anything recently.",
-    },
-    APPROVED: {
-      title: "No approved testimonials",
-      desc: "Approve testimonials to publish them to your widgets.",
-    },
-    REJECTED: {
-      title: "No rejected testimonials",
-      desc: "Rejected testimonials will appear here.",
-    },
-  };
-
-  const { title, desc } = messages[filter];
-
-  return (
-    <div className="flex flex-col items-center py-20 px-6 text-center animate-fade-up">
-      <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted">
-        <MessageSquareTextIcon className="size-4 text-muted-foreground" />
-      </div>
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
-        {desc}
-      </p>
-    </div>
-  );
-}
-
-// ── Bulk actions toolbar ────────────────────────────────────────────────────
-
-function BulkToolbar({
-  count,
-  onApproveAll,
-  onRejectAll,
-  onCancel,
-}: {
-  count: number;
-  onApproveAll: () => void;
-  onRejectAll: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/[0.04] px-6 py-2 animate-fade-up">
-      <span className="text-xs font-semibold tabular-nums text-foreground">
-        {count} selected
-      </span>
-      <div className="ml-auto flex items-center gap-1.5">
-        <Button
-          size="xs"
-          variant="outline"
-          className="gap-1 hover:bg-success/8 hover:text-success hover:border-success/30 active:scale-[0.97]"
-          onClick={onApproveAll}
-        >
-          <CheckCircle2Icon className="size-3" />
-          Approve
-        </Button>
-        <Button
-          size="xs"
-          variant="outline"
-          className="gap-1 hover:bg-destructive/6 hover:text-destructive hover:border-destructive/30 active:scale-[0.97]"
-          onClick={onRejectAll}
-        >
-          <XCircleIcon className="size-3" />
-          Reject
-        </Button>
-        <Button size="xs" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 // ── Main component ──────────────────────────────────────────────────────────
 
@@ -554,7 +289,7 @@ export function TestimonialsClient({
             ))}
           </div>
         ) : items.length === 0 ? (
-          <EmptyState filter={status} />
+          <TestimonialEmptyState filter={status} />
         ) : (
           <div className="divide-y divide-border/60 list-content-enter">
             {items.map((t) => (
@@ -624,39 +359,3 @@ export function TestimonialsClient({
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function buildPageNumbers(
-  current: number,
-  total: number
-): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-  const pages: (number | "ellipsis")[] = [1];
-
-  if (current > 3) pages.push("ellipsis");
-
-  for (
-    let i = Math.max(2, current - 1);
-    i <= Math.min(total - 1, current + 1);
-    i++
-  ) {
-    pages.push(i);
-  }
-
-  if (current < total - 2) pages.push("ellipsis");
-  pages.push(total);
-
-  return pages;
-}
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = React.useState(value);
-
-  React.useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-
-  return debounced;
-}
