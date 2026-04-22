@@ -108,14 +108,7 @@ export const TestimonialForm = React.memo(function TestimonialForm({
       display: "flex",
       flexDirection: "column" as const,
     }),
-    [
-      cssVars,
-      tokens.bg,
-      textureImage,
-      tokens.fontBody,
-      tokens.ink,
-      effectiveContainer,
-    ],
+    [cssVars, tokens.bg, textureImage, tokens.fontBody, tokens.ink],
   );
 
   // Thank-you screen

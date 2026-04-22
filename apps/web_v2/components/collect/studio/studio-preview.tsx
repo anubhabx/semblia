@@ -43,11 +43,12 @@ const ScaledDeviceFrame = React.memo(function ScaledDeviceFrame({
       rafRef.current = requestAnimationFrame(() => {
         for (const entry of entries) {
           const { width: cw, height: ch } = entry.contentRect;
-          const pad = cw < 500 ? 12 : 40;
+          const pad = 24;
           const availW = cw - pad * 2;
           const availH = ch - pad * 2;
-          const s = Math.min(availW / dims.w, availH / dims.h, 1);
-          setScale(Math.max(0.15, s));
+          // 0.95 bias ensures the frame never kisses the stage edge
+          const s = Math.min(availW / dims.w, availH / dims.h) * 0.95;
+          setScale(Math.max(0.2, Math.min(s, 1)));
         }
       });
     });
@@ -59,19 +60,24 @@ const ScaledDeviceFrame = React.memo(function ScaledDeviceFrame({
     };
   }, [dims.w, dims.h]);
 
+  // The scaled frame is positioned absolutely so its intrinsic dims.h never
+  // influences the parent's flex height — ResizeObserver on containerRef now
+  // reads the true available stage slot, not the frame's own height.
   return (
     <div
       ref={containerRef}
-      className="flex flex-1 items-center justify-center overflow-hidden p-2 sm:p-0"
+      style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}
     >
       <div
         className="studio-stage-frame"
         style={{
-          transform: `scale(${scale})`,
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
           transformOrigin: "center center",
           width: dims.w,
           height: dims.h,
-          flexShrink: 0,
           willChange: "transform",
         }}
       >
@@ -99,7 +105,7 @@ const PREVIEW_CSS = `
   --stage-tip: #4a4840;
 }
 .studio-stage-frame {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease, height 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   contain: layout style;
 }
 @keyframes stage-pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
@@ -168,7 +174,7 @@ export const StudioPreview = React.memo(function StudioPreview({
       </div>
 
       {/* Stage area — warm paper background */}
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <ScaledDeviceFrame device={device}>
           <TestimonialForm config={draft} mode="preview" />
         </ScaledDeviceFrame>
