@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProjectBySlug } from "@/lib/mock-data";
-import { ProjectPageShell } from "@/components/projects/project-page-shell";
+import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
@@ -9,6 +11,35 @@ export async function generateMetadata(props: {
   const { slug } = await props.params;
   const project = getProjectBySlug(slug);
   return { title: project ? `Analytics — ${project.name}` : "Analytics" };
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="border-b border-border px-6 pt-7 pb-5 space-y-4">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-3 w-48" />
+        <div className="flex gap-4 pt-1">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-4 w-16" />
+          ))}
+        </div>
+      </div>
+      <div className="px-6 py-6 space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[108px] rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="h-[248px] rounded-lg" />
+        <Skeleton className="h-[160px] rounded-lg" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-[200px] rounded-lg" />
+          <Skeleton className="h-[200px] rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default async function AnalyticsPage(props: {
@@ -19,15 +50,8 @@ export default async function AnalyticsPage(props: {
   if (!project) notFound();
 
   return (
-    <ProjectPageShell
-      title="Analytics"
-      description={<>Performance metrics - {project.name}</>}
-    >
-      <p className="text-sm text-muted-foreground">
-        Unified analytics dashboard: form impressions funnel, testimonial reach,
-        widget load performance (device/country/time), and API usage trends will
-        be built here.
-      </p>
-    </ProjectPageShell>
+    <Suspense fallback={<AnalyticsSkeleton />}>
+      <AnalyticsDashboard projectSlug={slug} />
+    </Suspense>
   );
 }
