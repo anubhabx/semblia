@@ -150,6 +150,12 @@ export interface MockWidgetConfig {
 export interface MockWidget {
   id: string;
   projectId: string;
+  /** Display name. */
+  name: string;
+  /** EMBED | WALL_OF_LOVE — mirrors Prisma `WidgetType`. */
+  widgetType: "EMBED" | "WALL_OF_LOVE";
+  /** Top-level layout type — mirrors Prisma `LayoutType`. */
+  layoutType: "CAROUSEL" | "GRID" | "MASONRY" | "LIST" | "WALL";
   config: MockWidgetConfig;
   createdAt: Date;
   updatedAt: Date;
@@ -599,6 +605,9 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
     {
       id: "widget_l1",
       projectId: "proj_launchpad",
+      name: "Homepage carousel",
+      widgetType: "EMBED",
+      layoutType: "CAROUSEL",
       config: {
         layoutType: "carousel",
         theme: "light",
@@ -621,6 +630,9 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
     {
       id: "widget_l2",
       projectId: "proj_launchpad",
+      name: "Wall of Love",
+      widgetType: "WALL_OF_LOVE",
+      layoutType: "WALL",
       config: {
         layoutType: "wall",
         theme: "auto",
@@ -645,6 +657,9 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
     {
       id: "widget_p1",
       projectId: "proj_portfoliopro",
+      name: "Case study grid",
+      widgetType: "EMBED",
+      layoutType: "GRID",
       config: {
         layoutType: "grid",
         theme: "light",
@@ -669,6 +684,9 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
     {
       id: "widget_m1",
       projectId: "proj_mobilekit",
+      name: "Docs sidebar list",
+      widgetType: "EMBED",
+      layoutType: "LIST",
       config: {
         layoutType: "list",
         theme: "dark",
@@ -858,6 +876,15 @@ export function getWidgetById(
 /** Returns widgets for a project */
 export function getWidgetsByProject(projectId: string): MockWidget[] {
   return MOCK_WIDGETS[projectId] ?? [];
+}
+
+/** Returns approved + published testimonials, ready for widget rendering. */
+export function getApprovedTestimonialsByProject(
+  projectId: string,
+): MockTestimonial[] {
+  return (MOCK_TESTIMONIALS[projectId] ?? []).filter(
+    (t) => t.isApproved && t.isPublished,
+  );
 }
 
 /** Returns API keys for a project */
