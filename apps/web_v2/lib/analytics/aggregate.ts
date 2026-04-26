@@ -335,7 +335,7 @@ export function buildDashboardData(
       lastUsedAt: key.lastUsedAt,
       isActive: key.isActive,
       series: sparkSeries,
-      permissions: key.permissions,
+      keyType: key.type,
     };
   });
 

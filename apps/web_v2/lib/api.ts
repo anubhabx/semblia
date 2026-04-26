@@ -9,20 +9,25 @@ import {
   MOCK_TESTIMONIALS,
   MOCK_WIDGETS,
   MOCK_API_KEYS,
+  MOCK_API_KEY_EVENTS,
   MOCK_NOTIFICATIONS,
   MOCK_SUBSCRIPTION,
   MOCK_USER,
   getProjectBySlug,
   getTestimonialById,
+  getApiKeyById,
+  getApiKeyEvents,
   type MockProject,
   type MockTestimonial,
   type MockWidget,
   type MockApiKey,
+  type MockApiKeyEvent,
   type MockNotification,
   type MockSubscription,
   type MockUser,
   type ModerationStatus,
   type TestimonialType,
+  type ApiKeyType,
 } from "./mock-data";
 
 // ── Latency config ─────────────────────────────────────────────────────────────
@@ -186,6 +191,133 @@ export async function apiGetWidgets(projectId: string): Promise<MockWidget[]> {
 export async function apiGetApiKeys(projectId: string): Promise<MockApiKey[]> {
   await simulateLatency();
   return MOCK_API_KEYS[projectId] ?? [];
+}
+
+export async function apiGetApiKeyById(keyId: string): Promise<MockApiKey | null> {
+  await simulateLatency();
+  return getApiKeyById(keyId) ?? null;
+}
+
+export async function apiGetApiKeyEvents(keyId: string): Promise<MockApiKeyEvent[]> {
+  await simulateLatency();
+  return getApiKeyEvents(keyId);
+}
+
+export type CreateApiKeyDraft = {
+  name: string;
+  type: ApiKeyType;
+  allowedOrigins?: string[];
+  allowedIps?: string[] | null;
+  expiresAt?: Date | null;
+  rateLimit?: number;
+  usageLimit?: number | null;
+};
+
+export async function apiCreateApiKey(
+  projectId: string,
+  draft: CreateApiKeyDraft,
+): Promise<{ key: MockApiKey; plaintext: string }> {
+  await simulateLatency();
+  const prefix = draft.type === "publishable" ? "pk" : "sk";
+  const rand = Math.random().toString(36).slice(2, 10);
+  const plaintext = `${prefix}_live_${rand}${Math.random().toString(36).slice(2, 10)}`;
+  const lastFour = plaintext.slice(-4);
+  const now = new Date();
+  const key: MockApiKey = {
+    id: `key_${rand}`,
+    name: draft.name,
+    type: draft.type,
+    keyPrefix: `${prefix}_live_${rand.slice(0, 4)}`,
+    lastFourPlaintext: lastFour,
+    userId: MOCK_USER.id,
+    projectId,
+    allowedOrigins: draft.type === "publishable" ? (draft.allowedOrigins ?? []) : [],
+    allowedIps: draft.type === "secret" ? (draft.allowedIps ?? null) : null,
+    usageCount: 0,
+    usageLimit: draft.usageLimit ?? null,
+    rateLimit: draft.rateLimit ?? 60,
+    isActive: true,
+    lastUsedAt: null,
+    expiresAt: draft.expiresAt ?? null,
+    createdAt: now,
+    updatedAt: now,
+    dailyUsage: [],
+  };
+  if (!MOCK_API_KEYS[projectId]) MOCK_API_KEYS[projectId] = [];
+  MOCK_API_KEYS[projectId].push(key);
+  MOCK_API_KEY_EVENTS[key.id] = [
+    { id: `ev_${rand}_c`, keyId: key.id, type: "created", at: now },
+  ];
+  return { key, plaintext };
+}
+
+export async function apiRevokeApiKey(keyId: string): Promise<{ success: boolean }> {
+  await sleep(320);
+  const key = getApiKeyById(keyId);
+  if (key) {
+    key.isActive = false;
+    key.updatedAt = new Date();
+    const events = MOCK_API_KEY_EVENTS[keyId] ?? [];
+    events.unshift({ id: `ev_${Math.random().toString(36).slice(2, 8)}`, keyId, type: "revoked", at: new Date() });
+    MOCK_API_KEY_EVENTS[keyId] = events;
+  }
+  return { success: true };
+}
+
+export async function apiRotateApiKey(keyId: string): Promise<{ plaintext: string }> {
+  await simulateLatency();
+  const key = getApiKeyById(keyId);
+  if (!key) throw new Error("Key not found");
+  const prefix = key.type === "publishable" ? "pk" : "sk";
+  const rand = Math.random().toString(36).slice(2, 10);
+  const plaintext = `${prefix}_live_${rand}${Math.random().toString(36).slice(2, 10)}`;
+  key.keyPrefix = `${prefix}_live_${rand.slice(0, 4)}`;
+  key.lastFourPlaintext = plaintext.slice(-4);
+  key.isActive = true;
+  key.updatedAt = new Date();
+  const events = MOCK_API_KEY_EVENTS[keyId] ?? [];
+  events.unshift({ id: `ev_${rand}`, keyId, type: "rotated", at: new Date() });
+  MOCK_API_KEY_EVENTS[keyId] = events;
+  return { plaintext };
+}
+
+export type ApiKeyPatch = Partial<
+  Pick<MockApiKey, "name" | "allowedOrigins" | "allowedIps" | "rateLimit" | "usageLimit" | "expiresAt">
+>;
+
+export async function apiUpdateApiKey(keyId: string, patch: ApiKeyPatch): Promise<MockApiKey> {
+  await simulateLatency();
+  const key = getApiKeyById(keyId);
+  if (!key) throw new Error("Key not found");
+  Object.assign(key, patch, { updatedAt: new Date() });
+  return key;
+}
+
+// ── Projects (mutations) ───────────────────────────────────────────────────────
+
+export type ProjectPatch = Partial<
+  Pick<
+    MockProject,
+    | "name"
+    | "slug"
+    | "shortDescription"
+    | "description"
+    | "visibility"
+    | "autoModeration"
+    | "autoApproveVerified"
+    | "profanityFilterLevel"
+    | "websiteUrl"
+    | "socialLinks"
+    | "tags"
+  >
+>;
+
+export async function apiUpdateProject(slug: string, patch: ProjectPatch): Promise<MockProject> {
+  await simulateLatency();
+  const project = MOCK_PROJECTS.find((p) => p.slug === slug);
+  if (!project) throw new Error("Project not found");
+  Object.assign(project, patch, { updatedAt: new Date() });
+  return project;
 }
 
 // ── Notifications ──────────────────────────────────────────────────────────────

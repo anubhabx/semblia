@@ -167,17 +167,24 @@ export interface MockWidget {
   };
 }
 
+export type ApiKeyType = "publishable" | "secret";
+export type ApiKeyEventType = "created" | "used" | "revoked" | "rotated" | "limit_hit";
+
 export interface MockApiKey {
   id: string;
   name: string;
-  keyPrefix: string; // e.g. "tresta_live_abcd1234" — never expose keyHash
+  /** Key type. Publishable keys are browser-safe + read-only. Secret keys are server-only. */
+  type: ApiKeyType;
+  /** Display prefix, e.g. "pk_live_a8f2" or "sk_live_c3e7". Never includes keyHash. */
+  keyPrefix: string;
+  /** Last 4 chars of the plaintext key — for masked display only. */
+  lastFourPlaintext: string;
   userId: string;
   projectId: string;
-  permissions: {
-    widgets: boolean;
-    testimonials: boolean;
-    analytics: boolean;
-  } | null;
+  /** Allowed origins for publishable keys (e.g. "https://example.com"). Empty = allow all. */
+  allowedOrigins: string[];
+  /** IP allowlist for secret keys. null = any IP allowed. */
+  allowedIps: string[] | null;
   usageCount: number;
   usageLimit: number | null;
   rateLimit: number;
@@ -186,6 +193,18 @@ export interface MockApiKey {
   expiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Daily request counts for the last 30 days (oldest → newest). */
+  dailyUsage: { date: string; count: number }[];
+}
+
+export interface MockApiKeyEvent {
+  id: string;
+  keyId: string;
+  type: ApiKeyEventType;
+  at: Date;
+  ip?: string;
+  userAgent?: string;
+  origin?: string;
 }
 
 export interface MockNotification {
@@ -709,75 +728,123 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
   ],
 };
 
+function makeDailyUsage(base: number, variance: number, days = 30): { date: string; count: number }[] {
+  const out: { date: string; count: number }[] = [];
+  const now = new Date("2024-12-10T00:00:00Z");
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const count = Math.max(0, Math.round(base + (Math.random() - 0.5) * variance));
+    out.push({ date: d.toISOString().slice(0, 10), count });
+  }
+  return out;
+}
+
 export const MOCK_API_KEYS: Record<string, MockApiKey[]> = {
   proj_launchpad: [
     {
       id: "key_l1",
       name: "Production Widget",
-      keyPrefix: "tresta_live_a8f2",
+      type: "publishable",
+      keyPrefix: "pk_live_a8f2",
+      lastFourPlaintext: "7x9z",
       userId: "user_2abc123def456",
       projectId: "proj_launchpad",
-      permissions: { widgets: true, testimonials: false, analytics: false },
+      allowedOrigins: ["https://launchpad.io", "https://www.launchpad.io"],
+      allowedIps: null,
       usageCount: 12483,
       usageLimit: null,
-      rateLimit: 100,
+      rateLimit: 600,
       isActive: true,
       lastUsedAt: new Date("2024-12-10T11:45:00Z"),
       expiresAt: null,
       createdAt: new Date("2024-02-01T10:00:00Z"),
       updatedAt: new Date("2024-12-10T11:45:00Z"),
+      dailyUsage: makeDailyUsage(420, 180),
     },
     {
       id: "key_l2",
-      name: "Dev Testing",
-      keyPrefix: "tresta_test_c3e7",
+      name: "Server Integration",
+      type: "secret",
+      keyPrefix: "sk_live_c3e7",
+      lastFourPlaintext: "m2pq",
       userId: "user_2abc123def456",
       projectId: "proj_launchpad",
-      permissions: { widgets: true, testimonials: true, analytics: true },
+      allowedOrigins: [],
+      allowedIps: ["10.0.1.0/24"],
       usageCount: 847,
       usageLimit: 5000,
-      rateLimit: 50,
+      rateLimit: 60,
       isActive: true,
       lastUsedAt: new Date("2024-12-08T09:00:00Z"),
-      expiresAt: new Date("2025-02-01T00:00:00Z"),
+      expiresAt: new Date("2025-06-01T00:00:00Z"),
       createdAt: new Date("2024-08-15T12:00:00Z"),
       updatedAt: new Date("2024-12-08T09:00:00Z"),
+      dailyUsage: makeDailyUsage(28, 14),
+    },
+    {
+      id: "key_l3",
+      name: "Staging Widget",
+      type: "publishable",
+      keyPrefix: "pk_live_d5f9",
+      lastFourPlaintext: "k4nr",
+      userId: "user_2abc123def456",
+      projectId: "proj_launchpad",
+      allowedOrigins: ["https://staging.launchpad.io"],
+      allowedIps: null,
+      usageCount: 319,
+      usageLimit: 2000,
+      rateLimit: 60,
+      isActive: false,
+      lastUsedAt: new Date("2024-11-20T14:00:00Z"),
+      expiresAt: null,
+      createdAt: new Date("2024-09-01T09:00:00Z"),
+      updatedAt: new Date("2024-11-20T14:00:00Z"),
+      dailyUsage: makeDailyUsage(11, 6),
     },
   ],
   proj_portfoliopro: [
     {
       id: "key_p1",
-      name: "Main Widget Key",
-      keyPrefix: "tresta_live_b9d4",
+      name: "Portfolio Widget",
+      type: "publishable",
+      keyPrefix: "pk_live_b9d4",
+      lastFourPlaintext: "r8vc",
       userId: "user_2abc123def456",
       projectId: "proj_portfoliopro",
-      permissions: { widgets: true, testimonials: false, analytics: false },
+      allowedOrigins: ["https://alexchen.design"],
+      allowedIps: null,
       usageCount: 3201,
       usageLimit: null,
-      rateLimit: 100,
+      rateLimit: 600,
       isActive: true,
       lastUsedAt: new Date("2024-12-08T15:00:00Z"),
       expiresAt: null,
       createdAt: new Date("2024-04-01T10:00:00Z"),
       updatedAt: new Date("2024-12-08T15:00:00Z"),
+      dailyUsage: makeDailyUsage(107, 43),
     },
   ],
   proj_mobilekit: [
     {
       id: "key_m1",
-      name: "Docs Widget",
-      keyPrefix: "tresta_live_f1a6",
+      name: "Docs Embed",
+      type: "publishable",
+      keyPrefix: "pk_live_f1a6",
+      lastFourPlaintext: "h3wt",
       userId: "user_2abc123def456",
       projectId: "proj_mobilekit",
-      permissions: { widgets: true, testimonials: false, analytics: false },
+      allowedOrigins: ["https://docs.mobilekit.dev"],
+      allowedIps: null,
       usageCount: 1102,
       usageLimit: null,
-      rateLimit: 100,
+      rateLimit: 600,
       isActive: true,
       lastUsedAt: new Date("2024-12-07T10:00:00Z"),
       expiresAt: null,
       createdAt: new Date("2024-07-01T08:00:00Z"),
       updatedAt: new Date("2024-12-07T10:00:00Z"),
+      dailyUsage: makeDailyUsage(37, 15),
     },
   ],
 };
@@ -890,6 +957,51 @@ export function getApprovedTestimonialsByProject(
 /** Returns API keys for a project */
 export function getApiKeysByProject(projectId: string): MockApiKey[] {
   return MOCK_API_KEYS[projectId] ?? [];
+}
+
+/** Returns a single API key by id, searching all projects. */
+export function getApiKeyById(keyId: string): MockApiKey | undefined {
+  for (const keys of Object.values(MOCK_API_KEYS)) {
+    const found = keys.find((k) => k.id === keyId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+// ── API key events ─────────────────────────────────────────────────────────────
+
+export const MOCK_API_KEY_EVENTS: Record<string, MockApiKeyEvent[]> = {
+  key_l1: [
+    { id: "ev_l1_1", keyId: "key_l1", type: "created",  at: new Date("2024-02-01T10:00:00Z") },
+    { id: "ev_l1_2", keyId: "key_l1", type: "used", at: new Date("2024-12-10T11:45:00Z"), ip: "203.0.113.47", origin: "https://launchpad.io", userAgent: "Mozilla/5.0 (compatible)" },
+    { id: "ev_l1_3", keyId: "key_l1", type: "used", at: new Date("2024-12-10T09:13:00Z"), ip: "203.0.113.22", origin: "https://www.launchpad.io" },
+    { id: "ev_l1_4", keyId: "key_l1", type: "used", at: new Date("2024-12-09T17:52:00Z"), ip: "198.51.100.8",  origin: "https://launchpad.io" },
+    { id: "ev_l1_5", keyId: "key_l1", type: "used", at: new Date("2024-12-09T07:30:00Z"), ip: "203.0.113.91", origin: "https://launchpad.io" },
+  ],
+  key_l2: [
+    { id: "ev_l2_1", keyId: "key_l2", type: "created",   at: new Date("2024-08-15T12:00:00Z") },
+    { id: "ev_l2_2", keyId: "key_l2", type: "rotated",   at: new Date("2024-10-01T08:00:00Z"), ip: "10.0.1.5"  },
+    { id: "ev_l2_3", keyId: "key_l2", type: "used",      at: new Date("2024-12-08T09:00:00Z"), ip: "10.0.1.5",  userAgent: "axios/1.6.2" },
+    { id: "ev_l2_4", keyId: "key_l2", type: "limit_hit", at: new Date("2024-11-28T14:22:00Z"), ip: "10.0.1.5" },
+    { id: "ev_l2_5", keyId: "key_l2", type: "used",      at: new Date("2024-12-07T22:15:00Z"), ip: "10.0.1.6",  userAgent: "node-fetch/3.3.2" },
+  ],
+  key_l3: [
+    { id: "ev_l3_1", keyId: "key_l3", type: "created", at: new Date("2024-09-01T09:00:00Z") },
+    { id: "ev_l3_2", keyId: "key_l3", type: "revoked",  at: new Date("2024-11-20T14:00:00Z") },
+  ],
+  key_p1: [
+    { id: "ev_p1_1", keyId: "key_p1", type: "created", at: new Date("2024-04-01T10:00:00Z") },
+    { id: "ev_p1_2", keyId: "key_p1", type: "used",    at: new Date("2024-12-08T15:00:00Z"), ip: "198.51.100.34", origin: "https://alexchen.design" },
+  ],
+  key_m1: [
+    { id: "ev_m1_1", keyId: "key_m1", type: "created", at: new Date("2024-07-01T08:00:00Z") },
+    { id: "ev_m1_2", keyId: "key_m1", type: "used",    at: new Date("2024-12-07T10:00:00Z"), ip: "203.0.113.7", origin: "https://docs.mobilekit.dev" },
+  ],
+};
+
+/** Returns audit events for a key (newest first). */
+export function getApiKeyEvents(keyId: string): MockApiKeyEvent[] {
+  return (MOCK_API_KEY_EVENTS[keyId] ?? []).slice().sort((a, b) => b.at.getTime() - a.at.getTime());
 }
 
 /** Returns the unread notification count */
