@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { ActionButton } from "@/components/ui/action-button";
+import { ItemShell } from "@/components/shared";
 import { cn } from "@/lib/utils";
 import { timeAgo, type MockTestimonial } from "@/lib/mock-data";
 import { Stars, StatusPill } from "@/components/testimonials/shared";
@@ -40,9 +41,10 @@ export function TestimonialRow({
     t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <ItemShell
+      shape="row"
+      selected={isSelected}
+      bulkSelected={isBulkSelected}
       onClick={() => {
         if (bulkMode) {
           onBulkToggle?.(t.id);
@@ -50,21 +52,7 @@ export function TestimonialRow({
           onSelect?.(t.id);
         }
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (bulkMode) onBulkToggle?.(t.id);
-          else onSelect?.(t.id);
-        }
-      }}
-      className={cn(
-        "group relative flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-150",
-        isSelected
-          ? "bg-muted/60"
-          : isBulkSelected
-            ? "bg-brand/[0.04]"
-            : "hover:bg-muted/30",
-      )}
+      className="group items-start gap-3 px-5 py-3.5"
     >
       {/* Checkbox / avatar */}
       {bulkMode ? (
@@ -162,6 +150,6 @@ export function TestimonialRow({
       {!bulkMode && (
         <ChevronRightIcon className="mt-2 size-3.5 shrink-0 text-muted-foreground/40 lg:hidden" />
       )}
-    </div>
+    </ItemShell>
   );
 }

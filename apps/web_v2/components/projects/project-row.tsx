@@ -1,5 +1,4 @@
 import * as React from "react";
-import Link from "next/link";
 import {
   ChatText as MessageSquareTextIcon,
   PuzzlePiece as PuzzleIcon,
@@ -9,6 +8,7 @@ import {
   ArrowRight as ArrowRightIcon,
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
+import { ItemShell } from "@/components/shared";
 import { projectInitials } from "@/lib/format";
 import {
   PROJECT_TYPE_LABELS,
@@ -44,9 +44,11 @@ export function ProjectRow({
   const VisIcon = VisibilityIcon[project.visibility];
 
   return (
-    <Link
+    <ItemShell
+      shape="row"
       href={`/projects/${project.slug}`}
-      className="group tactile flex items-center gap-4 px-6 py-4 transition-colors duration-150 hover:bg-muted/40 animate-fade-up"
+      aria-label={project.name}
+      className="group items-center gap-4 px-6 py-4 animate-fade-up"
       style={{ animationDelay: `${index * 55}ms`, animationFillMode: "both" }}
     >
       <span
@@ -121,6 +123,6 @@ export function ProjectRow({
       </div>
 
       <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/70" />
-    </Link>
+    </ItemShell>
   );
 }

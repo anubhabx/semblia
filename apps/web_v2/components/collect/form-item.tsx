@@ -4,7 +4,6 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import type { FormConfigEntry } from "@/lib/collect/studio-types";
-import { ActionButton } from "@/components/ui/action-button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,26 +13,19 @@ import {
   PauseIcon,
   PlayIcon,
 } from "@phosphor-icons/react";
+import {
+  ItemShell,
+  ItemActionRow,
+  type ItemAction,
+} from "@/components/shared";
 import { InlineName } from "./inline-name";
-
-/* ─── Row shell — consistent left indicator for all rows ───────────────── */
-
-const ROW_BASE = "border-b border-border py-5 pr-6 pl-6";
-
-function rowIndicatorStyle(active: boolean): React.CSSProperties {
-  return {
-    borderLeftWidth: 3,
-    borderLeftStyle: "solid",
-    borderLeftColor: active ? "var(--brand)" : "transparent",
-  };
-}
 
 /* ─── Skeleton loader ─────────────────────────────────────────────────────── */
 
 export function FormItemSkeleton() {
   return (
-    <div className={ROW_BASE} style={rowIndicatorStyle(false)}>
-      <div className="flex items-baseline justify-between gap-6">
+    <ItemShell shape="row" accentColor={null} className="flex-col py-5 pr-6 pl-6">
+      <div className="flex w-full items-baseline justify-between gap-6">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-4 w-40 animate-shimmer" />
           <Skeleton className="h-3 w-56 animate-shimmer" />
@@ -49,7 +41,7 @@ export function FormItemSkeleton() {
         <Skeleton className="h-6 w-20 rounded-md animate-shimmer" />
         <Skeleton className="h-6 w-14 rounded-md animate-shimmer" />
       </div>
-    </div>
+    </ItemShell>
   );
 }
 
@@ -113,10 +105,46 @@ export const FormItem = React.memo(function FormItem({
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const inactive = !entry.isActive;
 
+  const actions: ItemAction[] = [
+    {
+      id: "edit",
+      label: "Edit",
+      icon: PencilIcon,
+      onSelect: onEdit,
+      pinned: true,
+    },
+    {
+      id: "duplicate",
+      label: "Duplicate",
+      icon: CopyIcon,
+      onSelect: onDuplicate,
+    },
+    {
+      id: "toggle",
+      label: entry.isActive ? "Pause" : "Activate",
+      icon: entry.isActive ? PauseIcon : PlayIcon,
+      tone: entry.isActive ? "warning" : "success",
+      onSelect: onToggleActive,
+    },
+    {
+      id: "delete",
+      label: "Delete",
+      icon: TrashIcon,
+      tone: "danger",
+      pinned: true,
+      onSelect: () => setDeleteOpen(true),
+    },
+  ];
+
   return (
-    <div className={ROW_BASE} style={rowIndicatorStyle(entry.isActive)}>
+    <ItemShell
+      shape="row"
+      accentColor={entry.isActive ? "var(--brand)" : null}
+      inactive={inactive}
+      className="flex-col py-5 pr-6 pl-6"
+    >
       {/* Row 1: name + metrics */}
-      <div className="flex items-baseline justify-between gap-6">
+      <div className="flex w-full items-baseline justify-between gap-6">
         <div className="min-w-0 flex-1">
           <InlineName
             value={entry.name}
@@ -144,64 +172,13 @@ export const FormItem = React.memo(function FormItem({
         />
       </div>
 
-      {/* Row 2: actions — always visible, grouped by intent */}
-      <div className="mt-3 flex items-center">
-        {/* Primary + secondary grouped tight */}
-        <div className="flex items-center gap-1">
-          <ActionButton
-            tone="neutral"
-            variant="ghost"
-            size="xs"
-            className="gap-1"
-            onClick={onEdit}
-          >
-            <PencilIcon className="size-3" aria-hidden="true" />
-            Edit
-          </ActionButton>
-          <ActionButton
-            tone="neutral"
-            variant="ghost"
-            size="xs"
-            className="gap-1"
-            onClick={onDuplicate}
-          >
-            <CopyIcon className="size-3" aria-hidden="true" />
-            Duplicate
-          </ActionButton>
-        </div>
-
-        {/* Status toggle — separated by spacing */}
-        <div className="ml-3">
-          <ActionButton
-            tone={entry.isActive ? "warning" : "success"}
-            variant="ghost"
-            size="xs"
-            className="gap-1"
-            onClick={onToggleActive}
-          >
-            {entry.isActive ? (
-              <PauseIcon className="size-3" aria-hidden="true" />
-            ) : (
-              <PlayIcon className="size-3" aria-hidden="true" />
-            )}
-            {entry.isActive ? "Pause" : "Activate"}
-          </ActionButton>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Destructive — far right */}
-        <ActionButton
-          tone="danger"
-          variant="ghost"
-          size="xs"
-          className="gap-1"
-          onClick={() => setDeleteOpen(true)}
-        >
-          <TrashIcon className="size-3" aria-hidden="true" />
-          Delete
-        </ActionButton>
-      </div>
+      {/* Row 2: actions — overflow-aware via ItemActionRow */}
+      <ItemActionRow
+        actions={actions}
+        collapseUnder={420}
+        visibleWhenCollapsed={1}
+        className="mt-3"
+      />
 
       <ConfirmationDialog
         open={deleteOpen}
@@ -218,6 +195,6 @@ export const FormItem = React.memo(function FormItem({
         confirmLabel="Delete form"
         onConfirm={onDelete}
       />
-    </div>
+    </ItemShell>
   );
 });
