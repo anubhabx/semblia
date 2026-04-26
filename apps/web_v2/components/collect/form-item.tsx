@@ -14,7 +14,7 @@ import {
   PlayIcon,
 } from "@phosphor-icons/react";
 import {
-  ItemShell,
+  ItemRow,
   ItemActionRow,
   type ItemAction,
 } from "@/components/shared";
@@ -24,24 +24,30 @@ import { InlineName } from "./inline-name";
 
 export function FormItemSkeleton() {
   return (
-    <ItemShell shape="row" accentColor={null} className="flex-col py-5 pr-6 pl-6">
-      <div className="flex w-full items-baseline justify-between gap-6">
-        <div className="min-w-0 flex-1 space-y-2">
+    <ItemRow
+      accentColor={null}
+      padding="comfortable"
+      title={
+        <div className="space-y-2">
           <Skeleton className="h-4 w-40 animate-shimmer" />
           <Skeleton className="h-3 w-56 animate-shimmer" />
         </div>
+      }
+      metrics={
         <div className="flex items-center gap-3">
           <Skeleton className="h-3.5 w-20 animate-shimmer" />
           <Skeleton className="h-3.5 w-20 animate-shimmer" />
           <Skeleton className="h-3.5 w-10 animate-shimmer" />
         </div>
-      </div>
-      <div className="mt-3 flex items-center gap-1">
-        <Skeleton className="h-6 w-14 rounded-md animate-shimmer" />
-        <Skeleton className="h-6 w-20 rounded-md animate-shimmer" />
-        <Skeleton className="h-6 w-14 rounded-md animate-shimmer" />
-      </div>
-    </ItemShell>
+      }
+      actions={
+        <div className="flex items-center gap-1">
+          <Skeleton className="h-6 w-14 rounded-md animate-shimmer" />
+          <Skeleton className="h-6 w-20 rounded-md animate-shimmer" />
+          <Skeleton className="h-6 w-14 rounded-md animate-shimmer" />
+        </div>
+      }
+    />
   );
 }
 
@@ -61,7 +67,7 @@ function MetricRow({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-baseline gap-1 font-mono text-[11.5px] tracking-tight",
+        "flex items-baseline gap-1 font-mono text-[11.5px] tracking-tight",
         muted && "opacity-50",
       )}
     >
@@ -137,48 +143,47 @@ export const FormItem = React.memo(function FormItem({
   ];
 
   return (
-    <ItemShell
-      shape="row"
+    <>
+    <ItemRow
       accentColor={entry.isActive ? "var(--brand)" : null}
       inactive={inactive}
-      className="flex-col py-5 pr-6 pl-6"
-    >
-      {/* Row 1: name + metrics */}
-      <div className="flex w-full items-baseline justify-between gap-6">
-        <div className="min-w-0 flex-1">
-          <InlineName
-            value={entry.name}
-            muted={inactive}
-            dirty={hasDirtyDraft}
-            onCommit={onRename}
-          />
-          {entry.description && (
-            <p
-              className={cn(
-                "mt-0.5 truncate text-xs",
-                inactive ? "text-muted-foreground/50" : "text-muted-foreground",
-              )}
-            >
-              {entry.description}
-            </p>
-          )}
-        </div>
-
+      padding="comfortable"
+      title={
+        <InlineName
+          value={entry.name}
+          muted={inactive}
+          dirty={hasDirtyDraft}
+          onCommit={onRename}
+        />
+      }
+      subtitle={
+        entry.description ? (
+          <p
+            className={cn(
+              "truncate text-xs",
+              inactive ? "text-muted-foreground/50" : "text-muted-foreground",
+            )}
+          >
+            {entry.description}
+          </p>
+        ) : undefined
+      }
+      metrics={
         <MetricRow
           views={entry.views}
           submissions={entry.submissions}
           rate={entry.responseRate}
           muted={inactive}
         />
-      </div>
-
-      {/* Row 2: actions — overflow-aware via ItemActionRow */}
-      <ItemActionRow
-        actions={actions}
-        collapseUnder={420}
-        visibleWhenCollapsed={1}
-        className="mt-3"
-      />
+      }
+      actions={
+        <ItemActionRow
+          actions={actions}
+          collapseUnder={420}
+          visibleWhenCollapsed={1}
+        />
+      }
+    />
 
       <ConfirmationDialog
         open={deleteOpen}
@@ -195,6 +200,6 @@ export const FormItem = React.memo(function FormItem({
         confirmLabel="Delete form"
         onConfirm={onDelete}
       />
-    </ItemShell>
+    </>
   );
 });

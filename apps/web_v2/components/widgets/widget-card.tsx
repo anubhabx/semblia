@@ -38,7 +38,7 @@ import type {
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { InlineName } from "@/components/collect/inline-name";
 import {
-  ItemShell,
+  ItemCard,
   ItemActionRow,
   type ItemAction,
 } from "@/components/shared";
@@ -144,8 +144,7 @@ export const WidgetCard = React.memo(function WidgetCard({
   ];
 
   return (
-    <ItemShell
-      shape="card"
+    <ItemCard
       inactive={!entry.isActive}
       data-testid="widget-card"
       aria-label={`${entry.name} (${LAYOUT_LABEL[entry.layout]})`}
@@ -244,7 +243,7 @@ export const WidgetCard = React.memo(function WidgetCard({
       </Link>
 
       {/* ── Footer ────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2 px-3.5 pb-3 pt-3">
+      <div className="flex flex-1 flex-col gap-2 px-3.5 pb-3 pt-3">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -321,6 +320,6 @@ export const WidgetCard = React.memo(function WidgetCard({
         confirmLabel="Delete widget"
         onConfirm={onDelete}
       />
-    </ItemShell>
+    </ItemCard>
   );
 });

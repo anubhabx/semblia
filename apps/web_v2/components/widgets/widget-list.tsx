@@ -224,7 +224,7 @@ export function WidgetList({ project }: WidgetListProps) {
             onCreate={() => setQuery({ new: filter as WidgetKind })}
           />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((entry) => {
               const snap = snapshots[entry.id];
               if (!snap) return null;

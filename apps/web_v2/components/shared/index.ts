@@ -24,6 +24,15 @@ export type { SearchFieldProps } from "./search-field";
 export { ItemShell } from "./item-shell";
 export type { ItemShellProps, ItemShape } from "./item-shell";
 
+export { ItemRow } from "./item-row";
+export type { ItemRowProps } from "./item-row";
+
+export { ItemCard } from "./item-card";
+export type { ItemCardProps } from "./item-card";
+
+export { ViewToggle } from "./view-toggle";
+export type { ViewToggleProps, ViewMode } from "./view-toggle";
+
 export { ItemActionRow } from "./item-action-row";
 export type {
   ItemActionRowProps,

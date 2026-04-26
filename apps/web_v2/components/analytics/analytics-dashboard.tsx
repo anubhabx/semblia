@@ -314,7 +314,7 @@ function OverviewTab({
   metric: AnalyticsMetric;
   onMetricChange: (m: AnalyticsMetric) => void;
 }) {
-  const metricOptions: { id: AnalyticsMetric; label: string }[] = [
+  const metricOptions: FilterPillOption<AnalyticsMetric>[] = [
     { id: "submissions", label: "Submissions" },
     { id: "approvals", label: "Approvals" },
     { id: "impressions", label: "Impressions" },
@@ -324,24 +324,14 @@ function OverviewTab({
     <div className="space-y-4">
       {/* Hero chart with metric selector */}
       <div className="rounded-lg border border-border bg-card p-5">
-        <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold text-foreground">Trends</h3>
-          <div className="flex items-center gap-1">
-            {metricOptions.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => onMetricChange(opt.id)}
-                className={cn(
-                  "px-2.5 py-1 rounded text-xs font-medium transition-all duration-150",
-                  metric === opt.id
-                    ? "bg-brand/10 text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <FilterPills
+            options={metricOptions}
+            value={metric}
+            onChange={onMetricChange}
+            size="sm"
+          />
         </div>
         <HeroChart
           series={data.timeseries}

@@ -4,7 +4,7 @@ import {
   ArrowRight as ArrowRightIcon,
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
-import { ItemShell } from "@/components/shared";
+import { ItemCard } from "@/components/shared";
 import { projectInitials } from "@/lib/format";
 import {
   PROJECT_TYPE_LABELS,
@@ -28,8 +28,7 @@ export function ProjectCard({
   const brandColor = project.brandColorPrimary ?? "#a8895c";
 
   return (
-    <ItemShell
-      shape="card"
+    <ItemCard
       href={`/projects/${project.slug}`}
       aria-label={project.name}
       className="group animate-fade-up"
@@ -94,6 +93,6 @@ export function ProjectCard({
         </span>
         <ArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/70" />
       </div>
-    </ItemShell>
+    </ItemCard>
   );
 }
