@@ -10,13 +10,17 @@
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
-  Plus as PlusIcon,
-  Globe as GlobeIcon,
-  Code as CodeIcon,
+  PlusIcon as PlusIcon,
+  GlobeIcon as GlobeIcon,
+  CodeIcon as CodeIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  PageHeader,
+  HeaderSep,
+} from "@/components/shared";
 import {
   getApprovedTestimonialsByProject,
   type MockProject,
@@ -52,7 +56,7 @@ function FilterPills({
     { id: "wall", label: "Walls" },
   ];
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5">
+    <div className="inline-flex flex-1 md:flex-0 items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5">
       {opts.map((o) => {
         const on = value === o.id;
         return (
@@ -62,7 +66,7 @@ function FilterPills({
             onClick={() => onChange(o.id)}
             aria-pressed={on}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[11.5px] font-medium",
+              "inline-flex flex-1 justify-between h-7 items-center gap-1.5 rounded-md px-2.5 text-[11.5px] font-medium",
               "transition-[background,color,box-shadow] duration-150",
               on
                 ? "bg-background text-foreground shadow-sm"
@@ -184,24 +188,28 @@ export function WidgetList({ project }: WidgetListProps) {
     [createWidget, project.slug, project.brandColorPrimary, setQuery, router],
   );
 
+  const showToolbar = hydrated && list.length > 0;
+
   return (
     <div className="flex flex-1 flex-col">
-      {/* Header */}
-      <header className="border-b border-border px-6 pt-7 pb-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Widgets
-            </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {hydrated
-                ? `${list.length} widget${list.length === 1 ? "" : "s"} · ${project.name}`
-                : project.name}
-            </p>
-          </div>
-
-          {hydrated && list.length > 0 && (
-            <div className="flex shrink-0 items-center gap-2">
+      <PageHeader
+        title="Widgets"
+        description={
+          hydrated ? (
+            <>
+              <span>
+                {list.length} widget{list.length === 1 ? "" : "s"}
+              </span>
+              <HeaderSep />
+              <span>{project.name}</span>
+            </>
+          ) : (
+            project.name
+          )
+        }
+        actions={
+          showToolbar ? (
+            <>
               <Button
                 variant="outline"
                 size="sm"
@@ -219,23 +227,21 @@ export function WidgetList({ project }: WidgetListProps) {
                 <PlusIcon className="size-3.5" weight="bold" aria-hidden />
                 New embed
               </Button>
-            </div>
-          )}
-        </div>
-
-        {hydrated && list.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <FilterPills
-              value={filter}
-              onChange={(v) => setQuery({ type: v === "all" ? null : v })}
-              counts={counts}
-            />
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
-              Edits auto-deploy. No re-embed needed.
-            </p>
-          </div>
-        )}
-      </header>
+            </>
+          ) : undefined
+        }
+        toolbar={
+          showToolbar ? (
+            <>
+              <FilterPills
+                value={filter}
+                onChange={(v) => setQuery({ type: v === "all" ? null : v })}
+                counts={counts}
+              />
+            </>
+          ) : undefined
+        }
+      />
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">

@@ -6,6 +6,7 @@ import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import type { FormConfigEntry } from "@/lib/collect/studio-types";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "@phosphor-icons/react";
+import { PageHeader } from "@/components/shared";
 
 import { FormItem, FormItemSkeleton } from "./form-item";
 import { FormEmptyState } from "./form-empty-state";
@@ -93,17 +94,11 @@ export function FormConfigList({ slug }: { slug: string }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="border-b border-border px-6 py-6 sm:py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-[15px] font-semibold tracking-tight text-foreground sm:text-base">
-              Forms
-            </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Collect testimonials and feedback from your customers.
-            </p>
-          </div>
-          {normalizedForms.length > 0 && (
+      <PageHeader
+        title="Forms"
+        description="Collect testimonials and feedback from your customers."
+        actions={
+          normalizedForms.length > 0 ? (
             <Button
               size="sm"
               className="shrink-0 gap-1.5 text-xs"
@@ -112,9 +107,9 @@ export function FormConfigList({ slug }: { slug: string }) {
               <PlusIcon className="size-3.5" aria-hidden="true" />
               Create new
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       <div className="flex-1 overflow-y-auto">
         {hydrated &&

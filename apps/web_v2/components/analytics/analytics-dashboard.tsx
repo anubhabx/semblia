@@ -43,6 +43,7 @@ import type {
 } from "@/lib/analytics/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/shared";
 
 // ── Tab config ─────────────────────────────────────────────────────────────────
 
@@ -170,18 +171,11 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="border-b border-border px-6 pt-7 pb-0">
-        <div className="flex items-start justify-between gap-4 mb-5">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Analytics
-            </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {data.project.name}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
+      <PageHeader
+        title="Analytics"
+        description={data.project.name}
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -207,15 +201,14 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
               customTo={customTo}
               onChange={setRange}
             />
-          </div>
-        </div>
-
-        {/* ── Tab nav ──────────────────────────────────────────────────────── */}
-        <nav
-          className="flex items-center gap-0 overflow-x-auto"
-          aria-label="Analytics sections"
-          style={{ scrollbarWidth: "none" }}
-        >
+          </>
+        }
+        toolbar={
+          <nav
+            className="flex w-full items-center gap-0 overflow-x-auto"
+            aria-label="Analytics sections"
+            style={{ scrollbarWidth: "none" }}
+          >
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -246,8 +239,9 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
               {label}
             </button>
           ))}
-        </nav>
-      </header>
+          </nav>
+        }
+      />
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div

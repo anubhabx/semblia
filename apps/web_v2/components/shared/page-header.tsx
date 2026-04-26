@@ -114,26 +114,26 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 pb-4">
-        <div className="min-w-0 flex-1">
-          {eyebrow && (
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
-              {eyebrow}
-            </p>
-          )}
-          <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+      <div className="pb-4">
+        {eyebrow && (
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+            {eyebrow}
+          </p>
+        )}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {title}
           </h1>
-          {description && (
-            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-              {description}
-            </p>
+          {actions && (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {actions}
+            </div>
           )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {actions}
-          </div>
+        {description && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
       {toolbar && (
@@ -155,7 +155,10 @@ export function PageHeader({
  */
 export function HeaderSep({ className }: { className?: string }) {
   return (
-    <span aria-hidden className={cn("text-border", className)}>
+    <span
+      aria-hidden
+      className={cn("mx-1.5 text-border", className)}
+    >
       ·
     </span>
   );

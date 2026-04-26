@@ -12,6 +12,7 @@ import { apiGetTestimonial } from "@/lib/api";
 import type { MockTestimonial } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
+import { PageHeader, HeaderSep } from "@/components/shared";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -212,24 +213,23 @@ export function TestimonialsInbox({
       <KbdShortcutsDialog open={kbdOpen} onOpenChange={setKbdOpen} />
 
       {/* ── Page header ── */}
-      <div className="flex items-center justify-between gap-4 px-6 h-14 border-b border-border shrink-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-semibold tracking-tight text-foreground">
-            Testimonials
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              {totalCount} total
-              {pendingCount > 0 && (
-                <>
-                  {" \u00b7 "}
-                  <span className="font-medium text-warning">
-                    {pendingCount} pending
-                  </span>
-                </>
-              )}
-            </span>
-          </h1>
-        </div>
-      </div>
+      <PageHeader
+        density="compact"
+        title="Testimonials"
+        description={
+          <>
+            <span>{totalCount} total</span>
+            {pendingCount > 0 && (
+              <>
+                <HeaderSep />
+                <span className="font-medium text-warning">
+                  {pendingCount} pending
+                </span>
+              </>
+            )}
+          </>
+        }
+      />
 
       {/* ── Master-detail split ── */}
       <div className="flex flex-1 min-h-0">

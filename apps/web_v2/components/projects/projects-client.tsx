@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus as PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { PageHeader, HeaderSep } from "@/components/shared";
 import { useProjects } from "@/hooks/use-projects";
 
 import { ProjectRowSkeleton, ProjectCardSkeleton } from "./project-skeletons";
@@ -26,29 +27,43 @@ export function ProjectsClient() {
     totalPending,
   } = useProjects();
 
+  const description = loading ? (
+    "Loading…"
+  ) : projects.length === 0 ? (
+    "Get started by creating your first project."
+  ) : (
+    <>
+      <span>
+        {projects.length} project{projects.length !== 1 ? "s" : ""}
+      </span>
+      <HeaderSep />
+      <span>
+        {totalTestimonials} testimonial{totalTestimonials !== 1 ? "s" : ""}
+      </span>
+      {totalPending > 0 && (
+        <>
+          <HeaderSep />
+          <span className="text-warning">{totalPending} pending</span>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div className="flex flex-1 flex-col">
-      {/* ── Page title ── */}
-      <div className="flex items-start gap-4 px-6 pt-7 pb-5">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Projects
-          </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {loading
-              ? "Loading…"
-              : projects.length === 0
-                ? "Get started by creating your first project."
-                : `${projects.length} project${projects.length !== 1 ? "s" : ""} · ${totalTestimonials} testimonial${totalTestimonials !== 1 ? "s" : ""}${totalPending > 0 ? ` · ${totalPending} pending` : ""}`}
-          </p>
-        </div>
-        <Button size="sm" className="gap-1.5 shrink-0" asChild>
-          <Link href="/projects/new">
-            <PlusIcon className="size-3.5" />
-            New project
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Projects"
+        description={description}
+        actions={
+          <Button size="sm" className="gap-1.5 shrink-0" asChild>
+            <Link href="/projects/new">
+              <PlusIcon className="size-3.5" />
+              New project
+            </Link>
+          </Button>
+        }
+        borderless
+      />
 
       <ProjectsToolbar
         search={search}
