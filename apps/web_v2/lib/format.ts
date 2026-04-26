@@ -47,3 +47,24 @@ export function fmtNum(n: number): string {
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
 }
+
+/** Relative time from a Date: "2m ago", "3h ago", "5d ago", "Jan 3". */
+export function fmtRelative(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const s = diff / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Expiry countdown: "Expires in 3d", "Expires in 2h", "Expired". */
+export function fmtExpiry(date: Date): string {
+  const diff = date.getTime() - Date.now();
+  if (diff <= 0) return "Expired";
+  const s = diff / 1000;
+  if (s < 3600) return `Expires in ${Math.floor(s / 60)}m`;
+  if (s < 86400) return `Expires in ${Math.floor(s / 3600)}h`;
+  return `Expires in ${Math.ceil(s / 86400)}d`;
+}
