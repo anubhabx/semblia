@@ -9,7 +9,10 @@
  */
 
 import * as React from "react";
-import { Rows as RowsIcon, SquaresFour as GridIcon } from "@phosphor-icons/react";
+import {
+  Rows as RowsIcon,
+  SquaresFour as GridIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -22,7 +25,12 @@ export interface ViewToggleProps {
   className?: string;
 }
 
-export function ViewToggle({ value, onChange, size = "sm", className }: ViewToggleProps) {
+export function ViewToggle({
+  value,
+  onChange,
+  size = "sm",
+  className,
+}: ViewToggleProps) {
   return (
     <ToggleGroup
       type="single"
@@ -32,20 +40,12 @@ export function ViewToggle({ value, onChange, size = "sm", className }: ViewTogg
       }}
       variant="outline"
       size={size}
-      className={cn("gap-0 rounded-lg border border-border/70 bg-muted/40 p-0.5", className)}
+      className={cn("gap-0", className)}
     >
-      <ToggleGroupItem
-        value="list"
-        aria-label="List view"
-        className="rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm"
-      >
+      <ToggleGroupItem value="list" aria-label="List view">
         <RowsIcon className="size-3.5" weight="bold" aria-hidden />
       </ToggleGroupItem>
-      <ToggleGroupItem
-        value="grid"
-        aria-label="Grid view"
-        className="rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm"
-      >
+      <ToggleGroupItem value="grid" aria-label="Grid view">
         <GridIcon className="size-3.5" weight="bold" aria-hidden />
       </ToggleGroupItem>
     </ToggleGroup>

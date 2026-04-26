@@ -193,12 +193,16 @@ export async function apiGetApiKeys(projectId: string): Promise<MockApiKey[]> {
   return MOCK_API_KEYS[projectId] ?? [];
 }
 
-export async function apiGetApiKeyById(keyId: string): Promise<MockApiKey | null> {
+export async function apiGetApiKeyById(
+  keyId: string,
+): Promise<MockApiKey | null> {
   await simulateLatency();
   return getApiKeyById(keyId) ?? null;
 }
 
-export async function apiGetApiKeyEvents(keyId: string): Promise<MockApiKeyEvent[]> {
+export async function apiGetApiKeyEvents(
+  keyId: string,
+): Promise<MockApiKeyEvent[]> {
   await simulateLatency();
   return getApiKeyEvents(keyId);
 }
@@ -231,7 +235,8 @@ export async function apiCreateApiKey(
     lastFourPlaintext: lastFour,
     userId: MOCK_USER.id,
     projectId,
-    allowedOrigins: draft.type === "publishable" ? (draft.allowedOrigins ?? []) : [],
+    allowedOrigins:
+      draft.type === "publishable" ? (draft.allowedOrigins ?? []) : [],
     allowedIps: draft.type === "secret" ? (draft.allowedIps ?? null) : null,
     usageCount: 0,
     usageLimit: draft.usageLimit ?? null,
@@ -251,20 +256,29 @@ export async function apiCreateApiKey(
   return { key, plaintext };
 }
 
-export async function apiRevokeApiKey(keyId: string): Promise<{ success: boolean }> {
+export async function apiRevokeApiKey(
+  keyId: string,
+): Promise<{ success: boolean }> {
   await sleep(320);
   const key = getApiKeyById(keyId);
   if (key) {
     key.isActive = false;
     key.updatedAt = new Date();
     const events = MOCK_API_KEY_EVENTS[keyId] ?? [];
-    events.unshift({ id: `ev_${Math.random().toString(36).slice(2, 8)}`, keyId, type: "revoked", at: new Date() });
+    events.unshift({
+      id: `ev_${Math.random().toString(36).slice(2, 8)}`,
+      keyId,
+      type: "revoked",
+      at: new Date(),
+    });
     MOCK_API_KEY_EVENTS[keyId] = events;
   }
   return { success: true };
 }
 
-export async function apiRotateApiKey(keyId: string): Promise<{ plaintext: string }> {
+export async function apiRotateApiKey(
+  keyId: string,
+): Promise<{ plaintext: string }> {
   await simulateLatency();
   const key = getApiKeyById(keyId);
   if (!key) throw new Error("Key not found");
@@ -282,10 +296,21 @@ export async function apiRotateApiKey(keyId: string): Promise<{ plaintext: strin
 }
 
 export type ApiKeyPatch = Partial<
-  Pick<MockApiKey, "name" | "allowedOrigins" | "allowedIps" | "rateLimit" | "usageLimit" | "expiresAt">
+  Pick<
+    MockApiKey,
+    | "name"
+    | "allowedOrigins"
+    | "allowedIps"
+    | "rateLimit"
+    | "usageLimit"
+    | "expiresAt"
+  >
 >;
 
-export async function apiUpdateApiKey(keyId: string, patch: ApiKeyPatch): Promise<MockApiKey> {
+export async function apiUpdateApiKey(
+  keyId: string,
+  patch: ApiKeyPatch,
+): Promise<MockApiKey> {
   await simulateLatency();
   const key = getApiKeyById(keyId);
   if (!key) throw new Error("Key not found");
@@ -312,7 +337,10 @@ export type ProjectPatch = Partial<
   >
 >;
 
-export async function apiUpdateProject(slug: string, patch: ProjectPatch): Promise<MockProject> {
+export async function apiUpdateProject(
+  slug: string,
+  patch: ProjectPatch,
+): Promise<MockProject> {
   await simulateLatency();
   const project = MOCK_PROJECTS.find((p) => p.slug === slug);
   if (!project) throw new Error("Project not found");

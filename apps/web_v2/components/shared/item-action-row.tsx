@@ -207,7 +207,11 @@ function InlineAction({
       return (
         <Button asChild {...buttonProps}>
           <Link href={action.href!} onClick={(e) => e.stopPropagation()}>
-            {Icon ? <Icon className="size-3.5" weight="bold" aria-hidden /> : action.label}
+            {Icon ? (
+              <Icon className="size-3.5" weight="bold" aria-hidden />
+            ) : (
+              action.label
+            )}
           </Link>
         </Button>
       );
@@ -222,7 +226,11 @@ function InlineAction({
         }}
         disabled={action.disabled}
       >
-        {Icon ? <Icon className="size-3.5" weight="bold" aria-hidden /> : action.label}
+        {Icon ? (
+          <Icon className="size-3.5" weight="bold" aria-hidden />
+        ) : (
+          action.label
+        )}
       </Button>
     );
   }

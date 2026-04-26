@@ -17,7 +17,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ItemShell, type ItemShellProps } from "./item-shell";
 
-export interface ItemRowProps extends Omit<ItemShellProps, "shape" | "children"> {
+export interface ItemRowProps extends Omit<
+  ItemShellProps,
+  "shape" | "children"
+> {
   /** Left-edge zone (avatar, icon, checkbox). Always shrink-0. */
   leading?: React.ReactNode;
   /** Primary label. Gets min-w-0 + truncation context. Required. */
@@ -38,9 +41,9 @@ export interface ItemRowProps extends Omit<ItemShellProps, "shape" | "children">
 }
 
 const PADDING: Record<NonNullable<ItemRowProps["padding"]>, string> = {
-  default:     "px-6 py-4",
+  default: "px-6 py-4",
   comfortable: "py-5 pl-6 pr-6",
-  dense:       "px-4 py-3",
+  dense: "px-4 py-3",
 };
 
 export function ItemRow({
@@ -69,7 +72,7 @@ export function ItemRow({
           className={cn(
             "flex min-w-0 flex-1",
             metrics != null
-              ? "flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-6"
+              ? "flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-6"
               : "flex-col",
           )}
         >

@@ -10,7 +10,8 @@ export async function generateMetadata(props: {
   const key = getApiKeyById(keyId);
   const project = getProjectBySlug(slug);
   return {
-    title: key && project ? `${key.name} — API Keys — ${project.name}` : "API Key",
+    title:
+      key && project ? `${key.name} — API Keys — ${project.name}` : "API Key",
   };
 }
 
@@ -23,10 +24,6 @@ export default async function ApiKeyDetailPage(props: {
   if (!project || !key) notFound();
 
   return (
-    <ApiKeyDetailClient
-      keyId={keyId}
-      slug={slug}
-      projectName={project.name}
-    />
+    <ApiKeyDetailClient keyId={keyId} slug={slug} projectName={project.name} />
   );
 }

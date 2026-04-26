@@ -6,7 +6,12 @@ import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
 import type { FormConfigEntry } from "@/lib/collect/studio-types";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "@phosphor-icons/react";
-import { PageBody, PageHeader, PageToolbar, ViewToggle } from "@/components/shared";
+import {
+  PageBody,
+  PageHeader,
+  PageToolbar,
+  ViewToggle,
+} from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
 
 import { FormItem, FormItemSkeleton } from "./form-item";
@@ -142,7 +147,7 @@ export function FormConfigList({ slug }: { slug: string }) {
               <FormItemSkeleton />
             </>
           ) : (
-            <div className="grid auto-rows-fr grid-cols-1 gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:px-6 sm:grid-cols-2 lg:grid-cols-3">
               <FormItemCardSkeleton />
               <FormItemCardSkeleton />
               <FormItemCardSkeleton />
@@ -160,7 +165,9 @@ export function FormConfigList({ slug }: { slug: string }) {
                   onEdit={() => handleEdit(entry.id)}
                   onDuplicate={() => handleDuplicate(entry.id)}
                   onDelete={() => handleDelete(entry.id)}
-                  onToggleActive={() => handleToggleActive(entry.id, entry.isActive)}
+                  onToggleActive={() =>
+                    handleToggleActive(entry.id, entry.isActive)
+                  }
                   onRename={(name) => updateFormEntry(slug, entry.id, { name })}
                 />
               </div>
@@ -168,19 +175,21 @@ export function FormConfigList({ slug }: { slug: string }) {
           </div>
         ) : (
           <div
-            className="grid auto-rows-fr grid-cols-1 gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:px-6 sm:grid-cols-2 lg:grid-cols-3"
             role="list"
             aria-label="Form configurations"
           >
             {normalizedForms.map((entry) => (
-              <div key={entry.id} role="listitem">
+              <div key={entry.id} role="listitem" className="h-full">
                 <FormItemCard
                   entry={entry}
                   hasDirtyDraft={isStudioDirty(snapshots[entry.id])}
                   onEdit={() => handleEdit(entry.id)}
                   onDuplicate={() => handleDuplicate(entry.id)}
                   onDelete={() => handleDelete(entry.id)}
-                  onToggleActive={() => handleToggleActive(entry.id, entry.isActive)}
+                  onToggleActive={() =>
+                    handleToggleActive(entry.id, entry.isActive)
+                  }
                   onRename={(name) => updateFormEntry(slug, entry.id, { name })}
                 />
               </div>

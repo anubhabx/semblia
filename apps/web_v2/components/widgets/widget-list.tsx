@@ -10,11 +10,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 // Phosphor icons now expects Icon suffixed imports. Pure "Plus" is deprecated.
-import {
-  PlusIcon,
-  GlobeIcon,
-  CodeIcon,
-} from "@phosphor-icons/react";
+import { PlusIcon, GlobeIcon, CodeIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,11 +23,7 @@ import {
   PageBody,
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
-import {
-  getApprovedTestimonialsByProject,
-  type MockProject,
-} from "@/lib/mock-data";
-import { selectPreviewTestimonials } from "@/lib/widgets/widget-fallback-testimonials";
+import type { MockProject } from "@/lib/mock-data";
 import {
   useWidgetStudioStore,
   isWidgetDirty,
@@ -50,20 +42,22 @@ interface WidgetListProps {
 
 function GalleryGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="overflow-hidden rounded-xl border border-border bg-card"
-        >
-          <Skeleton className="aspect-[16/10] w-full animate-shimmer" />
-          <div className="space-y-2 px-3.5 pb-3 pt-3">
-            <Skeleton className="h-3.5 w-32 animate-shimmer" />
-            <Skeleton className="h-2.5 w-44 animate-shimmer" />
-            <Skeleton className="mt-2 h-7 w-full animate-shimmer" />
+    <div className="px-4 py-5 sm:px-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="overflow-hidden rounded-xl border border-border bg-card"
+          >
+            <Skeleton className="aspect-[16/10] w-full animate-shimmer" />
+            <div className="space-y-2 px-3.5 pb-3 pt-3">
+              <Skeleton className="h-3.5 w-32 animate-shimmer" />
+              <Skeleton className="h-2.5 w-44 animate-shimmer" />
+              <Skeleton className="mt-2 h-7 w-full animate-shimmer" />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -115,14 +109,6 @@ export function WidgetList({ project }: WidgetListProps) {
     ensureProject(project.slug, { brandColor: project.brandColorPrimary });
     setHydrated(true);
   }, [project.slug, project.brandColorPrimary, ensureProject]);
-
-  // Fixed preview testimonials per project (memoized — same reference across
-  // re-renders so testimonial card memoization holds).
-  const previewItems = React.useMemo(() => {
-    const real = getApprovedTestimonialsByProject(project.id);
-    const { items } = selectPreviewTestimonials(real, 8);
-    return items;
-  }, [project.id]);
 
   const list = widgets ?? [];
   const counts: Record<Filter, number> = {
@@ -220,7 +206,7 @@ export function WidgetList({ project }: WidgetListProps) {
       />
 
       {/* Body */}
-      <PageBody padding="compact" className="overflow-y-auto">
+      <PageBody padding="bare" className="overflow-y-auto">
         {!hydrated ? (
           <GalleryGridSkeleton />
         ) : list.length === 0 ? (
@@ -231,7 +217,11 @@ export function WidgetList({ project }: WidgetListProps) {
             onCreate={() => setQuery({ new: filter as WidgetKind })}
           />
         ) : viewMode === "list" ? (
-          <div className="divide-y divide-border" role="list" aria-label="Widgets">
+          <div
+            className="divide-y divide-border"
+            role="list"
+            aria-label="Widgets"
+          >
             {filtered.map((entry) => {
               const snap = snapshots[entry.id];
               if (!snap) return null;
@@ -241,31 +231,6 @@ export function WidgetList({ project }: WidgetListProps) {
                   slug={project.slug}
                   entry={entry}
                   config={snap.draft}
-                  hasDirtyDraft={isWidgetDirty(snap)}
-                  onDuplicate={() => duplicateWidget(project.slug, entry.id)}
-                  onDelete={() => deleteWidget(project.slug, entry.id)}
-                  onToggleActive={() =>
-                    updateWidgetEntry(project.slug, entry.id, { isActive: !entry.isActive })
-                  }
-                  onRename={(name) =>
-                    updateWidgetEntry(project.slug, entry.id, { name })
-                  }
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((entry) => {
-              const snap = snapshots[entry.id];
-              if (!snap) return null;
-              return (
-                <WidgetCard
-                  key={entry.id}
-                  slug={project.slug}
-                  entry={entry}
-                  config={snap.draft}
-                  items={previewItems}
                   hasDirtyDraft={isWidgetDirty(snap)}
                   onDuplicate={() => duplicateWidget(project.slug, entry.id)}
                   onDelete={() => deleteWidget(project.slug, entry.id)}
@@ -280,6 +245,34 @@ export function WidgetList({ project }: WidgetListProps) {
                 />
               );
             })}
+          </div>
+        ) : (
+          <div className="px-4 py-5 sm:px-6">
+            <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filtered.map((entry) => {
+                const snap = snapshots[entry.id];
+                if (!snap) return null;
+                return (
+                  <WidgetCard
+                    key={entry.id}
+                    slug={project.slug}
+                    entry={entry}
+                    config={snap.draft}
+                    hasDirtyDraft={isWidgetDirty(snap)}
+                    onDuplicate={() => duplicateWidget(project.slug, entry.id)}
+                    onDelete={() => deleteWidget(project.slug, entry.id)}
+                    onToggleActive={() =>
+                      updateWidgetEntry(project.slug, entry.id, {
+                        isActive: !entry.isActive,
+                      })
+                    }
+                    onRename={(name) =>
+                      updateWidgetEntry(project.slug, entry.id, { name })
+                    }
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
       </PageBody>

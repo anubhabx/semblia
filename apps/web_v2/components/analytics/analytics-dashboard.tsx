@@ -3,13 +3,13 @@
 import { useMemo, useCallback, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ChartLine,
-  Funnel,
-  CheckSquare,
-  Gauge,
-  Globe,
-  Code,
-  ArrowsClockwise,
+  ChartLineIcon,
+  FunnelIcon,
+  CheckSquareIcon,
+  GaugeIcon,
+  GlobeIcon,
+  CodeIcon,
+  ArrowsClockwiseIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { RangePicker } from "./range-picker";
@@ -59,12 +59,12 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: "overview", label: "Overview", Icon: ChartLine },
-  { id: "collection", label: "Collection", Icon: Funnel },
-  { id: "pipeline", label: "Pipeline", Icon: CheckSquare },
-  { id: "engagement", label: "Engagement", Icon: Gauge },
-  { id: "sources", label: "Sources", Icon: Globe },
-  { id: "api", label: "API", Icon: Code },
+  { id: "overview", label: "Overview", Icon: ChartLineIcon },
+  { id: "collection", label: "Collection", Icon: FunnelIcon },
+  { id: "pipeline", label: "Pipeline", Icon: CheckSquareIcon },
+  { id: "engagement", label: "Engagement", Icon: GaugeIcon },
+  { id: "sources", label: "Sources", Icon: GlobeIcon },
+  { id: "api", label: "API", Icon: CodeIcon },
 ];
 
 // ── URL state helpers ──────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
               )}
               aria-pressed={showComparison}
             >
-              <ArrowsClockwise
+              <ArrowsClockwiseIcon
                 weight={showComparison ? "fill" : "regular"}
                 className={cn("size-3.5", showComparison ? "text-brand" : "")}
               />

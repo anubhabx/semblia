@@ -1,14 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import type { MockProject, MockApiKey, ApiKeyType } from "@/lib/mock-data";
-import {
-  PlusIcon,
-  KeyIcon,
-  EyeIcon,
-  LockKeyIcon,
-} from "@phosphor-icons/react";
+import { PlusIcon, KeyIcon, EyeIcon, LockKeyIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Empty,
   EmptyHeader,
@@ -65,9 +58,16 @@ function SectionHead({
     <div className="flex items-start justify-between gap-4 pb-3">
       <div>
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       </div>
-      <Button variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs" onClick={onNew}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="shrink-0 gap-1.5 text-xs"
+        onClick={onNew}
+      >
         <PlusIcon className="size-3.5" weight="bold" aria-hidden />
         {newLabel}
       </Button>
@@ -89,7 +89,11 @@ function SectionEmpty({
     <Empty className="border border-dashed py-10">
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          {isPublishable ? <EyeIcon weight="bold" /> : <LockKeyIcon weight="bold" />}
+          {isPublishable ? (
+            <EyeIcon weight="bold" />
+          ) : (
+            <LockKeyIcon weight="bold" />
+          )}
         </EmptyMedia>
         <EmptyTitle>
           No {isPublishable ? "publishable" : "secret"} keys yet
@@ -139,14 +143,22 @@ function KeySection({
 }) {
   const filtered = React.useMemo(() => {
     if (filter === "all") return keys;
-    if (filter === "active") return keys.filter((k) => k.isActive && (!k.expiresAt || k.expiresAt > new Date()));
+    if (filter === "active")
+      return keys.filter(
+        (k) => k.isActive && (!k.expiresAt || k.expiresAt > new Date()),
+      );
     if (filter === "revoked") return keys.filter((k) => !k.isActive);
     return keys.filter((k) => k.expiresAt != null && k.expiresAt <= new Date());
   }, [keys, filter]);
 
   return (
     <section className="space-y-3">
-      <SectionHead title={title} description={description} onNew={onNew} newLabel={`New ${type} key`} />
+      <SectionHead
+        title={title}
+        description={description}
+        onNew={onNew}
+        newLabel={`New ${type} key`}
+      />
 
       {loading ? (
         viewMode === "list" ? (
@@ -167,7 +179,11 @@ function KeySection({
           No {type} keys match the current filter.
         </p>
       ) : viewMode === "list" ? (
-        <div role="list" aria-label={`${title} keys`} className="divide-y divide-border rounded-lg border border-border">
+        <div
+          role="list"
+          aria-label={`${title} keys`}
+          className="divide-y divide-border"
+        >
           {filtered.map((key) => (
             <div key={key.id} role="listitem">
               <ApiKeyRow
@@ -204,7 +220,9 @@ function KeySection({
 /* ─── Main client ─────────────────────────────────────────────────────────── */
 
 export function ApiKeysClient({ project }: { project: MockProject }) {
-  const { publishable, secret, loading, revoke, rotate } = useApiKeys(project.id);
+  const { publishable, secret, loading, revoke, rotate } = useApiKeys(
+    project.id,
+  );
 
   const [viewMode, setViewMode] = useViewMode("api-keys:view", "list");
   const [filter, setFilter] = React.useState<StatusFilter>("all");
@@ -215,9 +233,13 @@ export function ApiKeysClient({ project }: { project: MockProject }) {
 
   const counts = {
     all: allKeys.length,
-    active: allKeys.filter((k) => k.isActive && (!k.expiresAt || k.expiresAt > new Date())).length,
+    active: allKeys.filter(
+      (k) => k.isActive && (!k.expiresAt || k.expiresAt > new Date()),
+    ).length,
     revoked: allKeys.filter((k) => !k.isActive).length,
-    expired: allKeys.filter((k) => k.expiresAt != null && k.expiresAt <= new Date()).length,
+    expired: allKeys.filter(
+      (k) => k.expiresAt != null && k.expiresAt <= new Date(),
+    ).length,
   };
 
   const applySearch = React.useCallback(
@@ -225,7 +247,9 @@ export function ApiKeysClient({ project }: { project: MockProject }) {
       if (!search.trim()) return keys;
       const q = search.trim().toLowerCase();
       return keys.filter(
-        (k) => k.name.toLowerCase().includes(q) || k.keyPrefix.toLowerCase().includes(q),
+        (k) =>
+          k.name.toLowerCase().includes(q) ||
+          k.keyPrefix.toLowerCase().includes(q),
       );
     },
     [search],
@@ -289,70 +313,84 @@ export function ApiKeysClient({ project }: { project: MockProject }) {
         />
       )}
 
-      <PageBody padding="default" className="overflow-y-auto space-y-8">
-        {!loading && allKeys.length === 0 ? (
-          /* Global empty state — no keys at all */
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <KeyIcon weight="bold" />
-              </EmptyMedia>
-              <EmptyTitle>No API keys yet</EmptyTitle>
-              <EmptyDescription>
-                Create a publishable key to embed widgets, or a secret key to manage your project via API.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setCreateType("publishable")}>
-                  <EyeIcon className="size-3.5" aria-hidden />
-                  Publishable key
-                </Button>
-                <Button size="sm" className="gap-1.5 text-xs" onClick={() => setCreateType("secret")}>
-                  <LockKeyIcon className="size-3.5" aria-hidden />
-                  Secret key
-                </Button>
-              </div>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <>
-            <KeySection
-              title="Publishable keys"
-              description="Safe to embed in browser code. Read-only. Locked to the origins you list."
-              keys={applySearch(publishable)}
-              slug={project.slug}
-              viewMode={viewMode}
-              filter={filter}
-              loading={loading}
-              type="publishable"
-              onNew={() => setCreateType("publishable")}
-              onRevoke={(id) => revoke(id)}
-              onRotate={(id) => rotate(id)}
-            />
+      <PageBody padding="bare" className="overflow-y-auto">
+        <div className="space-y-8 px-4 py-6 sm:px-6">
+          {!loading && allKeys.length === 0 ? (
+            /* Global empty state — no keys at all */
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <KeyIcon weight="bold" />
+                </EmptyMedia>
+                <EmptyTitle>No API keys yet</EmptyTitle>
+                <EmptyDescription>
+                  Create a publishable key to embed widgets, or a secret key to
+                  manage your project via API.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setCreateType("publishable")}
+                  >
+                    <EyeIcon className="size-3.5" aria-hidden />
+                    Publishable key
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setCreateType("secret")}
+                  >
+                    <LockKeyIcon className="size-3.5" aria-hidden />
+                    Secret key
+                  </Button>
+                </div>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <>
+              <KeySection
+                title="Publishable keys"
+                description="Safe to embed in browser code. Read-only. Locked to the origins you list."
+                keys={applySearch(publishable)}
+                slug={project.slug}
+                viewMode={viewMode}
+                filter={filter}
+                loading={loading}
+                type="publishable"
+                onNew={() => setCreateType("publishable")}
+                onRevoke={(id) => revoke(id)}
+                onRotate={(id) => rotate(id)}
+              />
 
-            <KeySection
-              title="Secret keys"
-              description="Server-side only. Never paste in client code. Treat like a database password."
-              keys={applySearch(secret)}
-              slug={project.slug}
-              viewMode={viewMode}
-              filter={filter}
-              loading={loading}
-              type="secret"
-              onNew={() => setCreateType("secret")}
-              onRevoke={(id) => revoke(id)}
-              onRotate={(id) => rotate(id)}
-            />
-          </>
-        )}
+              <KeySection
+                title="Secret keys"
+                description="Server-side only. Never paste in client code. Treat like a database password."
+                keys={applySearch(secret)}
+                slug={project.slug}
+                viewMode={viewMode}
+                filter={filter}
+                loading={loading}
+                type="secret"
+                onNew={() => setCreateType("secret")}
+                onRevoke={(id) => revoke(id)}
+                onRotate={(id) => rotate(id)}
+              />
+            </>
+          )}
+        </div>
       </PageBody>
 
       <CreateKeyDialog
         open={createType != null}
         initialType={createType ?? "publishable"}
         projectId={project.id}
-        onOpenChange={(open) => { if (!open) setCreateType(null); }}
+        onOpenChange={(open) => {
+          if (!open) setCreateType(null);
+        }}
       />
     </div>
   );

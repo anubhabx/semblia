@@ -13,11 +13,7 @@ import {
   PauseIcon,
   PlayIcon,
 } from "@phosphor-icons/react";
-import {
-  ItemRow,
-  ItemActionRow,
-  type ItemAction,
-} from "@/components/shared";
+import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
 
 /* ─── Skeleton loader ─────────────────────────────────────────────────────── */
@@ -144,46 +140,46 @@ export const FormItem = React.memo(function FormItem({
 
   return (
     <>
-    <ItemRow
-      accentColor={entry.isActive ? "var(--brand)" : null}
-      inactive={inactive}
-      padding="comfortable"
-      title={
-        <InlineName
-          value={entry.name}
-          muted={inactive}
-          dirty={hasDirtyDraft}
-          onCommit={onRename}
-        />
-      }
-      subtitle={
-        entry.description ? (
-          <p
-            className={cn(
-              "truncate text-xs",
-              inactive ? "text-muted-foreground/50" : "text-muted-foreground",
-            )}
-          >
-            {entry.description}
-          </p>
-        ) : undefined
-      }
-      metrics={
-        <MetricRow
-          views={entry.views}
-          submissions={entry.submissions}
-          rate={entry.responseRate}
-          muted={inactive}
-        />
-      }
-      actions={
-        <ItemActionRow
-          actions={actions}
-          collapseUnder={420}
-          visibleWhenCollapsed={1}
-        />
-      }
-    />
+      <ItemRow
+        accentColor={entry.isActive ? "var(--brand)" : null}
+        inactive={inactive}
+        padding="comfortable"
+        title={
+          <InlineName
+            value={entry.name}
+            muted={inactive}
+            dirty={hasDirtyDraft}
+            onCommit={onRename}
+          />
+        }
+        subtitle={
+          entry.description ? (
+            <p
+              className={cn(
+                "truncate text-xs",
+                inactive ? "text-muted-foreground/50" : "text-muted-foreground",
+              )}
+            >
+              {entry.description}
+            </p>
+          ) : undefined
+        }
+        metrics={
+          <MetricRow
+            views={entry.views}
+            submissions={entry.submissions}
+            rate={entry.responseRate}
+            muted={inactive}
+          />
+        }
+        actions={
+          <ItemActionRow
+            actions={actions}
+            collapseUnder={420}
+            visibleWhenCollapsed={1}
+          />
+        }
+      />
 
       <ConfirmationDialog
         open={deleteOpen}

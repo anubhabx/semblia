@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { fmtNum, fmtRelative, fmtExpiry } from "@/lib/format";
-import type { MockApiKey, MockApiKeyEvent, ApiKeyType } from "@/lib/mock-data";
+import { fmtNum, fmtRelative } from "@/lib/format";
+import type { MockApiKey, MockApiKeyEvent } from "@/lib/mock-data";
 import {
   Area,
   AreaChart,
@@ -17,13 +16,8 @@ import {
 import {
   ArrowsClockwiseIcon,
   ProhibitIcon,
-  GlobeIcon,
-  ShieldIcon,
   ClockIcon,
-  LightningIcon,
-  ArrowLeftIcon,
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -51,7 +45,11 @@ import {
   PageToolbar,
   FilterPills,
 } from "@/components/shared";
-import { useApiKey, useApiKeyEvents, type EventFilter } from "@/hooks/use-api-keys";
+import {
+  useApiKey,
+  useApiKeyEvents,
+  type EventFilter,
+} from "@/hooks/use-api-keys";
 import { CreateKeyDialog } from "./create-key-dialog";
 
 /* ─── Tab type ────────────────────────────────────────────────────────────── */
@@ -60,11 +58,21 @@ type Tab = "overview" | "activity" | "settings";
 
 /* ─── KPI card ────────────────────────────────────────────────────────────── */
 
-function KpiCard({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
+function KpiCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+}) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
+        {value}
+      </p>
       {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -106,16 +114,25 @@ function UsageChart({ data }: { data: MockApiKey["dailyUsage"] }) {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
-        <p className="mb-3 text-xs font-medium text-muted-foreground">Daily requests — last 30 days</p>
+        <p className="mb-3 text-xs font-medium text-muted-foreground">
+          Daily requests — last 30 days
+        </p>
         <ResponsiveContainer width="100%" height={160}>
-          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <AreaChart
+            data={data}
+            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+          >
             <defs>
               <linearGradient id="keyUsageGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              vertical={false}
+            />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
@@ -140,7 +157,14 @@ function UsageChart({ data }: { data: MockApiKey["dailyUsage"] }) {
                 border: "1px solid var(--border)",
                 borderRadius: 6,
               }}
-              labelFormatter={(l) => typeof l === "string" ? new Date(l).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : String(l)}
+              labelFormatter={(l) =>
+                typeof l === "string"
+                  ? new Date(l).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : String(l)
+              }
             />
             <Area
               type="monotone"
@@ -177,7 +201,8 @@ const EVENT_TONE: Record<MockApiKeyEvent["type"], string> = {
 };
 
 function ActivityTab({ keyId }: { keyId: string }) {
-  const { events, allEvents, loading, filter, setFilter } = useApiKeyEvents(keyId);
+  const { events, allEvents, loading, filter, setFilter } =
+    useApiKeyEvents(keyId);
 
   if (loading) {
     return (
@@ -194,9 +219,23 @@ function ActivityTab({ keyId }: { keyId: string }) {
       <FilterPills<EventFilter>
         options={[
           { id: "all", label: "All", count: allEvents.length },
-          { id: "used", label: "Used", count: allEvents.filter((e) => e.type === "used").length },
-          { id: "limit_hit", label: "Limit hits", count: allEvents.filter((e) => e.type === "limit_hit").length },
-          { id: "lifecycle", label: "Lifecycle", count: allEvents.filter((e) => ["created","revoked","rotated"].includes(e.type)).length },
+          {
+            id: "used",
+            label: "Used",
+            count: allEvents.filter((e) => e.type === "used").length,
+          },
+          {
+            id: "limit_hit",
+            label: "Limit hits",
+            count: allEvents.filter((e) => e.type === "limit_hit").length,
+          },
+          {
+            id: "lifecycle",
+            label: "Lifecycle",
+            count: allEvents.filter((e) =>
+              ["created", "revoked", "rotated"].includes(e.type),
+            ).length,
+          },
         ]}
         value={filter}
         onChange={setFilter}
@@ -206,7 +245,9 @@ function ActivityTab({ keyId }: { keyId: string }) {
       {events.length === 0 ? (
         <Empty className="py-12">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><ClockIcon weight="bold" /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <ClockIcon weight="bold" />
+            </EmptyMedia>
             <EmptyTitle>Quiet so far</EmptyTitle>
             <EmptyDescription>Calls will show up here.</EmptyDescription>
           </EmptyHeader>
@@ -218,7 +259,9 @@ function ActivityTab({ keyId }: { keyId: string }) {
               <TableHead className="text-xs">Time</TableHead>
               <TableHead className="text-xs">Event</TableHead>
               <TableHead className="text-xs hidden sm:table-cell">IP</TableHead>
-              <TableHead className="text-xs hidden md:table-cell">Origin</TableHead>
+              <TableHead className="text-xs hidden md:table-cell">
+                Origin
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -228,7 +271,9 @@ function ActivityTab({ keyId }: { keyId: string }) {
                   {fmtRelative(ev.at)}
                 </TableCell>
                 <TableCell>
-                  <span className={cn("text-xs font-medium", EVENT_TONE[ev.type])}>
+                  <span
+                    className={cn("text-xs font-medium", EVENT_TONE[ev.type])}
+                  >
                     {EVENT_LABELS[ev.type]}
                   </span>
                 </TableCell>
@@ -270,7 +315,10 @@ function ChipInput({
   return (
     <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-1 focus-within:ring-ring min-h-9">
       {values.map((v) => (
-        <span key={v} className="flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+        <span
+          key={v}
+          className="flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px]"
+        >
           {v}
           <button
             type="button"
@@ -285,8 +333,12 @@ function ChipInput({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
-          if (e.key === "Backspace" && !input && values.length) onChange(values.slice(0, -1));
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          }
+          if (e.key === "Backspace" && !input && values.length)
+            onChange(values.slice(0, -1));
         }}
         onBlur={commit}
         placeholder={values.length === 0 ? placeholder : undefined}
@@ -322,28 +374,48 @@ function SettingsTab({
     rateLimit !== entry.rateLimit;
 
   const rateLabelIdx = RATE_PRESETS.indexOf(rateLimit);
-  const sliderValue = rateLabelIdx >= 0 ? rateLabelIdx : RATE_PRESETS.findIndex((v) => v >= rateLimit);
+  const sliderValue =
+    rateLabelIdx >= 0
+      ? rateLabelIdx
+      : RATE_PRESETS.findIndex((v) => v >= rateLimit);
 
   return (
     <div className="space-y-6 pb-16">
       {/* Name */}
       <div className="space-y-1.5">
         <Label htmlFor="settings-name">Key name</Label>
-        <Input id="settings-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+        <Input
+          id="settings-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={50}
+        />
       </div>
 
       {/* Origins / IPs */}
       {entry.type === "publishable" ? (
         <div className="space-y-1.5">
           <Label>Allowed origins</Label>
-          <ChipInput values={origins} onChange={setOrigins} placeholder="https://example.com" />
-          <p className="text-[11px] text-muted-foreground">Leave empty to allow all origins.</p>
+          <ChipInput
+            values={origins}
+            onChange={setOrigins}
+            placeholder="https://example.com"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Leave empty to allow all origins.
+          </p>
         </div>
       ) : (
         <div className="space-y-1.5">
           <Label>IP allowlist</Label>
-          <ChipInput values={ips} onChange={setIps} placeholder="203.0.113.0/24" />
-          <p className="text-[11px] text-muted-foreground">Leave empty to allow any IP.</p>
+          <ChipInput
+            values={ips}
+            onChange={setIps}
+            placeholder="203.0.113.0/24"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Leave empty to allow any IP.
+          </p>
         </div>
       )}
 
@@ -351,7 +423,9 @@ function SettingsTab({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Rate limit</Label>
-          <span className="font-mono text-xs text-muted-foreground">{rateLimit} req/min</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {rateLimit} req/min
+          </span>
         </div>
         <Slider
           min={0}
@@ -361,26 +435,41 @@ function SettingsTab({
           onValueChange={([i]) => setRateLimit(RATE_PRESETS[i]!)}
         />
         <div className="flex justify-between text-[10px] text-muted-foreground">
-          {RATE_PRESETS.map((v) => <span key={v}>{v}/m</span>)}
+          {RATE_PRESETS.map((v) => (
+            <span key={v}>{v}/m</span>
+          ))}
         </div>
       </div>
 
       {/* Save bar */}
       {isDirty && (
         <div className="sticky bottom-0 flex items-center justify-end gap-2 rounded-lg border border-border bg-background/95 px-4 py-2.5 shadow-sm backdrop-blur">
-          <span className="mr-auto text-xs text-muted-foreground">Unsaved changes</span>
-          <Button variant="outline" size="sm" onClick={() => {
-            setName(entry.name);
-            setOrigins(entry.allowedOrigins);
-            setIps(entry.allowedIps ?? []);
-            setRateLimit(entry.rateLimit);
-          }}>
+          <span className="mr-auto text-xs text-muted-foreground">
+            Unsaved changes
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setName(entry.name);
+              setOrigins(entry.allowedOrigins);
+              setIps(entry.allowedIps ?? []);
+              setRateLimit(entry.rateLimit);
+            }}
+          >
             Discard
           </Button>
           <Button
             size="sm"
             disabled={saving}
-            onClick={() => onSave({ name, allowedOrigins: origins, allowedIps: ips.length ? ips : null, rateLimit })}
+            onClick={() =>
+              onSave({
+                name,
+                allowedOrigins: origins,
+                allowedIps: ips.length ? ips : null,
+                rateLimit,
+              })
+            }
           >
             {saving ? "Saving…" : "Save"}
           </Button>
@@ -393,7 +482,9 @@ function SettingsTab({
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium">Revoke this key</p>
-            <p className="text-xs text-muted-foreground">This key stops working immediately. You can&apos;t undo it.</p>
+            <p className="text-xs text-muted-foreground">
+              This key stops working immediately. You can&apos;t undo it.
+            </p>
           </div>
           <Button
             variant="destructive"
@@ -431,17 +522,21 @@ export function ApiKeyDetailClient({
   slug: string;
   projectName: string;
 }) {
-  const router = useRouter();
   const { key, loading, update, revoke, rotate } = useApiKey(keyId);
   const [tab, setTab] = React.useState<Tab>("overview");
   const [saving, setSaving] = React.useState(false);
   const [rotateOpen, setRotateOpen] = React.useState(false);
-  const [rotatePlaintext, setRotatePlaintext] = React.useState<string | null>(null);
+  const [rotatePlaintext, setRotatePlaintext] = React.useState<string | null>(
+    null,
+  );
 
   async function handleSave(patch: Partial<MockApiKey>) {
     setSaving(true);
-    try { await update(patch as Parameters<typeof update>[0]); }
-    finally { setSaving(false); }
+    try {
+      await update(patch as Parameters<typeof update>[0]);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleRevoke() {
@@ -462,7 +557,12 @@ export function ApiKeyDetailClient({
         />
         <PageBody padding="default" className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full animate-shimmer rounded-lg" />)}
+            {[...Array(4)].map((_, i) => (
+              <Skeleton
+                key={i}
+                className="h-20 w-full animate-shimmer rounded-lg"
+              />
+            ))}
           </div>
           <Skeleton className="h-48 w-full animate-shimmer rounded-lg" />
         </PageBody>
@@ -481,7 +581,12 @@ export function ApiKeyDetailClient({
         }
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setRotateOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setRotateOpen(true)}
+            >
               <ArrowsClockwiseIcon className="size-3.5" aria-hidden />
               Rotate
             </Button>
@@ -544,7 +649,9 @@ export function ApiKeyDetailClient({
           open={true}
           initialType={key.type}
           projectId={key.projectId}
-          onOpenChange={(open) => { if (!open) setRotatePlaintext(null); }}
+          onOpenChange={(open) => {
+            if (!open) setRotatePlaintext(null);
+          }}
         />
       )}
     </div>

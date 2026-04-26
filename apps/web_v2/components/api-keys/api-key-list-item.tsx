@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { fmtNum, fmtRelative, fmtExpiry } from "@/lib/format";
+import { fmtNum, fmtRelative } from "@/lib/format";
 import type { MockApiKey } from "@/lib/mock-data";
 import {
   ArrowSquareOutIcon,
@@ -11,42 +11,65 @@ import {
   ProhibitIcon,
   KeyIcon,
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { ItemRow, ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
+import {
+  ItemRow,
+  ItemCard,
+  ItemActionRow,
+  type ItemAction,
+} from "@/components/shared";
 
 /* ─── Shared helpers ─────────────────────────────────────────────────────── */
 
+/** Stable reference evaluated once at module load time — safe for purity rules */
+const MODULE_NOW = Date.now();
+
 function KeyTypeBadge({ type }: { type: MockApiKey["type"] }) {
   return (
-    <Badge
-      variant="secondary"
+    <span
       className={cn(
-        "shrink-0 font-mono text-[10px] font-semibold tracking-widest",
+        "shrink-0 rounded border px-1 py-0.5 font-mono text-[10px] font-semibold tracking-widest",
         type === "publishable"
-          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-          : "bg-slate-500/10 text-slate-700 dark:text-slate-300",
+          ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          : "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
       )}
     >
       {type === "publishable" ? "PK" : "SK"}
-    </Badge>
+    </span>
   );
 }
 
-function StatusBadge({ isActive, expiresAt }: { isActive: boolean; expiresAt: Date | null }) {
-  const expired = expiresAt != null && expiresAt.getTime() < Date.now();
-  if (!isActive) return <Badge variant="outline" className="text-[10px] opacity-60">Revoked</Badge>;
-  if (expired) return <Badge variant="outline" className="text-[10px] text-destructive">Expired</Badge>;
-  return <Badge variant="secondary" className="text-[10px] text-emerald-600 dark:text-emerald-400">Active</Badge>;
+function StatusChip({
+  isActive,
+  isExpired,
+}: {
+  isActive: boolean;
+  isExpired: boolean;
+}) {
+  if (!isActive)
+    return (
+      <span className="rounded-sm bg-destructive/10 px-1 py-0.5 font-mono text-[10px] font-medium text-destructive/70">
+        revoked
+      </span>
+    );
+  if (isExpired)
+    return (
+      <span className="rounded-sm bg-amber-500/10 px-1 py-0.5 font-mono text-[10px] font-medium text-amber-600 dark:text-amber-400">
+        expired
+      </span>
+    );
+  return null;
 }
 
 function MaskedKey({ prefix, lastFour }: { prefix: string; lastFour: string }) {
   const masked = `${prefix}••••${lastFour}`;
   return (
     <span className="flex items-center gap-1">
-      <span className="font-mono text-[11px] text-muted-foreground">{masked}</span>
+      <span className="font-mono text-[11px] text-muted-foreground">
+        {masked}
+      </span>
       <CopyButton value={prefix} label="Copy prefix" />
     </span>
   );
@@ -55,15 +78,19 @@ function MaskedKey({ prefix, lastFour }: { prefix: string; lastFour: string }) {
 function UsageBar({ count, limit }: { count: number; limit: number | null }) {
   if (!limit) return null;
   const pct = Math.min(100, Math.round((count / limit) * 100));
+  const fillClass =
+    pct >= 95 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary/60";
   return (
     <div className="flex items-center gap-1.5">
       <div className="h-1 w-16 overflow-hidden rounded-full bg-muted">
         <div
-          className={cn("h-full rounded-full transition-all", pct >= 90 ? "bg-destructive" : "bg-brand")}
+          className={cn("h-full rounded-full transition-all", fillClass)}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">{pct}%</span>
+      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+        {pct}%
+      </span>
     </div>
   );
 }
@@ -113,7 +140,12 @@ interface ApiKeyActions {
   onRotate: () => void;
 }
 
-function useKeyActions({ slug, keyId, onRevoke, onRotate }: ApiKeyActions): ItemAction[] {
+function useKeyActions({
+  slug,
+  keyId,
+  onRevoke,
+  onRotate,
+}: ApiKeyActions): ItemAction[] {
   const router = useRouter();
   return [
     {
@@ -157,6 +189,8 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
   const [revokeOpen, setRevokeOpen] = React.useState(false);
   const [rotateOpen, setRotateOpen] = React.useState(false);
   const inactive = !entry.isActive;
+  const isExpired =
+    entry.expiresAt != null && entry.expiresAt.getTime() < MODULE_NOW;
 
   const actions = useKeyActions({
     slug,
@@ -165,31 +199,67 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
     onRotate: () => setRotateOpen(true),
   });
 
-  const expiryLabel = entry.expiresAt ? fmtExpiry(entry.expiresAt) : null;
+  const expiryLabel = isExpired ? "Expired" : null;
 
   return (
     <>
       <ItemRow
-        accentColor={entry.isActive ? (entry.type === "publishable" ? "var(--chart-4)" : "var(--chart-2)") : null}
+        accentColor={
+          inactive
+            ? null
+            : entry.type === "publishable"
+              ? "rgba(245,158,11,0.65)"
+              : "rgba(14,165,233,0.65)"
+        }
         inactive={inactive}
         padding="comfortable"
         leading={
-          <div className={cn("flex size-7 shrink-0 items-center justify-center rounded-md bg-muted", inactive && "opacity-50")}>
-            <KeyIcon className="size-3.5 text-muted-foreground" weight="bold" />
+          <div
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-md",
+              entry.type === "publishable"
+                ? "bg-amber-500/10"
+                : "bg-sky-500/10",
+              inactive && "opacity-40",
+            )}
+          >
+            <KeyIcon
+              className={cn(
+                "size-3.5",
+                entry.type === "publishable"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-sky-600 dark:text-sky-400",
+              )}
+              weight="bold"
+            />
           </div>
         }
         title={
           <div className="flex items-center gap-2 min-w-0">
             <KeyTypeBadge type={entry.type} />
-            <span className={cn("truncate text-sm font-medium", inactive && "text-muted-foreground")}>{entry.name}</span>
+            <span
+              className={cn(
+                "truncate text-sm font-medium",
+                inactive && "text-muted-foreground",
+              )}
+            >
+              {entry.name}
+            </span>
           </div>
         }
-        subtitle={<MaskedKey prefix={entry.keyPrefix} lastFour={entry.lastFourPlaintext} />}
+        subtitle={
+          <MaskedKey
+            prefix={entry.keyPrefix}
+            lastFour={entry.lastFourPlaintext}
+          />
+        }
         metrics={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tabular-nums text-muted-foreground">
             <span>
-              <span className="font-semibold text-foreground">{fmtNum(entry.usageCount)}</span>
-              {entry.usageLimit ? ` / ${fmtNum(entry.usageLimit)}` : ""}{" "}calls
+              <span className="font-semibold text-foreground">
+                {fmtNum(entry.usageCount)}
+              </span>
+              {entry.usageLimit ? ` / ${fmtNum(entry.usageLimit)}` : ""} calls
             </span>
             <span className="text-border">·</span>
             <span>{entry.rateLimit}/min</span>
@@ -202,13 +272,21 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
             {expiryLabel && (
               <>
                 <span className="text-border">·</span>
-                <span className={cn(expiryLabel === "Expired" && "text-destructive")}>{expiryLabel}</span>
+                <StatusChip isActive={entry.isActive} isExpired={isExpired} />
               </>
+            )}
+            {!entry.isActive && !expiryLabel && (
+              <StatusChip isActive={entry.isActive} isExpired={isExpired} />
             )}
           </div>
         }
-        trailing={<StatusBadge isActive={entry.isActive} expiresAt={entry.expiresAt} />}
-        actions={<ItemActionRow actions={actions} collapseUnder={480} visibleWhenCollapsed={2} />}
+        actions={
+          <ItemActionRow
+            actions={actions}
+            collapseUnder={480}
+            visibleWhenCollapsed={2}
+          />
+        }
       />
 
       <ConfirmationDialog
@@ -251,11 +329,8 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
   const [revokeOpen, setRevokeOpen] = React.useState(false);
   const [rotateOpen, setRotateOpen] = React.useState(false);
   const inactive = !entry.isActive;
-  const accentColor = entry.isActive
-    ? entry.type === "publishable"
-      ? "var(--chart-4)"
-      : "var(--chart-2)"
-    : null;
+  const isExpired =
+    entry.expiresAt != null && entry.expiresAt.getTime() < MODULE_NOW;
 
   const actions = useKeyActions({
     slug,
@@ -267,18 +342,31 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
   return (
     <>
       <ItemCard
-        accentColor={accentColor}
+        accentColor={
+          inactive
+            ? null
+            : entry.type === "publishable"
+              ? "rgba(245,158,11,0.65)"
+              : "rgba(14,165,233,0.65)"
+        }
         inactive={inactive}
         preview={
           <div
-            className="flex items-center gap-3 px-4 py-3"
-            style={{
-              background: accentColor ? `linear-gradient(135deg, ${accentColor}12 0%, transparent 80%)` : undefined,
-              borderBottom: `1px solid ${accentColor ?? "var(--border)"}18`,
-            }}
+            className={cn(
+              "flex items-center gap-2 border-b border-border px-4 py-3",
+              entry.type === "publishable" ? "bg-amber-500/5" : "bg-sky-500/5",
+            )}
           >
             <KeyTypeBadge type={entry.type} />
-            <StatusBadge isActive={entry.isActive} expiresAt={entry.expiresAt} />
+            <MaskedKey
+              prefix={entry.keyPrefix}
+              lastFour={entry.lastFourPlaintext}
+            />
+            {(!entry.isActive || isExpired) && (
+              <div className="ml-auto">
+                <StatusChip isActive={entry.isActive} isExpired={isExpired} />
+              </div>
+            )}
           </div>
         }
         footer={
@@ -293,20 +381,30 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
         }
       >
         <div className="flex flex-col gap-1 px-4 py-3">
-          <span className={cn("truncate text-sm font-medium", inactive && "text-muted-foreground")}>{entry.name}</span>
-          <MaskedKey prefix={entry.keyPrefix} lastFour={entry.lastFourPlaintext} />
+          <span
+            className={cn(
+              "truncate text-sm font-medium",
+              inactive && "text-muted-foreground",
+            )}
+          >
+            {entry.name}
+          </span>
 
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] tabular-nums text-muted-foreground/80">
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] tabular-nums text-muted-foreground/80">
             <span>
-              <span className="font-semibold text-foreground">{fmtNum(entry.usageCount)}</span>
-              {entry.usageLimit ? ` / ${fmtNum(entry.usageLimit)}` : ""}{" "}calls
+              <span className="font-semibold text-foreground">
+                {fmtNum(entry.usageCount)}
+              </span>
+              {entry.usageLimit ? ` / ${fmtNum(entry.usageLimit)}` : ""} calls
             </span>
             <span className="text-border">·</span>
             <span>{entry.rateLimit}/min</span>
           </div>
           <UsageBar count={entry.usageCount} limit={entry.usageLimit} />
           {entry.lastUsedAt && (
-            <p className="text-[10px] text-muted-foreground/60">{fmtRelative(entry.lastUsedAt)}</p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {fmtRelative(entry.lastUsedAt)}
+            </p>
           )}
         </div>
       </ItemCard>

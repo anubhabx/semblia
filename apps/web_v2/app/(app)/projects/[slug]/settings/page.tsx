@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import React from "react";
 import { getProjectBySlug } from "@/lib/mock-data";
 import { SettingsClient } from "@/components/settings/settings-client";
 
@@ -18,5 +19,9 @@ export default async function SettingsPage(props: {
   const project = getProjectBySlug(slug);
   if (!project) notFound();
 
-  return <SettingsClient project={project} />;
+  return (
+    <React.Suspense fallback={<div className="flex flex-1 flex-col" />}>
+      <SettingsClient project={project} />
+    </React.Suspense>
+  );
 }

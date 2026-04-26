@@ -168,7 +168,12 @@ export interface MockWidget {
 }
 
 export type ApiKeyType = "publishable" | "secret";
-export type ApiKeyEventType = "created" | "used" | "revoked" | "rotated" | "limit_hit";
+export type ApiKeyEventType =
+  | "created"
+  | "used"
+  | "revoked"
+  | "rotated"
+  | "limit_hit";
 
 export interface MockApiKey {
   id: string;
@@ -728,13 +733,20 @@ export const MOCK_WIDGETS: Record<string, MockWidget[]> = {
   ],
 };
 
-function makeDailyUsage(base: number, variance: number, days = 30): { date: string; count: number }[] {
+function makeDailyUsage(
+  base: number,
+  variance: number,
+  days = 30,
+): { date: string; count: number }[] {
   const out: { date: string; count: number }[] = [];
   const now = new Date("2024-12-10T00:00:00Z");
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    const count = Math.max(0, Math.round(base + (Math.random() - 0.5) * variance));
+    const count = Math.max(
+      0,
+      Math.round(base + (Math.random() - 0.5) * variance),
+    );
     out.push({ date: d.toISOString().slice(0, 10), count });
   }
   return out;
@@ -972,36 +984,137 @@ export function getApiKeyById(keyId: string): MockApiKey | undefined {
 
 export const MOCK_API_KEY_EVENTS: Record<string, MockApiKeyEvent[]> = {
   key_l1: [
-    { id: "ev_l1_1", keyId: "key_l1", type: "created",  at: new Date("2024-02-01T10:00:00Z") },
-    { id: "ev_l1_2", keyId: "key_l1", type: "used", at: new Date("2024-12-10T11:45:00Z"), ip: "203.0.113.47", origin: "https://launchpad.io", userAgent: "Mozilla/5.0 (compatible)" },
-    { id: "ev_l1_3", keyId: "key_l1", type: "used", at: new Date("2024-12-10T09:13:00Z"), ip: "203.0.113.22", origin: "https://www.launchpad.io" },
-    { id: "ev_l1_4", keyId: "key_l1", type: "used", at: new Date("2024-12-09T17:52:00Z"), ip: "198.51.100.8",  origin: "https://launchpad.io" },
-    { id: "ev_l1_5", keyId: "key_l1", type: "used", at: new Date("2024-12-09T07:30:00Z"), ip: "203.0.113.91", origin: "https://launchpad.io" },
+    {
+      id: "ev_l1_1",
+      keyId: "key_l1",
+      type: "created",
+      at: new Date("2024-02-01T10:00:00Z"),
+    },
+    {
+      id: "ev_l1_2",
+      keyId: "key_l1",
+      type: "used",
+      at: new Date("2024-12-10T11:45:00Z"),
+      ip: "203.0.113.47",
+      origin: "https://launchpad.io",
+      userAgent: "Mozilla/5.0 (compatible)",
+    },
+    {
+      id: "ev_l1_3",
+      keyId: "key_l1",
+      type: "used",
+      at: new Date("2024-12-10T09:13:00Z"),
+      ip: "203.0.113.22",
+      origin: "https://www.launchpad.io",
+    },
+    {
+      id: "ev_l1_4",
+      keyId: "key_l1",
+      type: "used",
+      at: new Date("2024-12-09T17:52:00Z"),
+      ip: "198.51.100.8",
+      origin: "https://launchpad.io",
+    },
+    {
+      id: "ev_l1_5",
+      keyId: "key_l1",
+      type: "used",
+      at: new Date("2024-12-09T07:30:00Z"),
+      ip: "203.0.113.91",
+      origin: "https://launchpad.io",
+    },
   ],
   key_l2: [
-    { id: "ev_l2_1", keyId: "key_l2", type: "created",   at: new Date("2024-08-15T12:00:00Z") },
-    { id: "ev_l2_2", keyId: "key_l2", type: "rotated",   at: new Date("2024-10-01T08:00:00Z"), ip: "10.0.1.5"  },
-    { id: "ev_l2_3", keyId: "key_l2", type: "used",      at: new Date("2024-12-08T09:00:00Z"), ip: "10.0.1.5",  userAgent: "axios/1.6.2" },
-    { id: "ev_l2_4", keyId: "key_l2", type: "limit_hit", at: new Date("2024-11-28T14:22:00Z"), ip: "10.0.1.5" },
-    { id: "ev_l2_5", keyId: "key_l2", type: "used",      at: new Date("2024-12-07T22:15:00Z"), ip: "10.0.1.6",  userAgent: "node-fetch/3.3.2" },
+    {
+      id: "ev_l2_1",
+      keyId: "key_l2",
+      type: "created",
+      at: new Date("2024-08-15T12:00:00Z"),
+    },
+    {
+      id: "ev_l2_2",
+      keyId: "key_l2",
+      type: "rotated",
+      at: new Date("2024-10-01T08:00:00Z"),
+      ip: "10.0.1.5",
+    },
+    {
+      id: "ev_l2_3",
+      keyId: "key_l2",
+      type: "used",
+      at: new Date("2024-12-08T09:00:00Z"),
+      ip: "10.0.1.5",
+      userAgent: "axios/1.6.2",
+    },
+    {
+      id: "ev_l2_4",
+      keyId: "key_l2",
+      type: "limit_hit",
+      at: new Date("2024-11-28T14:22:00Z"),
+      ip: "10.0.1.5",
+    },
+    {
+      id: "ev_l2_5",
+      keyId: "key_l2",
+      type: "used",
+      at: new Date("2024-12-07T22:15:00Z"),
+      ip: "10.0.1.6",
+      userAgent: "node-fetch/3.3.2",
+    },
   ],
   key_l3: [
-    { id: "ev_l3_1", keyId: "key_l3", type: "created", at: new Date("2024-09-01T09:00:00Z") },
-    { id: "ev_l3_2", keyId: "key_l3", type: "revoked",  at: new Date("2024-11-20T14:00:00Z") },
+    {
+      id: "ev_l3_1",
+      keyId: "key_l3",
+      type: "created",
+      at: new Date("2024-09-01T09:00:00Z"),
+    },
+    {
+      id: "ev_l3_2",
+      keyId: "key_l3",
+      type: "revoked",
+      at: new Date("2024-11-20T14:00:00Z"),
+    },
   ],
   key_p1: [
-    { id: "ev_p1_1", keyId: "key_p1", type: "created", at: new Date("2024-04-01T10:00:00Z") },
-    { id: "ev_p1_2", keyId: "key_p1", type: "used",    at: new Date("2024-12-08T15:00:00Z"), ip: "198.51.100.34", origin: "https://alexchen.design" },
+    {
+      id: "ev_p1_1",
+      keyId: "key_p1",
+      type: "created",
+      at: new Date("2024-04-01T10:00:00Z"),
+    },
+    {
+      id: "ev_p1_2",
+      keyId: "key_p1",
+      type: "used",
+      at: new Date("2024-12-08T15:00:00Z"),
+      ip: "198.51.100.34",
+      origin: "https://alexchen.design",
+    },
   ],
   key_m1: [
-    { id: "ev_m1_1", keyId: "key_m1", type: "created", at: new Date("2024-07-01T08:00:00Z") },
-    { id: "ev_m1_2", keyId: "key_m1", type: "used",    at: new Date("2024-12-07T10:00:00Z"), ip: "203.0.113.7", origin: "https://docs.mobilekit.dev" },
+    {
+      id: "ev_m1_1",
+      keyId: "key_m1",
+      type: "created",
+      at: new Date("2024-07-01T08:00:00Z"),
+    },
+    {
+      id: "ev_m1_2",
+      keyId: "key_m1",
+      type: "used",
+      at: new Date("2024-12-07T10:00:00Z"),
+      ip: "203.0.113.7",
+      origin: "https://docs.mobilekit.dev",
+    },
   ],
 };
 
 /** Returns audit events for a key (newest first). */
 export function getApiKeyEvents(keyId: string): MockApiKeyEvent[] {
-  return (MOCK_API_KEY_EVENTS[keyId] ?? []).slice().sort((a, b) => b.at.getTime() - a.at.getTime());
+  return (MOCK_API_KEY_EVENTS[keyId] ?? [])
+    .slice()
+    .sort((a, b) => b.at.getTime() - a.at.getTime());
 }
 
 /** Returns the unread notification count */

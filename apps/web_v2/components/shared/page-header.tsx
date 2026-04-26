@@ -131,9 +131,7 @@ export function PageHeader({
           )}
         </div>
         {description && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         )}
       </div>
       {toolbar && (
@@ -155,10 +153,7 @@ export function PageHeader({
  */
 export function HeaderSep({ className }: { className?: string }) {
   return (
-    <span
-      aria-hidden
-      className={cn("mx-1.5 text-border", className)}
-    >
+    <span aria-hidden className={cn("mx-1.5 text-border", className)}>
       ·
     </span>
   );

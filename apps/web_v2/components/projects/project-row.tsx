@@ -97,7 +97,10 @@ export function ProjectRow({
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
               title={`${project._count.testimonials} testimonials`}
             >
-              <MessageSquareTextIcon className="size-3.5 shrink-0" aria-hidden />
+              <MessageSquareTextIcon
+                className="size-3.5 shrink-0"
+                aria-hidden
+              />
               {project._count.testimonials}
             </span>
             <span

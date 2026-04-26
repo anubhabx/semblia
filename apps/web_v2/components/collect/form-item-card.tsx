@@ -10,20 +10,19 @@ import {
   TrashIcon,
   PauseIcon,
   PlayIcon,
-  ClipboardTextIcon,
 } from "@phosphor-icons/react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
+import { FormCardPreview } from "./form-card-preview";
 
 /* ─── Skeleton ────────────────────────────────────────────────────────────── */
 
 export function FormItemCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <Skeleton className="h-[52px] w-full animate-shimmer" />
+      <Skeleton className="aspect-[16/10] w-full animate-shimmer" />
       <div className="space-y-2 px-4 pb-3 pt-3">
         <Skeleton className="h-3.5 w-32 animate-shimmer" />
         <Skeleton className="h-2.5 w-44 animate-shimmer" />
@@ -54,11 +53,21 @@ export const FormItemCard = React.memo(function FormItemCard({
 }) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const inactive = !entry.isActive;
-  const brandColor = inactive ? "var(--muted-foreground)" : "var(--brand)";
 
   const actions: ItemAction[] = [
-    { id: "edit", label: "Edit", icon: PencilIcon, onSelect: onEdit, pinned: true },
-    { id: "duplicate", label: "Duplicate", icon: CopyIcon, onSelect: onDuplicate },
+    {
+      id: "edit",
+      label: "Edit",
+      icon: PencilIcon,
+      onSelect: onEdit,
+      pinned: true,
+    },
+    {
+      id: "duplicate",
+      label: "Duplicate",
+      icon: CopyIcon,
+      onSelect: onDuplicate,
+    },
     {
       id: "toggle",
       label: entry.isActive ? "Pause" : "Activate",
@@ -66,7 +75,15 @@ export const FormItemCard = React.memo(function FormItemCard({
       tone: entry.isActive ? "warning" : "success",
       onSelect: onToggleActive,
     },
-    { id: "delete", label: "Delete", icon: TrashIcon, tone: "danger", iconOnly: true, pinned: true, onSelect: () => setDeleteOpen(true) },
+    {
+      id: "delete",
+      label: "Delete",
+      icon: TrashIcon,
+      tone: "danger",
+      iconOnly: true,
+      pinned: true,
+      onSelect: () => setDeleteOpen(true),
+    },
   ];
 
   return (
@@ -75,30 +92,28 @@ export const FormItemCard = React.memo(function FormItemCard({
         accentColor={entry.isActive ? "var(--brand)" : null}
         inactive={inactive}
         preview={
-          /* Coloured header band — echoes the brand stripe */
-          <div
-            className="flex items-center gap-3 px-4 py-3"
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}12 0%, transparent 80%)`,
-              borderBottom: `1px solid ${brandColor}18`,
-            }}
-          >
-            <div
-              className="flex size-7 shrink-0 items-center justify-center rounded-md"
-              style={{ background: `${brandColor}18` }}
-            >
-              <ClipboardTextIcon className="size-3.5" style={{ color: brandColor }} weight="bold" aria-hidden />
+          <div className="relative block aspect-[16/10] overflow-hidden">
+            <FormCardPreview inactive={inactive} className="absolute inset-0" />
+            {/* Status chip overlay */}
+            <div className="absolute left-2 top-2">
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-medium",
+                  "border backdrop-blur-md",
+                  entry.isActive
+                    ? "border-foreground/15 bg-background/85 text-foreground/80"
+                    : "border-border/60 bg-muted/80 text-muted-foreground",
+                )}
+              >
+                {entry.isActive ? "Active" : "Paused"}
+              </span>
             </div>
-            <Badge
-              variant={entry.isActive ? "secondary" : "outline"}
-              className={cn("text-[10px] font-medium", inactive && "opacity-50")}
-            >
-              {entry.isActive ? "Active" : "Paused"}
-            </Badge>
             {entry.abWeight !== 100 && entry.isActive && (
-              <Badge variant="outline" className="ml-auto text-[10px] font-mono font-medium">
-                {entry.abWeight}%
-              </Badge>
+              <div className="absolute right-2 top-2">
+                <span className="inline-flex items-center rounded-md border border-foreground/10 bg-background/85 px-1.5 py-0.5 font-mono text-[10px] font-medium text-foreground/70 backdrop-blur-md">
+                  {entry.abWeight}%
+                </span>
+              </div>
             )}
           </div>
         }
@@ -122,7 +137,12 @@ export const FormItemCard = React.memo(function FormItemCard({
             onCommit={onRename}
           />
           {entry.description && (
-            <p className={cn("line-clamp-2 text-xs leading-relaxed", inactive ? "text-muted-foreground/50" : "text-muted-foreground")}>
+            <p
+              className={cn(
+                "line-clamp-2 text-xs leading-relaxed",
+                inactive ? "text-muted-foreground/50" : "text-muted-foreground",
+              )}
+            >
               {entry.description}
             </p>
           )}
@@ -130,18 +150,24 @@ export const FormItemCard = React.memo(function FormItemCard({
           {/* Metric chips */}
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
             <span>
-              <span className="font-semibold text-foreground">{fmtNum(entry.views)}</span>
-              {" "}views
+              <span className="font-semibold text-foreground">
+                {fmtNum(entry.views)}
+              </span>{" "}
+              views
             </span>
             <span className="text-border">·</span>
             <span>
-              <span className="font-semibold text-foreground">{fmtNum(entry.submissions)}</span>
-              {" "}submissions
+              <span className="font-semibold text-foreground">
+                {fmtNum(entry.submissions)}
+              </span>{" "}
+              submissions
             </span>
             <span className="text-border">·</span>
             <span>
-              <span className="font-semibold text-foreground">{entry.responseRate.toFixed(1)}%</span>
-              {" "}conv.
+              <span className="font-semibold text-foreground">
+                {entry.responseRate.toFixed(1)}%
+              </span>{" "}
+              conv.
             </span>
           </div>
         </div>
@@ -153,7 +179,10 @@ export const FormItemCard = React.memo(function FormItemCard({
         intent="danger"
         title={<>Delete &ldquo;{entry.name}&rdquo;?</>}
         description={
-          <>This permanently removes this form configuration and its draft. This action cannot be undone.</>
+          <>
+            This permanently removes this form configuration and its draft. This
+            action cannot be undone.
+          </>
         }
         cancelLabel="Keep form"
         confirmLabel="Delete form"

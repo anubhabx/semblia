@@ -46,11 +46,7 @@ export function ItemCard({
   const structured = preview != null || footer != null;
 
   return (
-    <ItemShell
-      shape="card"
-      className={cn("h-full", className)}
-      {...shellProps}
-    >
+    <ItemShell shape="card" className={cn("h-full", className)} {...shellProps}>
       {structured ? (
         <>
           {preview}

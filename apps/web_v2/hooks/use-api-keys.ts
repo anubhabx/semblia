@@ -36,7 +36,9 @@ export function useApiKeys(projectId: string) {
   const secret = keys.filter((k) => k.type === "secret");
 
   const create = React.useCallback(
-    async (draft: CreateApiKeyDraft): Promise<{ key: MockApiKey; plaintext: string }> => {
+    async (
+      draft: CreateApiKeyDraft,
+    ): Promise<{ key: MockApiKey; plaintext: string }> => {
       const result = await apiCreateApiKey(projectId, draft);
       setKeys((prev) => [...prev, result.key]);
       return result;
@@ -57,7 +59,12 @@ export function useApiKeys(projectId: string) {
       setKeys((prev) =>
         prev.map((k) =>
           k.id === keyId
-            ? { ...k, keyPrefix: k.keyPrefix, lastFourPlaintext: result.plaintext.slice(-4), isActive: true }
+            ? {
+                ...k,
+                keyPrefix: k.keyPrefix,
+                lastFourPlaintext: result.plaintext.slice(-4),
+                isActive: true,
+              }
             : k,
         ),
       );
@@ -66,11 +73,14 @@ export function useApiKeys(projectId: string) {
     [],
   );
 
-  const update = React.useCallback(async (keyId: string, patch: ApiKeyPatch) => {
-    const updated = await apiUpdateApiKey(keyId, patch);
-    setKeys((prev) => prev.map((k) => (k.id === keyId ? updated : k)));
-    return updated;
-  }, []);
+  const update = React.useCallback(
+    async (keyId: string, patch: ApiKeyPatch) => {
+      const updated = await apiUpdateApiKey(keyId, patch);
+      setKeys((prev) => prev.map((k) => (k.id === keyId ? updated : k)));
+      return updated;
+    },
+    [],
+  );
 
   return {
     keys,
@@ -99,11 +109,14 @@ export function useApiKey(keyId: string) {
     });
   }, [keyId]);
 
-  const update = React.useCallback(async (patch: ApiKeyPatch) => {
-    const updated = await apiUpdateApiKey(keyId, patch);
-    setKey(updated);
-    return updated;
-  }, [keyId]);
+  const update = React.useCallback(
+    async (patch: ApiKeyPatch) => {
+      const updated = await apiUpdateApiKey(keyId, patch);
+      setKey(updated);
+      return updated;
+    },
+    [keyId],
+  );
 
   const revoke = React.useCallback(async () => {
     await apiRevokeApiKey(keyId);
@@ -113,7 +126,13 @@ export function useApiKey(keyId: string) {
   const rotate = React.useCallback(async (): Promise<{ plaintext: string }> => {
     const result = await apiRotateApiKey(keyId);
     setKey((prev) =>
-      prev ? { ...prev, lastFourPlaintext: result.plaintext.slice(-4), isActive: true } : prev,
+      prev
+        ? {
+            ...prev,
+            lastFourPlaintext: result.plaintext.slice(-4),
+            isActive: true,
+          }
+        : prev,
     );
     return result;
   }, [keyId]);
@@ -141,12 +160,21 @@ export function useApiKeyEvents(keyId: string) {
   const filtered = React.useMemo(() => {
     if (filter === "all") return events;
     if (filter === "used") return events.filter((e) => e.type === "used");
-    if (filter === "limit_hit") return events.filter((e) => e.type === "limit_hit");
-    return events.filter((e) => ["created", "revoked", "rotated"].includes(e.type));
+    if (filter === "limit_hit")
+      return events.filter((e) => e.type === "limit_hit");
+    return events.filter((e) =>
+      ["created", "revoked", "rotated"].includes(e.type),
+    );
   }, [events, filter]);
 
   return { events: filtered, allEvents: events, loading, filter, setFilter };
 }
 
 // Re-export types for convenience
-export type { MockApiKey, MockApiKeyEvent, ApiKeyType, CreateApiKeyDraft, ApiKeyPatch };
+export type {
+  MockApiKey,
+  MockApiKeyEvent,
+  ApiKeyType,
+  CreateApiKeyDraft,
+  ApiKeyPatch,
+};

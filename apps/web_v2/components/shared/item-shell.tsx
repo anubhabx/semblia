@@ -90,8 +90,7 @@ export function ItemShell({
 }: ItemShellProps) {
   const interactive = !nonInteractive && (href || onClick);
   const stripe = stripeStyle(accentColor, selected);
-  const mergedStyle =
-    stripe || style ? { ...stripe, ...style } : undefined;
+  const mergedStyle = stripe || style ? { ...stripe, ...style } : undefined;
   const baseClass = cn(
     // ── shared
     "group/item-shell relative outline-none transition-[background,border-color,box-shadow,transform,opacity] duration-150 ease-out",

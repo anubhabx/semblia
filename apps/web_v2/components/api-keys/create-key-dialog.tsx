@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import type { ApiKeyType } from "@/lib/mock-data";
 import {
   XIcon,
-  PlusIcon,
   CopyIcon,
   WarningIcon,
   CheckCircleIcon,
@@ -21,7 +20,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { useApiKeys } from "@/hooks/use-api-keys";
 
@@ -67,7 +65,10 @@ function ChipInput({
           {v}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onChange(values.filter((x) => x !== v)); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(values.filter((x) => x !== v));
+            }}
             className="ml-0.5 text-muted-foreground hover:text-foreground"
             aria-label={`Remove ${v}`}
           >
@@ -80,7 +81,10 @@ function ChipInput({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          }
           if (e.key === "Backspace" && !input && values.length) {
             onChange(values.slice(0, -1));
           }
@@ -141,12 +145,17 @@ function DraftStep({
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); if (valid) onSubmit(); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) onSubmit();
+      }}
       className="space-y-4"
     >
       {/* Name */}
       <div className="space-y-1.5">
-        <Label htmlFor="key-name">Key name <span className="text-destructive">*</span></Label>
+        <Label htmlFor="key-name">
+          Key name <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="key-name"
           value={draft.name}
@@ -155,7 +164,9 @@ function DraftStep({
           maxLength={50}
           autoFocus
         />
-        <p className="text-[11px] text-muted-foreground">{draft.name.length}/50 characters</p>
+        <p className="text-[11px] text-muted-foreground">
+          {draft.name.length}/50 characters
+        </p>
       </div>
 
       {/* Expiry */}
@@ -191,7 +202,8 @@ function DraftStep({
             validate={(v) => /^https?:\/\/.+/.test(v)}
           />
           <p className="text-[11px] text-muted-foreground">
-            Requests from other origins will be blocked. Leave empty to allow all.
+            Requests from other origins will be blocked. Leave empty to allow
+            all.
           </p>
         </div>
       )}
@@ -202,11 +214,17 @@ function DraftStep({
           <div className="rounded-md border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
             <p className="flex items-start gap-2 text-[12px] leading-relaxed text-amber-700 dark:text-amber-400">
               <WarningIcon className="mt-0.5 size-3.5 shrink-0" weight="fill" />
-              Treat like a password. Never paste in client code, repos, or chat messages.
+              Treat like a password. Never paste in client code, repos, or chat
+              messages.
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label>IP allowlist <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Label>
+              IP allowlist{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
             <ChipInput
               values={draft.ips}
               onChange={(v) => onChange({ ips: v })}
@@ -214,15 +232,23 @@ function DraftStep({
               validate={(v) => /^[\d.:/a-fA-F]+$/.test(v)}
             />
             <p className="text-[11px] text-muted-foreground">
-              Restrict to your server IPs or CIDR blocks. Leave empty for any IP.
+              Restrict to your server IPs or CIDR blocks. Leave empty for any
+              IP.
             </p>
           </div>
         </>
       )}
 
       <DialogFooter>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" size="sm" disabled={!valid || submitting} className="gap-1.5">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!valid || submitting}
+          className="gap-1.5"
+        >
           {submitting ? "Creating…" : "Create key"}
         </Button>
       </DialogFooter>
@@ -256,7 +282,9 @@ function RevealStep({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <p className="text-sm font-semibold text-foreground">Your new key — copy it now</p>
+        <p className="text-sm font-semibold text-foreground">
+          Your new key — copy it now
+        </p>
         <p className="text-xs text-muted-foreground">
           We won&apos;t show it again. If you lose it, rotate to get a new one.
         </p>
@@ -278,9 +306,13 @@ function RevealStep({
           aria-label="Copy key"
         >
           {copied ? (
-            <><CheckCircleIcon className="size-3.5" /> Copied</>
+            <>
+              <CheckCircleIcon className="size-3.5" /> Copied
+            </>
           ) : (
-            <><CopyIcon className="size-3.5" /> Copy</>
+            <>
+              <CopyIcon className="size-3.5" /> Copy
+            </>
           )}
         </button>
       </div>
@@ -296,7 +328,12 @@ function RevealStep({
 
 /* ─── Dialog ──────────────────────────────────────────────────────────────── */
 
-const EMPTY_DRAFT: DraftState = { name: "", expiry: "never", origins: [], ips: [] };
+const EMPTY_DRAFT: DraftState = {
+  name: "",
+  expiry: "never",
+  origins: [],
+  ips: [],
+};
 
 export function CreateKeyDialog({
   open,
@@ -359,15 +396,14 @@ export function CreateKeyDialog({
     }
   }
 
-  const title = step === "reveal"
-    ? "Key created"
-    : `Create ${initialType} key`;
+  const title = step === "reveal" ? "Key created" : `Create ${initialType} key`;
 
-  const description = step === "reveal"
-    ? undefined
-    : initialType === "publishable"
-    ? "Safe for browser code. Read-only access. Locked to allowed origins."
-    : "For server use only. Full project access. Keep this secret.";
+  const description =
+    step === "reveal"
+      ? undefined
+      : initialType === "publishable"
+        ? "Safe for browser code. Read-only access. Locked to allowed origins."
+        : "For server use only. Full project access. Keep this secret.";
 
   return (
     <>
@@ -375,7 +411,9 @@ export function CreateKeyDialog({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            {description && <DialogDescription>{description}</DialogDescription>}
+            {description && (
+              <DialogDescription>{description}</DialogDescription>
+            )}
           </DialogHeader>
 
           <AnimatePresence mode="wait" initial={false}>
@@ -421,14 +459,23 @@ export function CreateKeyDialog({
             <DialogHeader>
               <DialogTitle>Close without copying?</DialogTitle>
               <DialogDescription>
-                The key won&apos;t be shown again. Make sure you&apos;ve saved it somewhere safe.
+                The key won&apos;t be shown again. Make sure you&apos;ve saved
+                it somewhere safe.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setConfirmClose(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClose(false)}
+              >
                 Go back
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleConfirmClose}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmClose}
+              >
                 Close anyway
               </Button>
             </DialogFooter>

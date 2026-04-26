@@ -30,9 +30,7 @@ export function ProjectsToolbar({
           ariaLabel="Search projects"
         />
       }
-      trailing={
-        <ViewToggle value={view} onChange={onViewChange} />
-      }
+      trailing={<ViewToggle value={view} onChange={onViewChange} />}
     />
   );
 }

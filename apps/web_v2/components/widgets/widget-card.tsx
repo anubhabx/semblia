@@ -30,25 +30,19 @@ import {
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import { timeAgo } from "@/lib/mock-data";
-import type { MockTestimonial } from "@/lib/mock-data";
 import type {
   WidgetListEntry,
   WidgetStudioConfig,
 } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { InlineName } from "@/components/collect/inline-name";
-import {
-  ItemCard,
-  ItemActionRow,
-  type ItemAction,
-} from "@/components/shared";
-import { WidgetCardMiniPreview } from "./widget-card-mini-preview";
+import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
+import { WidgetLayoutPreview } from "./widget-layout-preview";
 
 interface WidgetCardProps {
   slug: string;
   entry: WidgetListEntry;
   config: WidgetStudioConfig;
-  items: MockTestimonial[];
   hasDirtyDraft: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -80,7 +74,6 @@ export const WidgetCard = React.memo(function WidgetCard({
   slug,
   entry,
   config,
-  items,
   hasDirtyDraft,
   onDuplicate,
   onDelete,
@@ -148,23 +141,20 @@ export const WidgetCard = React.memo(function WidgetCard({
       inactive={!entry.isActive}
       data-testid="widget-card"
       aria-label={`${entry.name} (${LAYOUT_LABEL[entry.layout]})`}
-      className={cn(
-        !entry.isActive && "border-dashed border-border/70",
-      )}
+      className={cn(!entry.isActive && "border-dashed border-border/70")}
     >
       {/* ── Preview pane ───────────────────────────────────────────── */}
       <Link
         href={editHref}
-        className="relative block aspect-[16/10] overflow-hidden bg-muted/50 outline-none"
+        className="relative block aspect-[16/10] overflow-hidden bg-muted/30 outline-none"
         prefetch
       >
-        <div className="absolute inset-0">
-          <WidgetCardMiniPreview
-            config={config}
-            items={items}
-            ariaLabel={`Preview of ${entry.name}`}
-          />
-        </div>
+        <WidgetLayoutPreview
+          layout={entry.layout}
+          kind={entry.kind}
+          inactive={!entry.isActive}
+          className="absolute inset-0"
+        />
 
         {/* Type ribbon — top-left */}
         <div
@@ -243,7 +233,7 @@ export const WidgetCard = React.memo(function WidgetCard({
       </Link>
 
       {/* ── Footer ────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col gap-2 px-3.5 pb-3 pt-3">
+      <div className="flex flex-1 flex-col px-3.5 pb-3 pt-3">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -279,7 +269,7 @@ export const WidgetCard = React.memo(function WidgetCard({
         </div>
 
         {/* Metrics */}
-        <div className="flex items-baseline gap-1.5 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
+        <div className="mt-1.5 flex items-baseline gap-1.5 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
           <span className="font-semibold text-foreground">
             {fmtNum(entry.metrics.totalLoads)}
           </span>
@@ -296,12 +286,12 @@ export const WidgetCard = React.memo(function WidgetCard({
           </span>
         </div>
 
-        {/* Action row — collapses non-pinned actions into a menu under 340px */}
+        {/* Action row pinned to bottom of card */}
         <ItemActionRow
           actions={actions}
           collapseUnder={340}
           visibleWhenCollapsed={2}
-          className="mt-1 border-t border-border/60 pt-2"
+          className="mt-auto border-t border-border/60 pt-2"
         />
       </div>
 
