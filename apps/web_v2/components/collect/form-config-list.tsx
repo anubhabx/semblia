@@ -131,7 +131,7 @@ export function FormConfigList({ slug }: { slug: string }) {
           totalActiveWeight !== 100 &&
           totalActiveWeight > 0 && (
             <div
-              className="mx-6 mt-4 rounded-md border border-border bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground"
+              className="mx-4 mt-4 rounded-md border border-border bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground sm:mx-6"
               role="alert"
             >
               Active form weights total{" "}
@@ -183,6 +183,7 @@ export function FormConfigList({ slug }: { slug: string }) {
               <div key={entry.id} role="listitem" className="h-full">
                 <FormItemCard
                   entry={entry}
+                  layout={snapshots[entry.id]?.draft.layout ?? null}
                   hasDirtyDraft={isStudioDirty(snapshots[entry.id])}
                   onEdit={() => handleEdit(entry.id)}
                   onDuplicate={() => handleDuplicate(entry.id)}

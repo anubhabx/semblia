@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * WidgetCard — the gallery card. Visual-first: a live mini-preview of the
- * widget sits at the top, with a type ribbon, layout chip, theme strip,
- * inline-editable name, mono metrics, and a footer action row.
+ * WidgetCard — the gallery card. Visual-first: a static SVG layout preview
+ * sits at the top, with a type ribbon, layout chip, theme strip, inline-
+ * editable name, mono metrics, and a footer action row.
  *
  * The action row uses the shared `ItemActionRow` so non-primary actions
  * (Duplicate, Pause/Activate, Delete) collapse into a "More" menu when
@@ -217,7 +217,7 @@ export const WidgetCard = React.memo(function WidgetCard({
           className={cn(
             "pointer-events-none absolute inset-0 flex items-end justify-end p-2",
             "bg-gradient-to-t from-foreground/15 via-foreground/0 to-transparent",
-            "opacity-0 transition-opacity duration-200 group-hover:opacity-100",
+            "opacity-0 transition-opacity duration-200 group-hover/item-shell:opacity-100",
           )}
         >
           <span

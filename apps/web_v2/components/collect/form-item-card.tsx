@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
-import type { FormConfigEntry } from "@/lib/collect/studio-types";
+import type { FormConfigEntry, LayoutConfig } from "@/lib/collect/studio-types";
 import {
   PencilIcon,
   CopyIcon,
@@ -16,6 +16,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
 import { FormCardPreview } from "./form-card-preview";
+
+const FLOW_LABEL: Record<LayoutConfig["flow"], string> = {
+  all: "All fields",
+  stepped: "Stepped",
+  cards: "Cards",
+  conversational: "Conversational",
+};
+
+const DETAIL_LABEL: Record<LayoutConfig["container"], string> = {
+  boxed: "Boxed",
+  split: "Split",
+  fullbleed: "Full-bleed",
+  centered: "Centered",
+};
+
+const HERO_LABEL: Record<LayoutConfig["hero"], string> = {
+  none: "Minimal",
+  top: "Top hero",
+  side: "Side hero",
+  floating: "Floating hero",
+};
 
 /* ─── Skeleton ────────────────────────────────────────────────────────────── */
 
@@ -36,6 +57,7 @@ export function FormItemCardSkeleton() {
 
 export const FormItemCard = React.memo(function FormItemCard({
   entry,
+  layout,
   hasDirtyDraft,
   onEdit,
   onDuplicate,
@@ -44,6 +66,7 @@ export const FormItemCard = React.memo(function FormItemCard({
   onRename,
 }: {
   entry: FormConfigEntry;
+  layout: LayoutConfig | null;
   hasDirtyDraft: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
@@ -93,28 +116,41 @@ export const FormItemCard = React.memo(function FormItemCard({
         inactive={inactive}
         preview={
           <div className="relative block aspect-[16/10] overflow-hidden">
-            <FormCardPreview inactive={inactive} className="absolute inset-0" />
-            {/* Status chip overlay */}
+            <FormCardPreview
+              layout={layout}
+              inactive={inactive}
+              className="absolute inset-0"
+            />
             <div className="absolute left-2 top-2">
               <span
                 className={cn(
-                  "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-medium",
+                  "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.14em]",
                   "border backdrop-blur-md",
                   entry.isActive
                     ? "border-foreground/15 bg-background/85 text-foreground/80"
                     : "border-border/60 bg-muted/80 text-muted-foreground",
                 )}
               >
-                {entry.isActive ? "Active" : "Paused"}
+                {layout ? FLOW_LABEL[layout.flow] : "Form"}
               </span>
             </div>
-            {entry.abWeight !== 100 && entry.isActive && (
-              <div className="absolute right-2 top-2">
-                <span className="inline-flex items-center rounded-md border border-foreground/10 bg-background/85 px-1.5 py-0.5 font-mono text-[10px] font-medium text-foreground/70 backdrop-blur-md">
-                  {entry.abWeight}%
-                </span>
-              </div>
-            )}
+            <div className="absolute right-2 top-2">
+              <span className="inline-flex items-center rounded-md border border-foreground/10 bg-background/85 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-foreground/70 backdrop-blur-md">
+                {layout && layout.hero !== "none"
+                  ? HERO_LABEL[layout.hero]
+                  : layout
+                    ? DETAIL_LABEL[layout.container]
+                    : entry.isActive
+                      ? "Active"
+                      : "Paused"}
+                {entry.abWeight !== 100 && entry.isActive ? ` · ${entry.abWeight}%` : ""}
+              </span>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 flex h-[3px]" aria-hidden>
+              <span className="flex-1 bg-background/60" />
+              <span className="flex-1 bg-primary/75" />
+              <span className="flex-1 bg-muted-foreground/25" />
+            </div>
           </div>
         }
         footer={
@@ -128,7 +164,6 @@ export const FormItemCard = React.memo(function FormItemCard({
           </div>
         }
       >
-        {/* Body: name + description + metrics */}
         <div className="flex flex-col gap-1 px-4 py-3">
           <InlineName
             value={entry.name}
@@ -147,28 +182,21 @@ export const FormItemCard = React.memo(function FormItemCard({
             </p>
           )}
 
-          {/* Metric chips */}
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
-            <span>
-              <span className="font-semibold text-foreground">
-                {fmtNum(entry.views)}
-              </span>{" "}
-              views
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-1.5 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
+            <span className="font-semibold text-foreground">
+              {fmtNum(entry.views)}
             </span>
+            <span>views</span>
             <span className="text-border">·</span>
-            <span>
-              <span className="font-semibold text-foreground">
-                {fmtNum(entry.submissions)}
-              </span>{" "}
-              submissions
+            <span className="font-semibold text-foreground">
+              {fmtNum(entry.submissions)}
             </span>
+            <span>submissions</span>
             <span className="text-border">·</span>
-            <span>
-              <span className="font-semibold text-foreground">
-                {entry.responseRate.toFixed(1)}%
-              </span>{" "}
-              conv.
+            <span className="font-semibold text-foreground">
+              {entry.responseRate.toFixed(1)}%
             </span>
+            <span>conv.</span>
           </div>
         </div>
       </ItemCard>

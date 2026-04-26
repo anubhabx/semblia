@@ -38,7 +38,7 @@ export function ViewToggle({
       onValueChange={(v) => {
         if (v === "list" || v === "grid") onChange(v);
       }}
-      variant="outline"
+      variant="default"
       size={size}
       className={cn("gap-0", className)}
     >

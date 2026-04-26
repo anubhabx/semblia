@@ -515,56 +515,64 @@ export function SettingsClient({ project }: { project: MockProject }) {
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" description={project.name} />
 
-      {anyDirty && (
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setTab(v as TabId)}
+        className="flex flex-1 flex-col gap-0"
+      >
         <PageToolbar
-          trailing={
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                Unsaved changes
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setName(project.name);
-                  setSlug(project.slug);
-                  setDescription(project.description ?? "");
-                  setVisibility(project.visibility);
-                  setAutoModeration(project.autoModeration);
-                  setAutoApproveVerified(project.autoApproveVerified);
-                  setProfanityLevel(project.profanityFilterLevel ?? "OFF");
-                  setWebsiteUrl(project.websiteUrl ?? "");
-                  setSocialLinks(project.socialLinks ?? {});
-                  setTags(project.tags);
-                }}
-              >
-                Discard
-              </Button>
-              <Button size="sm" disabled={saving} onClick={handleSave}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-            </div>
-          }
-        />
-      )}
-
-      <PageBody padding="bare" className="overflow-y-auto">
-        <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabId)}>
-          <div className="border-b border-border/60 px-6">
-            <TabsList className="h-auto gap-0 rounded-none bg-transparent p-0">
+          className="py-1.5"
+          leading={
+            <TabsList
+              variant="line"
+              aria-label="Settings sections"
+              className="h-auto gap-1 rounded-none p-0"
+            >
               {TABS.map(({ id, label }) => (
                 <TabsTrigger
                   key={id}
                   value={id}
-                  className="rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground"
+                  className="h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground after:hidden data-[state=active]:bg-muted data-[state=active]:text-foreground"
                 >
                   {label}
                 </TabsTrigger>
               ))}
             </TabsList>
-          </div>
+          }
+          trailing={
+            anyDirty ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  Unsaved changes
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setName(project.name);
+                    setSlug(project.slug);
+                    setDescription(project.description ?? "");
+                    setVisibility(project.visibility);
+                    setAutoModeration(project.autoModeration);
+                    setAutoApproveVerified(project.autoApproveVerified);
+                    setProfanityLevel(project.profanityFilterLevel ?? "OFF");
+                    setWebsiteUrl(project.websiteUrl ?? "");
+                    setSocialLinks(project.socialLinks ?? {});
+                    setTags(project.tags);
+                  }}
+                >
+                  Discard
+                </Button>
+                <Button size="sm" disabled={saving} onClick={handleSave}>
+                  {saving ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            ) : undefined
+          }
+        />
 
-          <div className="max-w-2xl px-6 pb-20 pt-6">
+        <PageBody padding="default" className="overflow-y-auto">
+          <div className="max-w-2xl pb-20">
             <TabsContent value="identity" className="mt-0">
               <Section
                 id="identity"
@@ -815,8 +823,8 @@ export function SettingsClient({ project }: { project: MockProject }) {
               </Section>
             </TabsContent>
           </div>
-        </Tabs>
-      </PageBody>
+        </PageBody>
+      </Tabs>
 
       <SlugChangeDialog
         open={slugConfirm}

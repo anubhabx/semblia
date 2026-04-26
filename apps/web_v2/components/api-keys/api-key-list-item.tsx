@@ -30,10 +30,7 @@ function KeyTypeBadge({ type }: { type: MockApiKey["type"] }) {
   return (
     <span
       className={cn(
-        "shrink-0 rounded border px-1 py-0.5 font-mono text-[10px] font-semibold tracking-widest",
-        type === "publishable"
-          ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-          : "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+        "shrink-0 rounded-md border border-border/70 bg-background px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/75",
       )}
     >
       {type === "publishable" ? "PK" : "SK"}
@@ -50,13 +47,13 @@ function StatusChip({
 }) {
   if (!isActive)
     return (
-      <span className="rounded-sm bg-destructive/10 px-1 py-0.5 font-mono text-[10px] font-medium text-destructive/70">
+      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
         revoked
       </span>
     );
   if (isExpired)
     return (
-      <span className="rounded-sm bg-amber-500/10 px-1 py-0.5 font-mono text-[10px] font-medium text-amber-600 dark:text-amber-400">
+      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
         expired
       </span>
     );
@@ -72,26 +69,6 @@ function MaskedKey({ prefix, lastFour }: { prefix: string; lastFour: string }) {
       </span>
       <CopyButton value={prefix} label="Copy prefix" />
     </span>
-  );
-}
-
-function UsageBar({ count, limit }: { count: number; limit: number | null }) {
-  if (!limit) return null;
-  const pct = Math.min(100, Math.round((count / limit) * 100));
-  const fillClass =
-    pct >= 95 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary/60";
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="h-1 w-16 overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn("h-full rounded-full transition-all", fillClass)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-        {pct}%
-      </span>
-    </div>
   );
 }
 
@@ -204,39 +181,21 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
   return (
     <>
       <ItemRow
-        accentColor={
-          inactive
-            ? null
-            : entry.type === "publishable"
-              ? "rgba(245,158,11,0.65)"
-              : "rgba(14,165,233,0.65)"
-        }
+        accentColor={null}
         inactive={inactive}
         padding="comfortable"
         leading={
           <div
             className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-md",
-              entry.type === "publishable"
-                ? "bg-amber-500/10"
-                : "bg-sky-500/10",
+              "flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/30",
               inactive && "opacity-40",
             )}
           >
-            <KeyIcon
-              className={cn(
-                "size-3.5",
-                entry.type === "publishable"
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-sky-600 dark:text-sky-400",
-              )}
-              weight="bold"
-            />
+            <KeyIcon className="size-3.5 text-muted-foreground" weight="bold" />
           </div>
         }
         title={
-          <div className="flex items-center gap-2 min-w-0">
-            <KeyTypeBadge type={entry.type} />
+          <div className="min-w-0">
             <span
               className={cn(
                 "truncate text-sm font-medium",
@@ -269,13 +228,12 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
                 <span>{fmtRelative(entry.lastUsedAt)}</span>
               </>
             )}
-            {expiryLabel && (
-              <>
-                <span className="text-border">·</span>
-                <StatusChip isActive={entry.isActive} isExpired={isExpired} />
-              </>
-            )}
-            {!entry.isActive && !expiryLabel && (
+          </div>
+        }
+        trailing={
+          <div className="flex items-baseline gap-2">
+            <KeyTypeBadge type={entry.type} />
+            {(!entry.isActive || expiryLabel) && (
               <StatusChip isActive={entry.isActive} isExpired={isExpired} />
             )}
           </div>
@@ -342,21 +300,10 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
   return (
     <>
       <ItemCard
-        accentColor={
-          inactive
-            ? null
-            : entry.type === "publishable"
-              ? "rgba(245,158,11,0.65)"
-              : "rgba(14,165,233,0.65)"
-        }
+        accentColor={null}
         inactive={inactive}
         preview={
-          <div
-            className={cn(
-              "flex items-center gap-2 border-b border-border px-4 py-3",
-              entry.type === "publishable" ? "bg-amber-500/5" : "bg-sky-500/5",
-            )}
-          >
+          <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-4 py-3">
             <KeyTypeBadge type={entry.type} />
             <MaskedKey
               prefix={entry.keyPrefix}
@@ -399,13 +346,13 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
             </span>
             <span className="text-border">·</span>
             <span>{entry.rateLimit}/min</span>
+            {entry.lastUsedAt && (
+              <>
+                <span className="text-border">·</span>
+                <span>{fmtRelative(entry.lastUsedAt)}</span>
+              </>
+            )}
           </div>
-          <UsageBar count={entry.usageCount} limit={entry.usageLimit} />
-          {entry.lastUsedAt && (
-            <p className="text-[10px] text-muted-foreground/60">
-              {fmtRelative(entry.lastUsedAt)}
-            </p>
-          )}
         </div>
       </ItemCard>
 

@@ -164,7 +164,7 @@ export const WidgetRow = React.memo(function WidgetRow({
           />
         }
         subtitle={
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-0.5 flex flex-wrap items-baseline gap-1.5">
             <span className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
               <ThemeIcon className="size-2.5" weight="bold" aria-hidden />
               {entry.theme.charAt(0).toUpperCase() + entry.theme.slice(1)}
@@ -192,7 +192,7 @@ export const WidgetRow = React.memo(function WidgetRow({
           </div>
         }
         trailing={
-          <div className="flex items-center gap-2">
+          <div className="flex items-baseline gap-2">
             <Badge
               variant={entry.isActive ? "secondary" : "outline"}
               className={cn(

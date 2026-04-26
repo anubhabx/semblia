@@ -248,28 +248,33 @@ export function WidgetList({ project }: WidgetListProps) {
           </div>
         ) : (
           <div className="px-4 py-5 sm:px-6">
-            <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div
+              className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              role="list"
+              aria-label="Widgets"
+            >
               {filtered.map((entry) => {
                 const snap = snapshots[entry.id];
                 if (!snap) return null;
                 return (
-                  <WidgetCard
-                    key={entry.id}
-                    slug={project.slug}
-                    entry={entry}
-                    config={snap.draft}
-                    hasDirtyDraft={isWidgetDirty(snap)}
-                    onDuplicate={() => duplicateWidget(project.slug, entry.id)}
-                    onDelete={() => deleteWidget(project.slug, entry.id)}
-                    onToggleActive={() =>
-                      updateWidgetEntry(project.slug, entry.id, {
-                        isActive: !entry.isActive,
-                      })
-                    }
-                    onRename={(name) =>
-                      updateWidgetEntry(project.slug, entry.id, { name })
-                    }
-                  />
+                  <div key={entry.id} role="listitem" className="h-full">
+                    <WidgetCard
+                      slug={project.slug}
+                      entry={entry}
+                      config={snap.draft}
+                      hasDirtyDraft={isWidgetDirty(snap)}
+                      onDuplicate={() => duplicateWidget(project.slug, entry.id)}
+                      onDelete={() => deleteWidget(project.slug, entry.id)}
+                      onToggleActive={() =>
+                        updateWidgetEntry(project.slug, entry.id, {
+                          isActive: !entry.isActive,
+                        })
+                      }
+                      onRename={(name) =>
+                        updateWidgetEntry(project.slug, entry.id, { name })
+                      }
+                    />
+                  </div>
                 );
               })}
             </div>
