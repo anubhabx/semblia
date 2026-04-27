@@ -5,6 +5,9 @@ import { useUser } from "@clerk/nextjs";
 type EmailAddressResource = NonNullable<
   ReturnType<typeof useUser>["user"]
 >["emailAddresses"][number];
+type ExternalAccountResource = NonNullable<
+  ReturnType<typeof useUser>["user"]
+>["externalAccounts"][number];
 import { toast } from "sonner";
 import {
   PageHeader,
@@ -46,7 +49,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { DotsThreeIcon, PlusIcon } from "@phosphor-icons/react";
+import { DotsThreeIcon, PlusIcon, GoogleLogoIcon, GithubLogoIcon, LinkIcon, TrashIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 
 // ── Email verification dialog ──────────────────────────────────────────────────
 
@@ -375,6 +379,52 @@ export default function ProfilePage() {
     }
   }
 
+  // Connected accounts
+  const [disconnectTarget, setDisconnectTarget] =
+    React.useState<ExternalAccountResource | null>(null);
+
+  async function connectGoogle() {
+    if (!user) return;
+    try {
+      await user.createExternalAccount({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+      });
+    } catch {
+      toast.error("Failed to connect Google account.");
+    }
+  }
+
+  async function disconnect() {
+    if (!disconnectTarget) return;
+    try {
+      await disconnectTarget.destroy();
+      toast.success("Account disconnected.");
+    } catch {
+      toast.error("Failed to disconnect account.");
+    } finally {
+      setDisconnectTarget(null);
+    }
+  }
+
+  // Delete account
+  const router = useRouter();
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+
+  async function deleteAccount() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await user.delete();
+      router.push("/sign-in");
+    } catch {
+      toast.error("Failed to delete account.");
+      setDeleting(false);
+    }
+  }
+
   const initials =
     [user?.firstName?.[0], user?.lastName?.[0]]
       .filter(Boolean)
@@ -510,6 +560,111 @@ export default function ProfilePage() {
             </div>
           </Card>
         </SettingsSection>
+
+        {/* Connected accounts */}
+        <SettingsSection
+          id="connected"
+          title="Connected accounts"
+          description="Sign in faster by linking an external provider."
+          staggerIndex={3}
+        >
+          <Card>
+            <div className="divide-y divide-border">
+              {!isLoaded ? (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="size-6 rounded-full" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              ) : user?.externalAccounts.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground">
+                  No connected accounts.
+                </div>
+              ) : (
+                user?.externalAccounts.map((acct) => {
+                  const Icon =
+                    acct.provider === "google"
+                      ? GoogleLogoIcon
+                      : acct.provider === "github"
+                        ? GithubLogoIcon
+                        : LinkIcon;
+                  return (
+                    <div
+                      key={acct.id}
+                      className="flex items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className="size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-foreground capitalize">
+                            {acct.provider}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {acct.emailAddress || acct.username}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/8"
+                        onClick={() => setDisconnectTarget(acct)}
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="border-t border-border px-4 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={connectGoogle}
+                disabled={
+                  !isLoaded ||
+                  user?.externalAccounts.some((a) => a.provider === "google")
+                }
+              >
+                <GoogleLogoIcon className="size-3.5 mr-1.5" />
+                Connect Google
+              </Button>
+            </div>
+          </Card>
+        </SettingsSection>
+
+        {/* Danger zone */}
+        <SettingsSection
+          id="danger"
+          title="Danger zone"
+          staggerIndex={4}
+        >
+          <Card className="border-destructive/30 ring-destructive/10">
+            <CardContent className="flex items-start justify-between gap-4 pt-0">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-foreground">
+                  Delete account
+                </p>
+                <p className="text-xs text-muted-foreground max-w-[42ch]">
+                  Permanently delete your account and all associated data. This
+                  cannot be undone.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteDialogOpen(true);
+                }}
+              >
+                <TrashIcon className="size-3.5 mr-1" />
+                Delete
+              </Button>
+            </CardContent>
+          </Card>
+        </SettingsSection>
       </PageBody>
 
       <SettingsFooter
@@ -549,6 +704,72 @@ export default function ProfilePage() {
         confirmLabel="Remove"
         onConfirm={removeEmail}
       />
+
+      <ConfirmationDialog
+        open={!!disconnectTarget}
+        onOpenChange={(o) => !o && setDisconnectTarget(null)}
+        intent="warning"
+        title="Disconnect account?"
+        description={
+          <>
+            Disconnect your{" "}
+            <span className="font-medium text-foreground capitalize">
+              {disconnectTarget?.provider}
+            </span>{" "}
+            account? You can reconnect it later.
+          </>
+        }
+        confirmLabel="Disconnect"
+        onConfirm={disconnect}
+      />
+
+      {/* Delete account dialog — type-to-confirm */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete account</DialogTitle>
+            <DialogDescription>
+              This will permanently delete your account and all associated data.
+              Type{" "}
+              <span className="font-mono font-medium text-destructive">
+                delete my account
+              </span>{" "}
+              to confirm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5 py-2">
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="delete my account"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={
+                deleteConfirmText.trim().toLowerCase() !== "delete my account" ||
+                deleting
+              }
+              onClick={deleteAccount}
+              className="min-w-[7rem]"
+            >
+              {deleting ? "Deleting…" : "Delete account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
