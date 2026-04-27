@@ -65,13 +65,13 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings/profile" className="gap-2 text-xs">
+          <Link href="/account/profile" className="gap-2 text-xs">
             <UserCircleIcon className="size-3.5 text-muted-foreground" />
             Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/settings/billing" className="gap-2 text-xs">
+          <Link href="/account/billing" className="gap-2 text-xs">
             <CreditCardIcon className="size-3.5 text-muted-foreground" />
             Billing
           </Link>

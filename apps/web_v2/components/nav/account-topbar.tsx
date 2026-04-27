@@ -1,0 +1,63 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+import { TrestaMark } from "./tresta-mark";
+import { BreadcrumbSlash } from "./breadcrumb-slash";
+import { NotificationBell } from "./notification-bell";
+import { UserMenu } from "./user-menu";
+import { HelpDropdown } from "./help-dropdown";
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const SECTION_LABELS: Record<string, string> = {
+  profile: "Profile",
+  security: "Security",
+  billing: "Billing",
+  notifications: "Notifications",
+  "api-keys": "API Keys",
+  defaults: "Defaults",
+};
+
+function sectionLabelFor(pathname: string): string | null {
+  const segment = pathname.replace(/^\/account\/?/, "").split("/")[0];
+  return segment ? (SECTION_LABELS[segment] ?? null) : null;
+}
+
+// ── Account topbar ─────────────────────────────────────────────────────────────
+
+export function AccountTopbar() {
+  const pathname = usePathname();
+  const section = sectionLabelFor(pathname);
+
+  return (
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 sm:px-5">
+      {/* ── Left cluster ── */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <TrestaMark />
+        <BreadcrumbSlash />
+        <span className="text-xs font-medium text-muted-foreground">
+          Account
+        </span>
+        {section && (
+          <>
+            <BreadcrumbSlash />
+            <span className="truncate text-xs font-medium text-foreground">
+              {section}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* ── Right cluster ── */}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <HelpDropdown />
+        <NotificationBell />
+        <ThemeToggle className="text-muted-foreground hover:text-foreground" />
+        <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
+        <UserMenu />
+      </div>
+    </header>
+  );
+}
