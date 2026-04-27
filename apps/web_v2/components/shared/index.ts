@@ -51,3 +51,12 @@ export type {
   EmptyKindPickerProps,
   EmptyKindOption,
 } from "./empty-kind-picker";
+
+export { SettingsSection } from "./settings-section";
+export type { SettingsSectionProps } from "./settings-section";
+
+export { SettingsFooter } from "./settings-footer";
+export type { SettingsFooterProps } from "./settings-footer";
+
+export { ToggleRow } from "./toggle-row";
+export type { ToggleRowProps } from "./toggle-row";

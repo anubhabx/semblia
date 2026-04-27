@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -47,6 +46,9 @@ import {
   PageBody,
   PageToolbar,
   PageTabs,
+  SettingsSection,
+  SettingsFooter,
+  ToggleRow,
 } from "@/components/shared";
 import { apiUpdateProject, type ProjectPatch } from "@/lib/api";
 
@@ -61,46 +63,6 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-/* ─── Section wrapper ─────────────────────────────────────────────────────── */
-
-function SettingsSection({
-  id,
-  title,
-  description,
-  children,
-  staggerIndex = 0,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  staggerIndex?: number;
-}) {
-  return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-heading`}
-      className="settings-section-enter space-y-5"
-      style={{ animationDelay: `${staggerIndex * 60}ms` }}
-    >
-      <div className="space-y-1">
-        <h2
-          id={`${id}-heading`}
-          className="text-sm font-semibold tracking-tight text-foreground"
-        >
-          {title}
-        </h2>
-        {description && (
-          <p className="max-w-[65ch] text-[13px] leading-relaxed text-muted-foreground">
-            {description}
-          </p>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 /* ─── Field group card ────────────────────────────────────────────────────── */
 
 function FieldGroup({
@@ -111,97 +73,6 @@ function FieldGroup({
   className?: string;
 }) {
   return <div className={className}>{children}</div>;
-}
-
-/* ─── Sticky save footer ─────────────────────────────────────────────────── */
-
-function SettingsFooter({
-  dirty,
-  saving,
-  onSave,
-  onDiscard,
-}: {
-  dirty: boolean;
-  saving: boolean;
-  onSave: () => void;
-  onDiscard: () => void;
-}) {
-  return (
-    <div
-      className="sticky bottom-0 z-10 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:px-6"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex items-center justify-end gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDiscard}
-          className="text-muted-foreground"
-          disabled={!dirty || saving}
-        >
-          Discard
-        </Button>
-        <Button
-          size="sm"
-          disabled={!dirty || saving}
-          onClick={onSave}
-          className="min-w-[7rem] tactile"
-        >
-          {saving ? "Saving\u2026" : "Save changes"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Settings toggle row ─────────────────────────────────────────────────── */
-
-function ToggleRow({
-  title,
-  description,
-  checked,
-  onChange,
-  disabled = false,
-}: {
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  const id = React.useId();
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-4 px-4 py-3.5 transition-colors duration-100",
-        disabled ? "pointer-events-none opacity-50" : "hover:bg-muted/40",
-      )}
-    >
-      <div className="min-w-0">
-        <label
-          htmlFor={id}
-          className="text-sm font-medium text-foreground cursor-pointer"
-        >
-          {title}
-        </label>
-        <p
-          id={`${id}-desc`}
-          className="text-[12.5px] leading-relaxed text-muted-foreground"
-        >
-          {description}
-        </p>
-      </div>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-        aria-describedby={`${id}-desc`}
-        className="shrink-0"
-      />
-    </div>
-  );
 }
 
 /* ─── Chip input (tags) ───────────────────────────────────────────────────── */
