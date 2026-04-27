@@ -25,7 +25,8 @@ import {
   apiGetInvoices,
   type Invoice,
 } from "@/lib/api";
-import { DownloadSimpleIcon, WarningIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { PlanSwitcher } from "@/components/account/plan-switcher";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -303,10 +304,19 @@ export default function BillingPage() {
         </SettingsSection>
 
         <SettingsSection
+          id="plans"
+          title="Plans"
+          description="Compare and switch plans. Razorpay checkout wires in when the billing API is ready."
+          staggerIndex={2}
+        >
+          <PlanSwitcher />
+        </SettingsSection>
+
+        <SettingsSection
           id="invoices"
           title="Invoice history"
           description="Past invoices for your account."
-          staggerIndex={2}
+          staggerIndex={3}
         >
           <InvoiceTable />
         </SettingsSection>
