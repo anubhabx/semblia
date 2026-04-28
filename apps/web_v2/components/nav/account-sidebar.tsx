@@ -89,27 +89,15 @@ export function AccountSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       {/* Identity header */}
-      <div className="px-3 pt-5 pb-3">
+      <div className="px-3 pt-5 pb-4">
         <div className="flex items-center gap-2 px-1.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-[10px] font-bold text-muted-foreground">
-            <UserCircleIcon className="size-4" />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted">
+            <UserCircleIcon className="size-3.5 text-muted-foreground" />
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-foreground">
-              Account settings
-            </p>
-            <p className="truncate text-[10px] text-muted-foreground">
-              Profile, billing &amp; security
-            </p>
-          </div>
+          <p className="truncate text-xs font-semibold text-foreground">
+            Account
+          </p>
         </div>
-      </div>
-
-      {/* Section label */}
-      <div className="px-4 pb-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
-          Account
-        </span>
       </div>
 
       {/* Nav */}
@@ -123,13 +111,14 @@ export function AccountSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      {/* Footer hint */}
-      <div className="mt-auto border-t border-border/60 px-4 py-3">
+      {/* Footer */}
+      <div className="mt-auto border-t border-border px-3 py-3">
         <Link
           href="/projects"
-          className="text-[10px] leading-snug text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground/60 transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          ← Back to projects
+          <span aria-hidden>←</span>
+          Back to projects
         </Link>
       </div>
     </div>
