@@ -42,9 +42,9 @@ function formatINR(paise: number) {
 
 function statusVariant(
   status: Invoice["status"],
-): "secondary" | "destructive" | "outline" {
+): "success" | "destructive" | "outline" {
   return status === "paid"
-    ? "secondary"
+    ? "success"
     : status === "void"
       ? "outline"
       : "destructive";
@@ -99,20 +99,13 @@ function PlanCard() {
                 {sub.userPlan} Plan
               </span>
               <Badge
-                variant={sub.status === "ACTIVE" ? "secondary" : "destructive"}
-                className={
-                  sub.status === "ACTIVE"
-                    ? "text-[10px] bg-success/10 text-success border-success/20"
-                    : "text-[10px]"
-                }
+                variant={sub.status === "ACTIVE" ? "success" : "destructive"}
+                className="text-[10px]"
               >
                 {sub.status}
               </Badge>
               {sub.cancelAtPeriodEnd && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] text-warning border-warning/30"
-                >
+                <Badge variant="warning" className="text-[10px]">
                   Cancels {periodEnd}
                 </Badge>
               )}
@@ -135,7 +128,7 @@ function PlanCard() {
             className={
               sub.cancelAtPeriodEnd
                 ? ""
-                : "text-destructive hover:text-destructive hover:bg-destructive/8 border-destructive/30"
+                : "text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
             }
           >
             {cancelling
@@ -183,12 +176,8 @@ function UsageMeter() {
               </div>
               <Progress
                 value={pct}
-                className={
-                  pct > 90
-                    ? "[&>[data-slot=progress-indicator]]:bg-destructive"
-                    : pct > 70
-                      ? "[&>[data-slot=progress-indicator]]:bg-warning"
-                      : ""
+                tone={
+                  pct > 90 ? "destructive" : pct > 70 ? "warning" : "default"
                 }
               />
             </div>
@@ -292,7 +281,7 @@ export default function BillingPage() {
         title="Billing"
         description="Manage your subscription, usage, and payment history."
       />
-      <PageBody padding="default" className="space-y-8 pb-24">
+      <PageBody padding="default" withFooter className="space-y-8">
         <SettingsSection
           id="plan"
           title="Current plan"

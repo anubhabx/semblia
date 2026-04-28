@@ -247,10 +247,7 @@ function EmailRow({
           </Badge>
         )}
         {verified ? (
-          <Badge
-            variant="secondary"
-            className="shrink-0 text-[10px] bg-success/10 text-success border-success/20"
-          >
+          <Badge variant="success" className="shrink-0 text-[10px]">
             Verified
           </Badge>
         ) : (
@@ -432,7 +429,7 @@ export default function ProfilePage() {
         description="Manage your personal information."
       />
 
-      <PageBody padding="default" className="space-y-8 pb-24">
+      <PageBody padding="default" withFooter className="space-y-8">
         {/* Avatar */}
         <SettingsSection id="avatar" title="Photo" staggerIndex={0}>
           <div className="flex items-center gap-5">

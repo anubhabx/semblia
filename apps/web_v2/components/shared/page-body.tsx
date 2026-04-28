@@ -24,11 +24,14 @@ export interface PageBodyProps extends React.ComponentProps<"div"> {
   padding?: PageBodyPadding;
   /** Apply vertical spacing between direct children (space-y-6). */
   stack?: boolean;
+  /** Add pb-24 to prevent sticky SettingsFooter from overlapping content. */
+  withFooter?: boolean;
 }
 
 export function PageBody({
   padding = "default",
   stack = false,
+  withFooter = false,
   className,
   children,
   ...rest
@@ -41,6 +44,7 @@ export function PageBody({
         padding === "compact" && "px-4 py-5 sm:px-6",
         // padding === "bare" → nothing
         stack && "space-y-6",
+        withFooter && "pb-24",
         className,
       )}
       {...rest}

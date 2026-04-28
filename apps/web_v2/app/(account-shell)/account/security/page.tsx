@@ -212,10 +212,7 @@ function MfaSection() {
                 Authenticator app
               </span>
               {totpEnabled ? (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] bg-success/10 text-success border-success/20"
-                >
+                <Badge variant="success" className="text-[10px]">
                   Enabled
                 </Badge>
               ) : (
@@ -292,7 +289,7 @@ export default function SecurityPage() {
         title="Security"
         description="Manage your password, two-factor authentication, and active sessions."
       />
-      <PageBody padding="default" className="space-y-8 pb-24">
+      <PageBody padding="default" withFooter className="space-y-8">
         <SettingsSection
           id="password"
           title="Password"
