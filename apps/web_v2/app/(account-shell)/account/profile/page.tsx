@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -430,68 +429,53 @@ export default function ProfilePage() {
       />
 
       <PageBody padding="default" withFooter className="space-y-8">
-        {/* Avatar */}
-        <SettingsSection id="avatar" title="Photo" staggerIndex={0}>
-          <div className="flex items-center gap-5">
-            {!isLoaded ? (
-              <Skeleton className="size-16 rounded-full" />
-            ) : (
-              <AvatarUpload imageUrl={user?.imageUrl} initials={initials} />
-            )}
-            <div className="min-w-0 space-y-0.5">
-              <p className="text-sm font-medium text-foreground">
-                {isLoaded ? (
-                  user?.fullName || "—"
-                ) : (
-                  <Skeleton className="h-4 w-32" />
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isLoaded ? (
-                  (user?.primaryEmailAddress?.emailAddress ?? "")
-                ) : (
-                  <Skeleton className="h-3 w-48" />
-                )}
-              </p>
-            </div>
-          </div>
-        </SettingsSection>
-
-        {/* Name */}
+        {/* Identity — photo + name merged */}
         <SettingsSection
-          id="name"
-          title="Personal info"
-          description="Your name is shown on your profile and in notifications sent to collaborators."
-          staggerIndex={1}
+          id="identity"
+          title="Identity"
+          description="Your name and photo shown on your profile and in notifications."
+          staggerIndex={0}
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="first-name">First name</Label>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+            {/* Avatar */}
+            <div className="shrink-0">
               {!isLoaded ? (
-                <Skeleton className="h-9 w-full rounded-md" />
+                <Skeleton className="size-16 rounded-full" />
               ) : (
-                <Input
-                  id="first-name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First name"
-                  autoComplete="given-name"
-                />
+                <AvatarUpload imageUrl={user?.imageUrl} initials={initials} />
               )}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="last-name">Last name</Label>
-              {!isLoaded ? (
-                <Skeleton className="h-9 w-full rounded-md" />
-              ) : (
-                <Input
-                  id="last-name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last name"
-                  autoComplete="family-name"
-                />
-              )}
+
+            {/* Name fields */}
+            <div className="flex-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="first-name">First name</Label>
+                {!isLoaded ? (
+                  <Skeleton className="h-9 w-full rounded-md" />
+                ) : (
+                  <Input
+                    id="first-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                    autoComplete="given-name"
+                  />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="last-name">Last name</Label>
+                {!isLoaded ? (
+                  <Skeleton className="h-9 w-full rounded-md" />
+                ) : (
+                  <Input
+                    id="last-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                    autoComplete="family-name"
+                  />
+                )}
+              </div>
             </div>
           </div>
         </SettingsSection>
@@ -501,26 +485,20 @@ export default function ProfilePage() {
           id="emails"
           title="Email addresses"
           description="Sign in with any verified email. Primary address receives account notifications."
-          staggerIndex={2}
+          staggerIndex={1}
+          actions={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAddEmailOpen(true)}
+              disabled={!isLoaded}
+            >
+              <PlusIcon className="size-3.5 mr-1" />
+              Add email
+            </Button>
+          }
         >
-          <Card>
-            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-              <span className="text-xs text-muted-foreground">
-                {isLoaded
-                  ? `${user?.emailAddresses.length ?? 0} address${(user?.emailAddresses.length ?? 0) === 1 ? "" : "es"}`
-                  : ""}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setAddEmailOpen(true)}
-                disabled={!isLoaded}
-              >
-                <PlusIcon className="size-3.5 mr-1" />
-                Add email
-              </Button>
-            </div>
-
+          <div className="overflow-hidden rounded-lg border border-border">
             <div className="divide-y divide-border">
               {!isLoaded
                 ? Array.from({ length: 1 }, (_, i) => (
@@ -539,7 +517,7 @@ export default function ProfilePage() {
                     />
                   ))}
             </div>
-          </Card>
+          </div>
         </SettingsSection>
 
         {/* Connected accounts */}
@@ -547,9 +525,23 @@ export default function ProfilePage() {
           id="connected"
           title="Connected accounts"
           description="Sign in faster by linking an external provider."
-          staggerIndex={3}
+          staggerIndex={2}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={connectGoogle}
+              disabled={
+                !isLoaded ||
+                user?.externalAccounts.some((a) => a.provider === "google")
+              }
+            >
+              <GoogleLogoIcon className="size-3.5 mr-1.5" />
+              Connect Google
+            </Button>
+          }
         >
-          <Card>
+          <div className="overflow-hidden rounded-lg border border-border">
             <div className="divide-y divide-border">
               {!isLoaded ? (
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -557,7 +549,7 @@ export default function ProfilePage() {
                   <Skeleton className="h-4 w-40" />
                 </div>
               ) : user?.externalAccounts.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-muted-foreground">
+                <div className="px-4 py-4 text-sm text-muted-foreground text-center">
                   No connected accounts.
                 </div>
               ) : (
@@ -597,50 +589,43 @@ export default function ProfilePage() {
                 })
               )}
             </div>
-            <div className="border-t border-border px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={connectGoogle}
-                disabled={
-                  !isLoaded ||
-                  user?.externalAccounts.some((a) => a.provider === "google")
-                }
-              >
-                <GoogleLogoIcon className="size-3.5 mr-1.5" />
-                Connect Google
-              </Button>
-            </div>
-          </Card>
+          </div>
         </SettingsSection>
 
         {/* Danger zone */}
-        <SettingsSection id="danger" title="Danger zone" staggerIndex={4}>
-          <Card className="border-destructive/30 ring-destructive/10">
-            <CardContent className="flex items-start justify-between gap-4 pt-0">
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground">
-                  Delete account
-                </p>
-                <p className="text-xs text-muted-foreground max-w-[42ch]">
-                  Permanently delete your account and all associated data. This
-                  cannot be undone.
-                </p>
+        <SettingsSection
+          id="danger"
+          title="Danger zone"
+          description="Irreversible actions that affect your account."
+          staggerIndex={3}
+        >
+          <div className="overflow-hidden rounded-xl border border-destructive/30 bg-destructive/[0.03] dark:bg-destructive/[0.06]">
+            <div className="divide-y divide-destructive/15">
+              <div className="flex items-center justify-between gap-4 p-5">
+                <div>
+                  <p className="text-sm font-medium text-destructive">
+                    Delete account
+                  </p>
+                  <p className="text-xs text-muted-foreground max-w-[42ch]">
+                    Permanently delete your account and all associated data.
+                    This cannot be undone.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="shrink-0 tactile"
+                  onClick={() => {
+                    setDeleteConfirmText("");
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <TrashIcon className="size-3.5 mr-1" />
+                  Delete
+                </Button>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  setDeleteConfirmText("");
-                  setDeleteDialogOpen(true);
-                }}
-              >
-                <TrashIcon className="size-3.5 mr-1" />
-                Delete
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </SettingsSection>
       </PageBody>
 
