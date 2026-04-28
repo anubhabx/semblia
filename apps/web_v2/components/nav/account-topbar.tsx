@@ -8,6 +8,7 @@ import { BreadcrumbSlash } from "./breadcrumb-slash";
 import { NotificationBell } from "./notification-bell";
 import { UserMenu } from "./user-menu";
 import { HelpDropdown } from "./help-dropdown";
+import { AccountMobileNav } from "./account-sidebar";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export function AccountTopbar() {
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 sm:px-5">
       {/* ── Left cluster ── */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
+        <AccountMobileNav />
         <TrestaMark />
         <BreadcrumbSlash />
         <span className="text-xs font-medium text-muted-foreground">

@@ -10,8 +10,11 @@ import {
   BellIcon,
   KeyIcon,
   SlidersHorizontalIcon,
+  ListIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 // ── Nav model ──────────────────────────────────────────────────────────────────
 
@@ -122,6 +125,29 @@ export function AccountSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+// ── Mobile nav (Sheet) ─────────────────────────────────────────────────────────
+
+export function AccountMobileNav() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-foreground lg:hidden"
+          aria-label="Open account navigation"
+        >
+          <ListIcon className="size-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-56 p-0">
+        <AccountSidebarNav onNavigate={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
   );
 }
 
