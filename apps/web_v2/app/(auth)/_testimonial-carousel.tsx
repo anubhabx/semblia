@@ -1,38 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChatText, PuzzlePiece, ChartBar } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
-const TESTIMONIALS = [
+/*
+ * Product capability showcase — replaces fake testimonials.
+ * Shows what Tresta actually does in 3 auto-advancing slides.
+ * These are factual feature descriptions, not invented quotes.
+ */
+
+const CAPABILITIES = [
   {
-    quote:
-      "Tresta cut our feedback collection time in half. Within six weeks our pricing page conversion climbed 38%.",
-    author: "Priya Menon",
-    role: "Head of Growth",
-    company: "Orbis Software",
-    initials: "PM",
+    Icon: ChatText,
+    label: "Collect",
+    headline: "One link, unlimited stories",
+    description:
+      "Share a branded collection page. Customers leave video or text testimonials in under 2 minutes — no login, no friction.",
   },
   {
-    quote:
-      "We went from zero social proof to a wall of trust in two weeks. The embeddable widgets made it effortless.",
-    author: "Marcus Chen",
-    role: "Product Lead",
-    company: "Strato Labs",
-    initials: "MC",
+    Icon: PuzzlePiece,
+    label: "Curate",
+    headline: "Review, approve, organize",
+    description:
+      "Every submission lands in a clean inbox. Tag, filter, and approve with one click. Keep the gold, archive the rest.",
   },
   {
-    quote:
-      "Our sales team used to chase case studies for months. Now customers share their stories in under 2 minutes.",
-    author: "Elena Torres",
-    role: "VP Marketing",
-    company: "Kindra Health",
-    initials: "ET",
+    Icon: ChartBar,
+    label: "Display",
+    headline: "Embed trust anywhere",
+    description:
+      "Drop a Wall of Love, carousel, or grid onto any page. Customizable widgets that match your brand — zero code required.",
   },
 ];
 
-const INTERVAL = 5000;
+const INTERVAL = 4500;
 
-export function TestimonialCarousel() {
+export function CapabilityShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -40,14 +44,14 @@ export function TestimonialCarousel() {
     const timer = setInterval(() => {
       setIsTransitioning(true);
       setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % TESTIMONIALS.length);
+        setActiveIndex((prev) => (prev + 1) % CAPABILITIES.length);
         setIsTransitioning(false);
       }, 200);
     }, INTERVAL);
     return () => clearInterval(timer);
   }, []);
 
-  const t = TESTIMONIALS[activeIndex];
+  const cap = CAPABILITIES[activeIndex];
 
   return (
     <div className="space-y-4">
@@ -58,55 +62,34 @@ export function TestimonialCarousel() {
           isTransitioning ? "opacity-0" : "opacity-100",
         )}
       >
-        {/* Stars */}
-        <div className="flex gap-[3px]">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <svg
-              key={i}
-              aria-hidden
-              width="12"
-              height="12"
-              viewBox="0 0 13 13"
-              fill="none"
-            >
-              <path
-                d="M6.5 1l1.44 2.92 3.22.47-2.33 2.27.55 3.21L6.5 8.26 3.62 9.87l.55-3.21L1.84 4.39l3.22-.47L6.5 1z"
-                className="fill-brand stroke-brand"
-                strokeWidth="0.4"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ))}
+        {/* Step badge */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-brand/10">
+            <cap.Icon className="size-4 text-brand" weight="duotone" />
+          </div>
+          <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-brand">
+            {cap.label}
+          </span>
         </div>
 
-        {/* Quote */}
-        <blockquote className="text-[0.8125rem] leading-[1.7] text-muted-foreground">
-          &ldquo;{t.quote}&rdquo;
-        </blockquote>
+        {/* Headline */}
+        <p className="text-[15px] font-semibold tracking-tight text-foreground leading-snug">
+          {cap.headline}
+        </p>
 
-        {/* Author */}
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold bg-brand/15 text-brand">
-            {t.initials}
-          </div>
-          <div>
-            <p className="text-[13px] font-medium text-foreground">
-              {t.author}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {t.role}, {t.company}
-            </p>
-          </div>
-        </div>
+        {/* Description */}
+        <p className="text-[0.8125rem] leading-[1.7] text-muted-foreground">
+          {cap.description}
+        </p>
       </div>
 
-      {/* Carousel indicators */}
+      {/* Step indicators */}
       <div className="flex items-center justify-center gap-1.5">
-        {TESTIMONIALS.map((_, i) => (
+        {CAPABILITIES.map((c, i) => (
           <button
-            key={i}
+            key={c.label}
             type="button"
-            aria-label={`View testimonial ${i + 1}`}
+            aria-label={`View: ${c.label}`}
             onClick={() => {
               setIsTransitioning(true);
               setTimeout(() => {

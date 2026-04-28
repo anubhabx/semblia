@@ -56,7 +56,7 @@ export default function SSOCallbackPage() {
             <AuthNotice error={error} />
             <Link
               href="/sign-in"
-              className="block w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium flex items-center justify-center hover:opacity-90 transition-opacity auth-btn"
+              className="block w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium items-center justify-center hover:opacity-90 transition-opacity auth-btn"
             >
               Back to sign in
             </Link>

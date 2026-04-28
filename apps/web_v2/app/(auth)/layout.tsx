@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { TrestaWordmark } from "@/components/brand/tresta-mark";
-import { TestimonialCarousel } from "./_testimonial-carousel";
+import { CapabilityShowcase } from "./_testimonial-carousel";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -60,21 +60,21 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <span className="text-brand">Grow faster.</span>
             </h2>
             <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[280px]">
-              Join 1,100+ teams using Tresta to turn customer stories into
-              revenue.
+              Turn customer stories into your most persuasive sales tool — in
+              minutes, not months.
             </p>
           </div>
 
-          {/* Testimonial carousel */}
+          {/* Product capability showcase */}
           <div className="auth-stagger-3">
-            <TestimonialCarousel />
+            <CapabilityShowcase />
           </div>
         </div>
 
         {/* ── Footer — subtle trust signal ── */}
         <div className="relative z-10 auth-stagger-4">
           <p className="text-[11px] text-muted-foreground/50">
-            Trusted by product, marketing, and growth teams worldwide.
+            Built for product, marketing, and growth teams.
           </p>
         </div>
       </aside>
