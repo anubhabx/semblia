@@ -7,22 +7,45 @@ import { cn } from "@/lib/utils";
 import { useAnimatedStep } from "@/hooks/use-animated-step";
 
 import type { OnboardStep } from "./steps/constants";
-import { NameStep } from "./steps/name-step";
-import { WelcomeStep } from "./steps/welcome-step";
+import { ProfileStep } from "./steps/profile-step";
+import { ReferralStep } from "./steps/referral-step";
+import { IntentStep } from "./steps/intent-step";
 import { ProjectStep } from "./steps/project-step";
-import { ReadyStep } from "./steps/ready-step";
+import { CollectionStep } from "./steps/collection-step";
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "my-project"
+  );
+}
 
 export function WelcomeFlow() {
   const { user } = useUser();
   const router = useRouter();
   const { activeStep, isLeaving, direction, go, isFirstRender } =
-    useAnimatedStep<OnboardStep>("name", 200);
+    useAnimatedStep<OnboardStep>("profile", 200);
 
-  const [projectName, setProjectName] = React.useState("");
-  const [creating, setCreating] = React.useState(false);
+  // Profile
   const [firstName, setFirstName] = React.useState(user?.firstName ?? "");
   const [lastName, setLastName] = React.useState(user?.lastName ?? "");
-  const [nameLoading, setNameLoading] = React.useState(false);
+  const [jobTitle, setJobTitle] = React.useState("");
+  const [profileLoading, setProfileLoading] = React.useState(false);
+
+  // Referral
+  const [referralSource, setReferralSource] = React.useState("");
+  const [referralOther, setReferralOther] = React.useState("");
+
+  // Intent
+  const [intents, setIntents] = React.useState<string[]>([]);
+  const [intentOther, setIntentOther] = React.useState("");
+
+  // Project
+  const [projectName, setProjectName] = React.useState("");
+  const [creating, setCreating] = React.useState(false);
+  const [collectionUrl, setCollectionUrl] = React.useState("");
 
   React.useEffect(() => {
     if (user?.firstName && !firstName) setFirstName(user.firstName);
@@ -34,36 +57,87 @@ export function WelcomeFlow() {
     if (done === "true") router.replace("/projects");
   }, [router]);
 
-  const displayName = firstName || user?.firstName || "there";
-
   function handleSkip() {
     localStorage.setItem("tresta:onboarding:done", "true");
     router.push("/projects");
   }
 
-  async function handleSaveName() {
+  // ── Step handlers ──
+
+  async function handleSaveProfile() {
     if (!firstName.trim()) return;
-    setNameLoading(true);
+    setProfileLoading(true);
     try {
       await user?.update({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        unsafeMetadata: {
+          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
+          jobTitle: jobTitle.trim(),
+        },
       });
     } catch {
-      // Continue — name can be updated later
+      // Continue — profile can be updated later
     }
-    setNameLoading(false);
-    go("welcome", "forward");
+    setProfileLoading(false);
+    go("referral", "forward");
+  }
+
+  function handleReferralContinue() {
+    // Save referral to metadata (fire-and-forget)
+    try {
+      user?.update({
+        unsafeMetadata: {
+          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
+          referralSource,
+          referralOther:
+            referralSource === "other" ? referralOther.trim() : undefined,
+        },
+      });
+    } catch {
+      // Non-critical
+    }
+    go("intent", "forward");
+  }
+
+  function handleIntentContinue() {
+    // Save intents to metadata (fire-and-forget)
+    try {
+      user?.update({
+        unsafeMetadata: {
+          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
+          intents,
+          intentOther: intents.includes("other")
+            ? intentOther.trim()
+            : undefined,
+        },
+      });
+    } catch {
+      // Non-critical
+    }
+    go("project", "forward");
   }
 
   async function handleCreateProject() {
     if (!projectName.trim() || creating) return;
     setCreating(true);
+
+    // TODO: Replace with actual API call to create project
     await new Promise((r) => setTimeout(r, 800));
+
+    const slug = slugify(projectName);
+    setCollectionUrl(`https://collect.tresta.app/${slug}`);
     localStorage.setItem("tresta:onboarding:done", "true");
     setCreating(false);
-    go("ready", "forward");
+    go("collection", "forward");
   }
+
+  function handleGoToProject() {
+    localStorage.setItem("tresta:onboarding:done", "true");
+    router.push("/projects");
+  }
+
+  // ── Animation classes ──
 
   const enterCls = isFirstRender
     ? "onboard-fade-in"
@@ -79,41 +153,53 @@ export function WelcomeFlow() {
         key={activeStep}
         className={cn("w-full max-w-md", isLeaving ? exitCls : enterCls)}
       >
-        {activeStep === "name" && (
-          <NameStep
+        {activeStep === "profile" && (
+          <ProfileStep
             firstName={firstName}
             lastName={lastName}
+            jobTitle={jobTitle}
             setFirstName={setFirstName}
             setLastName={setLastName}
-            loading={nameLoading}
-            onContinue={handleSaveName}
-            onSkip={() => go("welcome", "forward")}
+            setJobTitle={setJobTitle}
+            loading={profileLoading}
+            onContinue={handleSaveProfile}
+            onSkip={() => go("referral", "forward")}
           />
         )}
-        {activeStep === "welcome" && (
-          <WelcomeStep
-            firstName={displayName}
-            onContinue={() => go("project", "forward")}
-            onSkip={handleSkip}
+        {activeStep === "referral" && (
+          <ReferralStep
+            referralSource={referralSource}
+            referralOther={referralOther}
+            setReferralSource={setReferralSource}
+            setReferralOther={setReferralOther}
+            onContinue={handleReferralContinue}
+            onSkip={() => go("intent", "forward")}
+          />
+        )}
+        {activeStep === "intent" && (
+          <IntentStep
+            intents={intents}
+            intentOther={intentOther}
+            setIntents={setIntents}
+            setIntentOther={setIntentOther}
+            onContinue={handleIntentContinue}
+            onSkip={() => go("project", "forward")}
           />
         )}
         {activeStep === "project" && (
           <ProjectStep
             projectName={projectName}
             setProjectName={setProjectName}
-            creating={creating}
-            onSubmit={handleCreateProject}
+            loading={creating}
+            onContinue={handleCreateProject}
             onSkip={handleSkip}
-            onBack={() => go("welcome", "back")}
           />
         )}
-        {activeStep === "ready" && (
-          <ReadyStep
+        {activeStep === "collection" && (
+          <CollectionStep
             projectName={projectName}
-            onGoToProject={() => {
-              localStorage.setItem("tresta:onboarding:done", "true");
-              router.push("/projects");
-            }}
+            collectionUrl={collectionUrl}
+            onGoToProject={handleGoToProject}
           />
         )}
       </div>

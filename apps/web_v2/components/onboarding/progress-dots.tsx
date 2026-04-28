@@ -21,7 +21,7 @@ export function ProgressDots({ current, total }: ProgressDotsProps) {
           className={cn(
             "h-1 rounded-full transition-all duration-300",
             i === current
-              ? "w-5 bg-brand"
+              ? "w-6 bg-brand"
               : i < current
                 ? "w-1.5 bg-brand/40"
                 : "w-1.5 bg-border",

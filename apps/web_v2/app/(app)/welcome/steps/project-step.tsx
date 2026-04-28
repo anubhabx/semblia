@@ -1,30 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight, Folder } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { AuthField } from "@/components/auth/auth-field";
 import { AuthPrimaryBtn } from "@/components/auth/auth-primary-btn";
-import { AuthBackBtn } from "@/components/auth/auth-back-btn";
 import { ProgressDots } from "@/components/onboarding/progress-dots";
-import { SUGGESTIONS, TOTAL_STEPS } from "./constants";
+import { TOTAL_STEPS, STEP_INDEX, SUGGESTIONS } from "./constants";
 
 interface ProjectStepProps {
   projectName: string;
   setProjectName: (v: string) => void;
-  creating: boolean;
-  onSubmit: () => void;
+  loading: boolean;
+  onContinue: () => void;
   onSkip: () => void;
-  onBack: () => void;
 }
 
 export function ProjectStep({
   projectName,
   setProjectName,
-  creating,
-  onSubmit,
+  loading,
+  onContinue,
   onSkip,
-  onBack,
 }: ProjectStepProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -33,67 +30,64 @@ export function ProjectStep({
     return () => clearTimeout(t);
   }, []);
 
-  function handleSuggestion(name: string) {
-    setProjectName(name);
-    inputRef.current?.focus();
-  }
-
   return (
     <div>
-      <AuthBackBtn onClick={onBack} className="mb-7" />
-
-      <div className="mb-7">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Name your first project
+      <div className="mb-8">
+        <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand/10">
+          <Folder className="size-5 text-brand" />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Create your first project
         </h1>
-        <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">
-          A project groups testimonials for a product, service, or brand. You
-          can always rename it later.
+        <p className="mt-2 text-[14px] text-muted-foreground leading-relaxed max-w-[360px]">
+          A project organizes your testimonials. Name it after your product,
+          service, or brand.
         </p>
       </div>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit();
+          onContinue();
         }}
         className="space-y-4"
       >
-        <div className="space-y-2">
-          <AuthField
-            id="onboard-project-name"
-            label="Project name"
-            value={projectName}
-            onChange={setProjectName}
-            placeholder="e.g. My SaaS Product"
-            required
-            maxLength={60}
-            inputRef={inputRef}
-          />
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => handleSuggestion(s)}
-                className={cn(
-                  "px-2 py-0.5 rounded-md text-[11px] font-medium transition-all duration-150",
-                  projectName === s
-                    ? "bg-brand/12 text-brand ring-1 ring-brand/20"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+        <AuthField
+          id="onboard-project"
+          label="Project name"
+          value={projectName}
+          onChange={setProjectName}
+          placeholder="e.g. Acme SaaS"
+          required
+          maxLength={48}
+          inputRef={inputRef}
+        />
+
+        {/* Quick suggestions */}
+        <div className="flex flex-wrap gap-1.5">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setProjectName(s)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150",
+                "ring-1",
+                projectName === s
+                  ? "ring-brand/40 bg-brand/5 text-foreground"
+                  : "ring-foreground/[0.06] bg-card text-muted-foreground hover:ring-foreground/[0.12] hover:bg-muted/40",
+              )}
+            >
+              {s}
+            </button>
+          ))}
         </div>
 
         <AuthPrimaryBtn
           type="submit"
-          loading={creating}
-          loadingLabel="Creating…"
-          disabled={!projectName.trim() || creating}
+          loading={loading}
+          loadingLabel="Creating project…"
+          disabled={!projectName.trim() || loading}
         >
           Create project
           <ArrowRight className="size-4" />
@@ -104,10 +98,10 @@ export function ProjectStep({
         onClick={onSkip}
         className="w-full mt-4 text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150 py-1"
       >
-        Skip for now
+        I&apos;ll do this later
       </button>
 
-      <ProgressDots current={2} total={TOTAL_STEPS} />
+      <ProgressDots current={STEP_INDEX.project} total={TOTAL_STEPS} />
     </div>
   );
 }

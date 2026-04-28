@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   Eye,
   EyeSlash as EyeOff,
@@ -45,6 +45,8 @@ interface AuthPasswordFieldProps {
   required?: boolean;
   showStrength?: boolean;
   disabled?: boolean;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  error?: string;
 }
 
 export function AuthPasswordField({
@@ -60,6 +62,8 @@ export function AuthPasswordField({
   required,
   showStrength = false,
   disabled,
+  inputRef,
+  error,
 }: AuthPasswordFieldProps) {
   const strength = passwordStrength(value);
 
@@ -74,6 +78,7 @@ export function AuthPasswordField({
 
       <div className="relative">
         <input
+          ref={inputRef}
           id={id}
           type={showPwd ? "text" : "password"}
           value={value}
@@ -83,7 +88,14 @@ export function AuthPasswordField({
           required={required}
           disabled={disabled}
           suppressHydrationWarning
-          className={cn(authInputCls, "pr-10")}
+          className={cn(
+            authInputCls,
+            "pr-10",
+            error &&
+              "border-destructive/60 focus:ring-destructive/15 focus:border-destructive/50",
+          )}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
         />
         <button
           type="button"
@@ -95,6 +107,15 @@ export function AuthPasswordField({
           {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       </div>
+
+      {error && (
+        <p
+          id={`${id}-error`}
+          className="text-[11px] text-destructive leading-relaxed auth-notice-in"
+        >
+          {error}
+        </p>
+      )}
 
       {showStrength && value.length > 0 && (
         <div className="space-y-1 pt-1">

@@ -5,27 +5,31 @@ import { ArrowRight, User } from "@phosphor-icons/react";
 import { AuthField } from "@/components/auth/auth-field";
 import { AuthPrimaryBtn } from "@/components/auth/auth-primary-btn";
 import { ProgressDots } from "@/components/onboarding/progress-dots";
-import { TOTAL_STEPS } from "./constants";
+import { TOTAL_STEPS, STEP_INDEX } from "./constants";
 
-interface NameStepProps {
+interface ProfileStepProps {
   firstName: string;
   lastName: string;
+  jobTitle: string;
   setFirstName: (v: string) => void;
   setLastName: (v: string) => void;
+  setJobTitle: (v: string) => void;
   loading: boolean;
   onContinue: () => void;
   onSkip: () => void;
 }
 
-export function NameStep({
+export function ProfileStep({
   firstName,
   lastName,
+  jobTitle,
   setFirstName,
   setLastName,
+  setJobTitle,
   loading,
   onContinue,
   onSkip,
-}: NameStepProps) {
+}: ProfileStepProps) {
   const firstNameRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -43,7 +47,7 @@ export function NameStep({
           Let&apos;s personalize your experience
         </h1>
         <p className="mt-2 text-[14px] text-muted-foreground leading-relaxed max-w-[360px]">
-          Tell us your name so we know what to call you across Tresta.
+          Tell us about yourself so we can tailor Tresta to your needs.
         </p>
       </div>
 
@@ -75,6 +79,16 @@ export function NameStep({
           />
         </div>
 
+        <AuthField
+          id="onboard-jobtitle"
+          label="Job title"
+          value={jobTitle}
+          onChange={setJobTitle}
+          placeholder="Product Manager, Founder, etc."
+          autoComplete="organization-title"
+          helperText="Optional — helps us show you the right features."
+        />
+
         <AuthPrimaryBtn
           type="submit"
           loading={loading}
@@ -93,7 +107,7 @@ export function NameStep({
         I&apos;ll do this later
       </button>
 
-      <ProgressDots current={0} total={TOTAL_STEPS} />
+      <ProgressDots current={STEP_INDEX.profile} total={TOTAL_STEPS} />
     </div>
   );
 }

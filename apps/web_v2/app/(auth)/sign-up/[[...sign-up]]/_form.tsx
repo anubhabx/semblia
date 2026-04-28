@@ -21,6 +21,7 @@ export function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otp, setOtp] = useState("");
   const [resendCooldown, setResendCooldown] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -171,6 +172,8 @@ export function SignUpForm() {
           setPassword={setPassword}
           showPwd={showPwd}
           setShowPwd={setShowPwd}
+          agreedToTerms={agreedToTerms}
+          setAgreedToTerms={setAgreedToTerms}
           loading={loading}
           busy={busy}
           error={error}

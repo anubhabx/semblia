@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Envelope as Mail } from "@phosphor-icons/react";
 import {
   InputOTP,
@@ -35,6 +36,22 @@ export function VerifyStep({
   onResend,
   onBack,
 }: VerifyStepProps) {
+  const hasAutoSubmitted = useRef(false);
+
+  // Auto-submit when all 6 digits entered
+  useEffect(() => {
+    if (otp.length === 6 && !loading && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      const syntheticEvent = {
+        preventDefault: () => {},
+      } as React.FormEvent;
+      onSubmit(syntheticEvent);
+    }
+    if (otp.length < 6) {
+      hasAutoSubmitted.current = false;
+    }
+  }, [otp, loading, onSubmit]);
+
   return (
     <>
       <AuthBackBtn onClick={onBack} className="mb-8" />

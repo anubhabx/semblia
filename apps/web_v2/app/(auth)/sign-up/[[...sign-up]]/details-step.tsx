@@ -7,6 +7,7 @@ import { AuthPrimaryBtn } from "@/components/auth/auth-primary-btn";
 import { AuthSocialButtons } from "@/components/auth/auth-social-buttons";
 import { AuthDivider } from "@/components/auth/auth-divider";
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { AuthCheckbox } from "@/components/auth/auth-checkbox";
 
 interface DetailsStepProps {
   email: string;
@@ -15,6 +16,8 @@ interface DetailsStepProps {
   setPassword: (v: string) => void;
   showPwd: boolean;
   setShowPwd: (v: boolean) => void;
+  agreedToTerms: boolean;
+  setAgreedToTerms: (v: boolean) => void;
   loading: boolean;
   busy: boolean;
   error: string | null;
@@ -31,6 +34,8 @@ export function DetailsStep({
   setPassword,
   showPwd,
   setShowPwd,
+  agreedToTerms,
+  setAgreedToTerms,
   loading,
   busy,
   error,
@@ -82,35 +87,42 @@ export function DetailsStep({
           showStrength
           placeholder="Min. 8 characters"
         />
+
+        <AuthCheckbox
+          id="signup-terms"
+          checked={agreedToTerms}
+          onChange={setAgreedToTerms}
+        >
+          I agree to the{" "}
+          <Link
+            href="/legal/terms"
+            target="_blank"
+            className="underline underline-offset-2 text-foreground hover:text-brand transition-colors"
+          >
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/legal/privacy"
+            target="_blank"
+            className="underline underline-offset-2 text-foreground hover:text-brand transition-colors"
+          >
+            Privacy Policy
+          </Link>
+        </AuthCheckbox>
+
         <AuthNotice error={error} />
         <AuthPrimaryBtn
           type="submit"
           loading={loading}
           loadingLabel="Creating account…"
-          disabled={busy}
+          disabled={busy || !agreedToTerms}
         >
           Create account
         </AuthPrimaryBtn>
       </form>
 
       <div id="clerk-captcha" />
-
-      <p className="mt-4 text-center text-[11px] text-muted-foreground/60 leading-relaxed">
-        By creating an account you agree to our{" "}
-        <Link
-          href="#"
-          className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-        >
-          Terms
-        </Link>{" "}
-        and{" "}
-        <Link
-          href="#"
-          className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-        >
-          Privacy Policy
-        </Link>
-      </p>
 
       <p className="mt-5 text-center text-[13px] text-muted-foreground">
         Already have an account?{" "}

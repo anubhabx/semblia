@@ -1,20 +1,6 @@
 import type { ReactNode } from "react";
 import { TrestaWordmark } from "@/components/brand/tresta-mark";
-
-const TESTIMONIAL = {
-  quote:
-    "Tresta cut our feedback collection time in half. Within six weeks our pricing page conversion climbed 38 % — the testimonials just close the deal on their own.",
-  author: "Priya Menon",
-  role: "Head of Growth",
-  company: "Orbis Software",
-  initials: "PM",
-};
-
-const STATS = [
-  { value: "14,200+", label: "Testimonials collected" },
-  { value: "1,100+", label: "Active spaces" },
-  { value: "4.9 / 5", label: "Average rating" },
-];
+import { TestimonialCarousel } from "./_testimonial-carousel";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -66,9 +52,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {/* ── Center content ── */}
         <div className="relative z-10 space-y-8">
           <div className="space-y-3 auth-stagger-2">
-            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-muted-foreground">
-              Testimonial platform
-            </p>
             <h2 className="text-[2rem] font-semibold tracking-tight leading-[1.15] text-foreground">
               Collect trust.
               <br />
@@ -76,60 +59,23 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <br />
               <span className="text-brand">Grow faster.</span>
             </h2>
+            <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[280px]">
+              Join 1,100+ teams using Tresta to turn customer stories into
+              revenue.
+            </p>
           </div>
 
-          {/* Testimonial card */}
-          <div className="rounded-xl p-5 space-y-4 auth-stagger-3 bg-muted/40 border border-border/50">
-            <div className="flex gap-[3px]">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg
-                  key={i}
-                  aria-hidden
-                  width="12"
-                  height="12"
-                  viewBox="0 0 13 13"
-                  fill="none"
-                >
-                  <path
-                    d="M6.5 1l1.44 2.92 3.22.47-2.33 2.27.55 3.21L6.5 8.26 3.62 9.87l.55-3.21L1.84 4.39l3.22-.47L6.5 1z"
-                    className="fill-brand stroke-brand"
-                    strokeWidth="0.4"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ))}
-            </div>
-            <blockquote className="text-[0.8125rem] leading-[1.7] text-muted-foreground">
-              &ldquo;{TESTIMONIAL.quote}&rdquo;
-            </blockquote>
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold bg-brand/15 text-brand">
-                {TESTIMONIAL.initials}
-              </div>
-              <div>
-                <p className="text-[13px] font-medium text-foreground">
-                  {TESTIMONIAL.author}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {TESTIMONIAL.role}, {TESTIMONIAL.company}
-                </p>
-              </div>
-            </div>
+          {/* Testimonial carousel */}
+          <div className="auth-stagger-3">
+            <TestimonialCarousel />
           </div>
         </div>
 
-        {/* ── Stats strip ── */}
-        <div className="relative z-10 grid grid-cols-3 gap-6 pt-6 border-t border-border/50 auth-stagger-4">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="space-y-1">
-              <p className="font-semibold text-lg tabular-nums tracking-tight text-foreground">
-                {stat.value}
-              </p>
-              <p className="text-[10px] leading-snug text-muted-foreground">
-                {stat.label}
-              </p>
-            </div>
-          ))}
+        {/* ── Footer — subtle trust signal ── */}
+        <div className="relative z-10 auth-stagger-4">
+          <p className="text-[11px] text-muted-foreground/50">
+            Trusted by product, marketing, and growth teams worldwide.
+          </p>
         </div>
       </aside>
 

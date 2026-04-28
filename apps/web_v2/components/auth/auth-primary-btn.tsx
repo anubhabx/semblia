@@ -6,6 +6,7 @@ interface AuthPrimaryBtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   loadingLabel?: string;
   children: ReactNode;
+  variant?: "primary" | "secondary";
 }
 
 export function AuthPrimaryBtn({
@@ -14,19 +15,24 @@ export function AuthPrimaryBtn({
   children,
   disabled,
   className,
+  variant = "primary",
   ...props
 }: AuthPrimaryBtnProps) {
+  const isPrimary = variant === "primary";
+
   return (
     <button
       {...props}
       disabled={loading || disabled}
       className={cn(
-        "w-full h-10 rounded-lg bg-primary text-primary-foreground",
-        "text-sm font-medium",
+        "w-full h-10 rounded-lg text-sm font-medium",
         "flex items-center justify-center gap-2",
-        "hover:opacity-90 transition-all duration-150",
+        "transition-[transform,opacity,box-shadow] duration-150",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         "auth-btn",
+        isPrimary
+          ? "bg-primary text-primary-foreground hover:opacity-90"
+          : "bg-card text-foreground border border-border hover:bg-muted/70",
         className,
       )}
     >
