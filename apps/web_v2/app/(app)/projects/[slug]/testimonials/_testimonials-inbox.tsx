@@ -12,7 +12,11 @@ import { apiGetTestimonial } from "@/lib/api";
 import type { MockTestimonial } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
-import { PageHeader, HeaderSep } from "@/components/shared";
+import { PageHeader, HeaderSep, PageTabs } from "@/components/shared";
+import {
+  STATUS_TABS,
+  type StatusFilter,
+} from "@/components/testimonials/testimonials-filter-bar";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +37,9 @@ export function TestimonialsInbox({
 }: TestimonialsInboxProps) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+
+  // Status filter — lifted here so tabs render in PageHeader toolbar
+  const [status, setStatus] = React.useState<StatusFilter>("ALL");
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<MockTestimonial | null>(null);
@@ -229,14 +236,23 @@ export function TestimonialsInbox({
             )}
           </>
         }
+        toolbar={
+          <PageTabs<StatusFilter>
+            aria-label="Filter testimonials by status"
+            options={STATUS_TABS.map((t) => ({ id: t.key, label: t.label }))}
+            value={status}
+            onChange={setStatus}
+          />
+        }
       />
 
       {/* ── Master-detail split ── */}
       <div className="flex flex-1 min-h-0">
-        {/* List column */}
-        <div className="flex flex-1 flex-col min-w-0">
+        {/* List column — independently scrollable */}
+        <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
           <TestimonialsClient
             projectId={projectId}
+            status={status}
             selectedId={selectedId}
             onSelect={handleSelect}
             onInlineApprove={handleInlineApprove}

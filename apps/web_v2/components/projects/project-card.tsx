@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   ChatText as MessageSquareTextIcon,
   PuzzlePiece as PuzzleIcon,
@@ -34,17 +35,19 @@ export function ProjectCard({
       className="group animate-fade-up"
       style={{ animationDelay: `${index * 65}ms`, animationFillMode: "both" }}
     >
-      {/* Brand-tinted gradient header */}
-      <div
-        className="px-5 pt-5 pb-4"
-        style={{
-          background: `linear-gradient(160deg, ${brandColor}18 0%, transparent 70%)`,
-        }}
-      >
+      {/* Brand top stripe */}
+      <div className="h-[3px] w-full" style={{ backgroundColor: brandColor }} />
+
+      <div className="px-5 pt-4 pb-4">
         <div className="flex items-start justify-between gap-3">
           <span
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white shadow-sm"
-            style={{ backgroundColor: brandColor }}
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white shadow-sm transition-shadow duration-200 group-hover:shadow-[0_2px_8px_var(--tw-shadow-color)]"
+            style={
+              {
+                backgroundColor: brandColor,
+                "--tw-shadow-color": brandColor,
+              } as React.CSSProperties
+            }
           >
             {initials}
           </span>
@@ -58,13 +61,13 @@ export function ProjectCard({
 
         <div className="mt-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
+            <span className="truncate text-sm font-semibold text-foreground">
               {project.name}
             </span>
             {typeLabel && (
               <Badge
                 variant="secondary"
-                className="text-[10px] font-medium px-1.5 py-0"
+                className="shrink-0 px-1.5 py-0 text-[10px] font-medium"
               >
                 {typeLabel}
               </Badge>

@@ -75,29 +75,36 @@ export function PageHeader({
     return (
       <header
         className={cn(
-          "sticky top-[3.5rem] z-20 flex h-14 shrink-0 items-center gap-4 bg-background/85 px-4 backdrop-blur-md sm:px-6",
+          "sticky top-[3.5rem] z-20 shrink-0 bg-background/85 backdrop-blur-md",
           !borderless && "border-b border-border",
           animate && "animate-fade-up",
           className,
         )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          {eyebrow && (
-            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 sm:inline">
-              {eyebrow}
-            </span>
-          )}
-          <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
-            {title}
-          </h1>
-          {description && (
-            <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-              {description}
-            </span>
+        <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {eyebrow && (
+              <span className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 sm:inline">
+                {eyebrow}
+              </span>
+            )}
+            <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
+              {title}
+            </h1>
+            {description && (
+              <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+                {description}
+              </span>
+            )}
+          </div>
+          {actions && (
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
           )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        {toolbar && (
+          <div className="-mx-px flex items-center gap-3 border-t border-border/50 px-4 sm:px-6">
+            {toolbar}
+          </div>
         )}
         {children}
       </header>

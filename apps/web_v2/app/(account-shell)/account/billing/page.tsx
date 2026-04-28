@@ -164,15 +164,12 @@ function UsageMeter() {
                       : "text-foreground"
                 }
               >
-                {used.toLocaleString("en-IN")} /{" "}
-                {limit.toLocaleString("en-IN")}
+                {used.toLocaleString("en-IN")} / {limit.toLocaleString("en-IN")}
               </span>
             </div>
             <Progress
               value={pct}
-              tone={
-                pct > 90 ? "destructive" : pct > 70 ? "warning" : "default"
-              }
+              tone={pct > 90 ? "destructive" : pct > 70 ? "warning" : "default"}
             />
           </div>
         );

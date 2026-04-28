@@ -2,14 +2,10 @@
 
 import * as React from "react";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+  CaretLeft as ChevronLeftIcon,
+  CaretRight as ChevronRightIcon,
+} from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 
 import {
   apiGetTestimonials,
@@ -18,9 +14,8 @@ import {
   type PaginatedResponse,
 } from "@/lib/api";
 import { type MockTestimonial } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { PageBody } from "@/components/shared";
 import { useDebounce } from "@/hooks/use-debounce";
-import { buildPageNumbers } from "@/lib/pagination";
 import { TestimonialRow } from "./testimonial-row";
 import { TestimonialSkeleton } from "./testimonial-skeleton";
 import { TestimonialEmptyState } from "./testimonial-empty-state";
@@ -35,6 +30,7 @@ import {
 
 interface Props {
   projectId: string;
+  status: StatusFilter;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onInlineApprove?: (id: string) => void;
@@ -44,13 +40,13 @@ interface Props {
 
 export function TestimonialsClient({
   projectId,
+  status,
   selectedId,
   onSelect,
   onInlineApprove,
   onInlineReject,
   onItemsChange,
 }: Props) {
-  const [status, setStatus] = React.useState<StatusFilter>("ALL");
   const [sort, setSort] = React.useState<SortOption>("newest");
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
@@ -147,8 +143,6 @@ export function TestimonialsClient({
   return (
     <div className="flex flex-1 flex-col">
       <TestimonialsFilterBar
-        status={status}
-        setStatus={setStatus}
         sort={sort}
         setSort={setSort}
         search={search}
@@ -168,9 +162,9 @@ export function TestimonialsClient({
         />
       )}
 
-      <main className="flex-1">
+      <PageBody padding="bare" className="flex-1">
         {loading ? (
-          <div className="divide-y divide-border/60">
+          <div className="divide-y divide-border">
             {[0, 1, 2, 3, 4].map((i) => (
               <TestimonialSkeleton key={i} />
             ))}
@@ -178,7 +172,7 @@ export function TestimonialsClient({
         ) : items.length === 0 ? (
           <TestimonialEmptyState filter={status} />
         ) : (
-          <div className="divide-y divide-border/60 list-content-enter">
+          <div className="divide-y divide-border list-content-enter">
             {items.map((t) => (
               <TestimonialRow
                 key={t.id}
@@ -194,56 +188,35 @@ export function TestimonialsClient({
             ))}
           </div>
         )}
-      </main>
+      </PageBody>
 
       {result && result.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          <span className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border px-4 py-2.5 sm:px-6">
+          <span className="text-[11px] tabular-nums text-muted-foreground">
             Page {result.page} of {result.totalPages}
           </span>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  aria-disabled={!result.hasPrev}
-                  className={cn(
-                    !result.hasPrev && "pointer-events-none opacity-40",
-                  )}
-                />
-              </PaginationItem>
-
-              {buildPageNumbers(result.page, result.totalPages).map(
-                (item, i) =>
-                  item === "ellipsis" ? (
-                    <PaginationItem key={`ellipsis-${i}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={item}>
-                      <PaginationLink
-                        isActive={item === result.page}
-                        onClick={() => setPage(item)}
-                      >
-                        {item}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    setPage((p) => Math.min(result.totalPages, p + 1))
-                  }
-                  aria-disabled={!result.hasNext}
-                  className={cn(
-                    !result.hasNext && "pointer-events-none opacity-40",
-                  )}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!result.hasPrev}
+              aria-label="Previous page"
+              className="size-7"
+            >
+              <ChevronLeftIcon className="size-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.min(result.totalPages, p + 1))}
+              disabled={!result.hasNext}
+              aria-label="Next page"
+              className="size-7"
+            >
+              <ChevronRightIcon className="size-3.5" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -3,14 +3,21 @@
 import Link from "next/link";
 import { Plus as PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { PageHeader, HeaderSep, PageBody } from "@/components/shared";
-import { useProjects } from "@/hooks/use-projects";
+import {
+  PageHeader,
+  HeaderSep,
+  PageBody,
+  FilterPills,
+  SearchField,
+  ViewToggle,
+} from "@/components/shared";
+import { useProjects, type ProjectFilter } from "@/hooks/use-projects";
+import { PROJECT_TYPE_LABELS } from "@/lib/mock-data";
 
 import { ProjectRowSkeleton, ProjectCardSkeleton } from "./project-skeletons";
 import { ProjectRow } from "./project-row";
 import { ProjectCard } from "./project-card";
 import { EmptySearch, EmptyProjects } from "./project-empty-states";
-import { ProjectsToolbar } from "./projects-toolbar";
 
 // ── Main client component ─────────────────────────────────────────────────────
 
@@ -23,6 +30,9 @@ export function ProjectsClient() {
     setView,
     search,
     setSearch,
+    typeFilter,
+    setTypeFilter,
+    typeCounts,
     totalTestimonials,
     totalPending,
   } = useProjects();
@@ -49,6 +59,20 @@ export function ProjectsClient() {
     </>
   );
 
+  // Build filter pill options from data
+  const filterOptions: { id: ProjectFilter; label: string; count: number }[] = [
+    { id: "all", label: "All", count: typeCounts.get("all") ?? 0 },
+    ...([...typeCounts.entries()] as [ProjectFilter, number][])
+      .filter(([k]) => k !== "all")
+      .map(([k, count]) => ({
+        id: k,
+        label: PROJECT_TYPE_LABELS[k as keyof typeof PROJECT_TYPE_LABELS] ?? k,
+        count,
+      })),
+  ];
+
+  const showToolbar = !loading && projects.length > 0;
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
@@ -62,14 +86,27 @@ export function ProjectsClient() {
             </Link>
           </Button>
         }
-        borderless
-      />
-
-      <ProjectsToolbar
-        search={search}
-        onSearchChange={setSearch}
-        view={view}
-        onViewChange={setView}
+        toolbar={
+          showToolbar ? (
+            <>
+              <FilterPills<ProjectFilter>
+                aria-label="Filter projects by type"
+                options={filterOptions}
+                value={typeFilter}
+                onChange={setTypeFilter}
+              />
+              <div className="ml-auto flex items-center gap-3">
+                <SearchField
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search projects…"
+                  ariaLabel="Search projects"
+                />
+                <ViewToggle value={view} onChange={setView} />
+              </div>
+            </>
+          ) : undefined
+        }
       />
 
       {/* ── Content ── */}
@@ -82,7 +119,7 @@ export function ProjectsClient() {
               ))}
             </div>
           ) : (
-            <div className="grid auto-rows-fr grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
               {[0, 1, 2].map((i) => (
                 <ProjectCardSkeleton key={i} />
               ))}
@@ -99,7 +136,7 @@ export function ProjectsClient() {
             ))}
           </div>
         ) : (
-          <div className="grid auto-rows-fr grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
             {filtered.map((project, i) => (
               <ProjectCard key={project.id} project={project} index={i} />
             ))}
