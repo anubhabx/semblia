@@ -80,11 +80,9 @@ function SecretStep({
 // ── Step 2: Verify code ────────────────────────────────────────────────────────
 
 function VerifyStep({
-  totp,
   onVerified,
   onBack,
 }: {
-  totp: TOTPResource;
   onVerified: (backupCodes: string[]) => void;
   onBack: () => void;
 }) {
@@ -264,7 +262,6 @@ export function MfaSetupDialog({
           <SecretStep totp={totp} onNext={() => setStep("verify")} />
         ) : step === "verify" ? (
           <VerifyStep
-            totp={totp}
             onBack={() => setStep("secret")}
             onVerified={(codes) => {
               setBackupCodes(codes);

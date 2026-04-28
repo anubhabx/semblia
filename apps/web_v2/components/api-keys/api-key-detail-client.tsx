@@ -514,15 +514,7 @@ function SettingsTab({
 
 /* ─── Main detail client ──────────────────────────────────────────────────── */
 
-export function ApiKeyDetailClient({
-  keyId,
-  slug,
-  projectName,
-}: {
-  keyId: string;
-  slug: string;
-  projectName: string;
-}) {
+export function ApiKeyDetailClient({ keyId }: { keyId: string }) {
   const { key, loading, update, revoke, rotate } = useApiKey(keyId);
   const [tab, setTab] = React.useState<Tab>("overview");
   const [saving, setSaving] = React.useState(false);

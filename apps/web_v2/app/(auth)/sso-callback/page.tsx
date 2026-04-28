@@ -8,7 +8,7 @@ import { AuthNotice } from "@/components/auth/auth-notice";
 
 export default function SSOCallbackPage() {
   // Error state reserved for AuthenticateWithRedirectCallback error handling
-  const [error, _setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-background">

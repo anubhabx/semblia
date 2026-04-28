@@ -17,7 +17,6 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   apiGetSubscription,
   apiCancelSubscription,

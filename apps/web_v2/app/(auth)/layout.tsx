@@ -42,7 +42,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           aria-hidden
           className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none"
           style={{
-            background: "linear-gradient(to top, var(--color-card), transparent)",
+            background:
+              "linear-gradient(to top, var(--color-card), transparent)",
           }}
         />
 

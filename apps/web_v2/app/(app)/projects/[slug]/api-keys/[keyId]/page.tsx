@@ -23,7 +23,5 @@ export default async function ApiKeyDetailPage(props: {
   const key = getApiKeyById(keyId);
   if (!project || !key) notFound();
 
-  return (
-    <ApiKeyDetailClient keyId={keyId} slug={slug} projectName={project.name} />
-  );
+  return <ApiKeyDetailClient keyId={keyId} />;
 }
