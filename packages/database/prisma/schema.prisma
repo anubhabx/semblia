@@ -16,7 +16,7 @@ datasource db {
 }
 
 model User {
-  id        String  @id @default(cuid()) // Clerk user Id
+  id        String  @id // Clerk user Id
   email     String  @unique
   firstName String?
   lastName  String?
@@ -24,6 +24,7 @@ model User {
 
   plan                 UserPlan              @default(FREE)
   projects             Project[]
+  projectMemberships   ProjectMember[]
   testimonials         Testimonial[]
   apiKeys              ApiKey[]
   subscription         Subscription? // null for free tier users
@@ -34,7 +35,7 @@ model User {
   notificationPreferences NotificationPreferences?
 
   // Admin tracking
-  lastLogin DateTime?
+  lastLogin             DateTime?
   onboardingCompletedAt DateTime? @default(now())
 
   createdAt DateTime @default(now())
@@ -87,10 +88,11 @@ model Project {
   // }
   formConfig Json?
 
-  testimonials Testimonial[]
-  widgets      Widget[]
-  collectionForms CollectionForm[]
-  apiKeys      ApiKey[]
+  testimonials           Testimonial[]
+  widgets                Widget[]
+  members                ProjectMember[]
+  collectionForms        CollectionForm[]
+  apiKeys                ApiKey[]
   formImpressions        FormImpression[]
   testimonialImpressions TestimonialImpression[]
 
@@ -103,6 +105,22 @@ model Project {
   @@index([userId])
   @@index([visibility])
   @@index([projectType])
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  userId    String
+  role      MemberRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
 
 model Plan {
@@ -230,6 +248,17 @@ model PaymentWebhookEvent {
   @@index([receivedAt])
 }
 
+model ClerkWebhookEvent {
+  id              String    @id @default(cuid())
+  providerEventId String    @unique
+  eventType       String
+  payload         Json
+  status          String    @default("processed")
+  error           String?   @db.Text
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+}
+
 model Testimonial {
   id            String          @id @default(cuid())
   userId        String?
@@ -267,11 +296,11 @@ model Testimonial {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  User    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  collectionForm CollectionForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
-  tags    Tag[]    @relation("TestimonialTags")
-  impressions TestimonialImpression[]
+  User           User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Project        Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  collectionForm CollectionForm?         @relation(fields: [formId], references: [id], onDelete: SetNull)
+  tags           Tag[]                   @relation("TestimonialTags")
+  impressions    TestimonialImpression[]
 
   @@index([userId])
   @@index([projectId])
@@ -297,7 +326,7 @@ model CollectionForm {
   abWeight    Int     @default(100)
   config      Json
 
-  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   testimonials Testimonial[]
   impressions  FormImpression[]
 
@@ -355,53 +384,56 @@ enum WidgetDensity {
 
 model Widget {
   id        String @id @default(cuid())
-  projectId String?
+  projectId String
   name      String @default("Untitled widget") @db.VarChar(255)
 
-  // ─── Type & Layout ───────────────────────────────────
-  widgetType WidgetType    @default(EMBED)
-  layoutType LayoutType    @default(CAROUSEL)
-  themeMode  ThemeMode     @default(LIGHT)
+  kind   WidgetType @default(EMBED)
+  layout LayoutType @default(CAROUSEL)
+  theme  ThemeMode  @default(LIGHT)
 
-  // ─── Design tokens (preset-driven, user-tweakable) ──
-  preset       String        @default("clean") @db.VarChar(64)
-  accentColor  String?       @db.VarChar(32)
-  bgColor      String?       @db.VarChar(32)
-  textColor    String?       @db.VarChar(32)
-  borderRadius Int           @default(12)
-  fontFamily   String        @default("inter") @db.VarChar(64)
-  cardStyle    CardStyle     @default(SHADOW)
-  density      WidgetDensity @default(DEFAULT)
+  preset     String        @default("clean") @db.VarChar(64)
+  accent     String        @default("#0f172a") @db.VarChar(64)
+  text       String        @default("#0a0a0b") @db.VarChar(64)
+  bg         String        @default("#ffffff") @db.VarChar(64)
+  line       String        @default("#e5e7eb") @db.VarChar(64)
+  surface    String        @default("#f7f7f8") @db.VarChar(64)
+  radius     Int           @default(12)
+  fontFamily String        @default("\"Geist\", system-ui, sans-serif") @db.VarChar(255)
+  fontHead   String        @default("\"Geist\", system-ui, sans-serif") @db.VarChar(255)
+  cardStyle  CardStyle     @default(BORDERED)
+  density    WidgetDensity @default(DEFAULT)
 
-  // ─── Content visibility ─────────────────────────────
   showRating  Boolean @default(true)
   showAvatar  Boolean @default(true)
   showCompany Boolean @default(true)
   showDate    Boolean @default(false)
   showSource  Boolean @default(false)
 
-  // ─── Behavior ───────────────────────────────────────
-  maxItems       Int     @default(10)
+  maxItems       Int     @default(9)
   autoRotate     Boolean @default(true)
   rotateInterval Int     @default(5000)
   showBranding   Boolean @default(true)
 
-  // ─── Wall of Love specific ──────────────────────────
-  wallSlug    String? @unique @db.VarChar(255)
+  contentMode WidgetContentMode @default(ALL)
+  pickedIds   String[]          @default([])
+
+  wallSlug    String? @unique @db.VarChar(64)
   wallTitle   String? @db.VarChar(500)
   wallSubhead String? @db.Text
-
-  // ─── Legacy (kept for migration, nullable now) ──────
-  config Json?
+  isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  Project     Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
   impressions TestimonialImpression[]
 
   @@index([projectId])
-  @@index([wallSlug])
+}
+
+enum WidgetContentMode {
+  ALL
+  HANDPICKED
 }
 
 model ApiKey {
@@ -429,8 +461,8 @@ model ApiKey {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   dailyUsage ApiKeyDailyUsage[]
 
   @@index([userId])
@@ -479,6 +511,13 @@ enum ProjectVisibility {
   INVITE_ONLY
 }
 
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
 // ============================================
 // Notification System Models
 // ============================================
@@ -510,23 +549,23 @@ enum NotificationType {
 }
 
 model NotificationPreferences {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  emailEnabled Boolean  @default(true)
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  emailEnabled    Boolean  @default(true)
   typePreferences Json? // { NEW_TESTIMONIAL: { email: true, inApp: true } }
-  updatedAt    DateTime @updatedAt
+  updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ApiKeyDailyUsage {
-  id           String   @id @default(cuid())
-  apiKeyId     String
-  date         String   @db.VarChar(10) // YYYY-MM-DD in UTC
-  requestCount Int      @default(0)
+  id            String    @id @default(cuid())
+  apiKeyId      String
+  date          String    @db.VarChar(10) // YYYY-MM-DD in UTC
+  requestCount  Int       @default(0)
   lastRequestAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
 
@@ -754,7 +793,7 @@ model FormImpression {
   userAgent String?  @db.Text
   timestamp DateTime @default(now())
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   collectionForm CollectionForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
 
   @@index([projectId, timestamp])

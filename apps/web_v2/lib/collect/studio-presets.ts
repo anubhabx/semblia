@@ -11,7 +11,7 @@ import type {
   TokenTexture,
   LayoutConfig,
   ContainerMode,
-  StudioConfig,
+  FormConfig,
 } from "./studio-types";
 
 // ── Font choices (for the controls panel) ───────────────────────────────────
@@ -231,7 +231,7 @@ export const DEFAULT_LAYOUT: LayoutConfig = {
 
 // ── Build initial studio config ─────────────────────────────────────────────
 
-export function buildDefaultStudioConfig(): StudioConfig {
+export function buildDefaultFormConfig(): FormConfig {
   const presetId = "editorial";
   const tokens = { ...STYLE_PRESETS[presetId].tokens };
   return {

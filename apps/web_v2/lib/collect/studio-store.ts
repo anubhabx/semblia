@@ -3,11 +3,11 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type {
   DesignTokens,
   FormConfigEntry,
-  StudioConfig,
+  FormConfig,
   StudioDevice,
 } from "./studio-types";
 import {
-  buildDefaultStudioConfig,
+  buildDefaultFormConfig,
   ALL_PRESETS,
   randomTokens,
 } from "./studio-presets";
@@ -15,8 +15,8 @@ import {
 // ── Snapshot (per form) ─────────────────────────────────────────────────────
 
 export interface StudioSnapshot {
-  draft: StudioConfig;
-  saved: StudioConfig;
+  draft: FormConfig;
+  saved: FormConfig;
   savedAt: number;
   /** Incremented on every draft mutation — O(1) dirty check. */
   draftVersion: number;
@@ -112,7 +112,7 @@ function normalizeFormEntry(entry: FormConfigEntry): FormConfigEntry {
 function patchDraft(
   state: StudioStore,
   formId: string,
-  fn: (draft: StudioConfig) => StudioConfig,
+  fn: (draft: FormConfig) => FormConfig,
 ): Partial<StudioStore> {
   const snap = state.snapshots[formId];
   if (!snap) return {};
@@ -128,7 +128,7 @@ function patchDraft(
   };
 }
 
-function makeSnapshot(config: StudioConfig): StudioSnapshot {
+function makeSnapshot(config: FormConfig): StudioSnapshot {
   return {
     draft: config,
     saved: structuredClone(config),
@@ -155,7 +155,7 @@ export const useStudioStore = create<StudioStore>()(
 
         const formId = newFormId();
         const now = Date.now();
-        const initial = buildDefaultStudioConfig();
+        const initial = buildDefaultFormConfig();
         set((s) => ({
           formsByProject: {
             ...s.formsByProject,
@@ -184,7 +184,7 @@ export const useStudioStore = create<StudioStore>()(
       createForm: (slug, name) => {
         const formId = newFormId();
         const now = Date.now();
-        const initial = buildDefaultStudioConfig();
+        const initial = buildDefaultFormConfig();
         const entry: FormConfigEntry = {
           id: formId,
           name: name ?? `Form ${(get().formsByProject[slug]?.length ?? 0) + 1}`,
@@ -355,7 +355,7 @@ export const useStudioStore = create<StudioStore>()(
           const state = persisted as Record<string, unknown>;
           const bySlug = (state.bySlug ?? {}) as Record<
             string,
-            { draft: StudioConfig; saved: StudioConfig; savedAt: number }
+            { draft: FormConfig; saved: FormConfig; savedAt: number }
           >;
           const formsByProject: Record<string, FormConfigEntry[]> = {};
           const snapshots: Record<string, StudioSnapshot> = {};

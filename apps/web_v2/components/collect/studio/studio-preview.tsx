@@ -8,7 +8,7 @@
 import * as React from "react";
 import { DeviceFrame } from "@/components/collect/device-frame";
 import { tokensToCssVars, textureBg } from "@/lib/collect/studio-token-css";
-import type { StudioConfig, StudioDevice } from "@/lib/collect/studio-types";
+import type { FormConfig, StudioDevice } from "@/lib/collect/studio-types";
 import { useStudioStore } from "@/lib/collect/studio-store";
 
 /* ─── Device size map ─────────────────────────────────────────────────────── */
@@ -181,7 +181,7 @@ function TokenChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TokenPreviewShell({ draft }: { draft: StudioConfig }) {
+function TokenPreviewShell({ draft }: { draft: FormConfig }) {
   const { tokens } = draft;
   const cssVars = React.useMemo(
     () => tokensToCssVars(tokens) as React.CSSProperties,

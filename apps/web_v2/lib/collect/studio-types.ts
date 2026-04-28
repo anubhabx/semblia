@@ -89,7 +89,7 @@ export interface DesignTokens {
 
 // ── Studio config (full state) ──────────────────────────────────────────────
 
-export interface StudioConfig {
+export interface FormConfig {
   tokens: DesignTokens;
   layout: LayoutConfig;
   questions: StudioQuestion[];
