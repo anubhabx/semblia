@@ -11,12 +11,14 @@ describe("WidgetsController", () => {
   });
 
   it("declares GET /widgets/project/:projectId", () => {
-    expect(Reflect.getMetadata(PATH_METADATA, WidgetsController)).toBe("widgets");
-    expect(Reflect.getMetadata(PATH_METADATA, WidgetsController.prototype.list)).toBe(
-      "project/:projectId",
+    expect(Reflect.getMetadata(PATH_METADATA, WidgetsController)).toBe(
+      "widgets",
     );
-    expect(Reflect.getMetadata(METHOD_METADATA, WidgetsController.prototype.list)).toBe(
-      RequestMethod.GET,
-    );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, WidgetsController.prototype.list),
+    ).toBe("project/:projectId");
+    expect(
+      Reflect.getMetadata(METHOD_METADATA, WidgetsController.prototype.list),
+    ).toBe(RequestMethod.GET);
   });
 });

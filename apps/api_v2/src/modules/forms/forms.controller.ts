@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
@@ -18,7 +27,9 @@ import { FormsService } from "./forms.service.js";
 
 @Controller("forms")
 export class FormsController {
-  constructor(@Inject(FormsService) private readonly formsService: FormsService) {}
+  constructor(
+    @Inject(FormsService) private readonly formsService: FormsService,
+  ) {}
 
   @Get("project/:projectId")
   list(

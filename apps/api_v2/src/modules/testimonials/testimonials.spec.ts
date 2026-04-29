@@ -14,9 +14,14 @@ describe("TestimonialsController", () => {
     expect(Reflect.getMetadata(PATH_METADATA, TestimonialsController)).toBe(
       "testimonials",
     );
-    expect(Reflect.getMetadata(PATH_METADATA, TestimonialsController.prototype.list)).toBe("/");
     expect(
-      Reflect.getMetadata(METHOD_METADATA, TestimonialsController.prototype.list),
+      Reflect.getMetadata(PATH_METADATA, TestimonialsController.prototype.list),
+    ).toBe("/");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        TestimonialsController.prototype.list,
+      ),
     ).toBe(RequestMethod.GET);
   });
 });

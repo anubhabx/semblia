@@ -11,10 +11,14 @@ describe("ProjectsController", () => {
   });
 
   it("declares GET /projects", () => {
-    expect(Reflect.getMetadata(PATH_METADATA, ProjectsController)).toBe("projects");
-    expect(Reflect.getMetadata(PATH_METADATA, ProjectsController.prototype.list)).toBe("/");
-    expect(Reflect.getMetadata(METHOD_METADATA, ProjectsController.prototype.list)).toBe(
-      RequestMethod.GET,
+    expect(Reflect.getMetadata(PATH_METADATA, ProjectsController)).toBe(
+      "projects",
     );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, ProjectsController.prototype.list),
+    ).toBe("/");
+    expect(
+      Reflect.getMetadata(METHOD_METADATA, ProjectsController.prototype.list),
+    ).toBe(RequestMethod.GET);
   });
 });

@@ -34,6 +34,8 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 0 | Discovery dossier (gpt-5.4-mini) | ✓ done | `1e43be8` |
 | 1 | Prisma schema refactor (gpt-5.4) | ✓ done | `bf05b49` |
 | 2 | api_v2 scaffolding + shared infra (gpt-5.4) | ✓ done | `6443bb6` |
+| 2.5 | api_v2 tooling hardening (Nest CLI + ESLint + Prettier + smoke-start) | ✓ done | (this commit) |
+| 2.6 | web_v2 jest-dom matcher type augmentation | pending | — |
 | 3a | Users domain implementation | ✓ done | `35e8f08` |
 | 3b | Projects domain implementation | pending | — |
 | 3c | Widgets domain implementation | pending | — |
@@ -88,11 +90,15 @@ These are non-negotiable; every build phase must end with all of these green:
 - `cd apps/api_v2 && pnpm exec tsc --noEmit -p tsconfig.json`
 - `cd apps/api_v2 && pnpm test`
 - `cd apps/api_v2 && pnpm build`
+- `cd apps/api_v2 && pnpm lint` (added Phase 2.5 — must pass with zero warnings)
+- `cd apps/api_v2 && pnpm format:check` (added Phase 2.5 — Prettier must show no diffs)
 - `cd apps/web_v2 && pnpm exec tsc --noEmit`
 - `cd apps/web_v2 && pnpm exec eslint . --ext .ts,.tsx`
 - `pnpm build --filter web_v2` (CLAUDE.md says: "Do not end a session before this succeeds")
 - `python scripts/update-indexes.py` (after any source change in web_v2 / api_v2 / packages)
 - `python scripts/rebuild-graphify.py` (after any source change)
+
+**Format-before-finish rule (added 2026-04-29):** Every phase brief must explicitly run `pnpm format` (Prettier) and the lint command before reporting green gates. The orchestrator must also re-format if it makes any post-agent edits. No phase commits with formatting drift.
 
 ## Findings & concerns (from Phase 0–2)
 

@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Inject,
-  Patch,
-  Post,
-} from "@nestjs/common";
+import { Body, Controller, Get, Inject, Patch, Post } from "@nestjs/common";
 import { UsersService } from "./users.service.js";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import {
@@ -16,7 +9,9 @@ import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
 
 @Controller("me")
 export class UsersController {
-  constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
+  constructor(
+    @Inject(UsersService) private readonly usersService: UsersService,
+  ) {}
 
   @Get()
   getMe(@CurrentUserId() userId: string) {

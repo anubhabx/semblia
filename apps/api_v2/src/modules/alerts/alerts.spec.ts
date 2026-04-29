@@ -12,11 +12,14 @@ describe("AlertsController", () => {
 
   it("declares GET /alerts/_status", () => {
     expect(Reflect.getMetadata(PATH_METADATA, AlertsController)).toBe("alerts");
-    expect(Reflect.getMetadata(PATH_METADATA, AlertsController.prototype.getStatus)).toBe(
-      "_status",
-    );
     expect(
-      Reflect.getMetadata(METHOD_METADATA, AlertsController.prototype.getStatus),
+      Reflect.getMetadata(PATH_METADATA, AlertsController.prototype.getStatus),
+    ).toBe("_status");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        AlertsController.prototype.getStatus,
+      ),
     ).toBe(RequestMethod.GET);
   });
 });

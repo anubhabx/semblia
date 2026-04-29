@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
@@ -18,7 +27,9 @@ import { WidgetsService } from "./widgets.service.js";
 
 @Controller("widgets")
 export class WidgetsController {
-  constructor(@Inject(WidgetsService) private readonly widgetsService: WidgetsService) {}
+  constructor(
+    @Inject(WidgetsService) private readonly widgetsService: WidgetsService,
+  ) {}
 
   @Get("project/:projectId")
   list(
@@ -41,8 +52,10 @@ export class WidgetsController {
   @Patch(":widgetId")
   update(
     @CurrentUserId() userId: string,
-    @Param(new ZodValidationPipe(widgetIdParamsSchema)) params: WidgetIdParamsDto,
-    @Body(new ZodValidationPipe(updateWidgetBodySchema)) body: UpdateWidgetBodyDto,
+    @Param(new ZodValidationPipe(widgetIdParamsSchema))
+    params: WidgetIdParamsDto,
+    @Body(new ZodValidationPipe(updateWidgetBodySchema))
+    body: UpdateWidgetBodyDto,
   ) {
     return this.widgetsService.update(userId, params, body);
   }
@@ -50,7 +63,8 @@ export class WidgetsController {
   @Delete(":widgetId")
   delete(
     @CurrentUserId() userId: string,
-    @Param(new ZodValidationPipe(widgetIdParamsSchema)) params: WidgetIdParamsDto,
+    @Param(new ZodValidationPipe(widgetIdParamsSchema))
+    params: WidgetIdParamsDto,
   ) {
     return this.widgetsService.delete(userId, params);
   }
@@ -58,7 +72,8 @@ export class WidgetsController {
   @Public()
   @Get(":widgetId/public")
   getPublic(
-    @Param(new ZodValidationPipe(widgetIdParamsSchema)) params: WidgetIdParamsDto,
+    @Param(new ZodValidationPipe(widgetIdParamsSchema))
+    params: WidgetIdParamsDto,
   ) {
     return this.widgetsService.getPublic(params);
   }
@@ -66,7 +81,8 @@ export class WidgetsController {
   @Public()
   @Get("walls/:wallSlug")
   getPublicWall(
-    @Param(new ZodValidationPipe(wallSlugParamsSchema)) params: WallSlugParamsDto,
+    @Param(new ZodValidationPipe(wallSlugParamsSchema))
+    params: WallSlugParamsDto,
   ) {
     return this.widgetsService.getPublicWall(params);
   }
@@ -74,7 +90,8 @@ export class WidgetsController {
   @Public()
   @Get("embed/:widgetId")
   renderEmbed(
-    @Param(new ZodValidationPipe(widgetIdParamsSchema)) params: WidgetIdParamsDto,
+    @Param(new ZodValidationPipe(widgetIdParamsSchema))
+    params: WidgetIdParamsDto,
   ) {
     return this.widgetsService.renderEmbed(params);
   }

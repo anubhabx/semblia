@@ -14,11 +14,17 @@ describe("OpsAdminController", () => {
     expect(Reflect.getMetadata(PATH_METADATA, OpsAdminController)).toBe(
       "ops-admin",
     );
-    expect(Reflect.getMetadata(PATH_METADATA, OpsAdminController.prototype.getStatus)).toBe(
-      "_status",
-    );
     expect(
-      Reflect.getMetadata(METHOD_METADATA, OpsAdminController.prototype.getStatus),
+      Reflect.getMetadata(
+        PATH_METADATA,
+        OpsAdminController.prototype.getStatus,
+      ),
+    ).toBe("_status");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        OpsAdminController.prototype.getStatus,
+      ),
     ).toBe(RequestMethod.GET);
   });
 });

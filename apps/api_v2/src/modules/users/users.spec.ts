@@ -12,18 +12,26 @@ describe("UsersController", () => {
 
   it("declares GET /me", () => {
     expect(Reflect.getMetadata(PATH_METADATA, UsersController)).toBe("me");
-    expect(Reflect.getMetadata(PATH_METADATA, UsersController.prototype.getMe)).toBe("/");
-    expect(Reflect.getMetadata(METHOD_METADATA, UsersController.prototype.getMe)).toBe(
-      RequestMethod.GET,
-    );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, UsersController.prototype.getMe),
+    ).toBe("/");
+    expect(
+      Reflect.getMetadata(METHOD_METADATA, UsersController.prototype.getMe),
+    ).toBe(RequestMethod.GET);
   });
 
   it("declares PATCH /me", () => {
-    expect(Reflect.getMetadata(PATH_METADATA, UsersController.prototype.updateProfile)).toBe(
-      "/",
-    );
     expect(
-      Reflect.getMetadata(METHOD_METADATA, UsersController.prototype.updateProfile),
+      Reflect.getMetadata(
+        PATH_METADATA,
+        UsersController.prototype.updateProfile,
+      ),
+    ).toBe("/");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        UsersController.prototype.updateProfile,
+      ),
     ).toBe(RequestMethod.PATCH);
   });
 

@@ -14,8 +14,9 @@ export class ClerkService {
     this.client = secretKey
       ? createClerkClient({
           secretKey,
-          publishableKey:
-            this.configService.get<string>("CLERK_PUBLISHABLE_KEY"),
+          publishableKey: this.configService.get<string>(
+            "CLERK_PUBLISHABLE_KEY",
+          ),
         })
       : null;
   }

@@ -24,10 +24,7 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  Logger.log(
-    `api_v2 listening on http://localhost:${port}`,
-    "Bootstrap",
-  );
+  Logger.log(`api_v2 listening on http://localhost:${port}`, "Bootstrap");
 }
 
 void bootstrap();

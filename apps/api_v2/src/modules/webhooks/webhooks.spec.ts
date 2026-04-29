@@ -11,12 +11,20 @@ describe("WebhooksController", () => {
   });
 
   it("declares POST /webhooks/clerk", () => {
-    expect(Reflect.getMetadata(PATH_METADATA, WebhooksController)).toBe("webhooks");
+    expect(Reflect.getMetadata(PATH_METADATA, WebhooksController)).toBe(
+      "webhooks",
+    );
     expect(
-      Reflect.getMetadata(PATH_METADATA, WebhooksController.prototype.handleClerkWebhook),
+      Reflect.getMetadata(
+        PATH_METADATA,
+        WebhooksController.prototype.handleClerkWebhook,
+      ),
     ).toBe("clerk");
     expect(
-      Reflect.getMetadata(METHOD_METADATA, WebhooksController.prototype.handleClerkWebhook),
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        WebhooksController.prototype.handleClerkWebhook,
+      ),
     ).toBe(RequestMethod.POST);
   });
 });

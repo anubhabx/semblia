@@ -4,12 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @workspace/database build && tsx watch src/main.ts",
-    "build": "pnpm --filter @workspace/database build && tsc -p tsconfig.json",
+    "dev": "pnpm --filter @workspace/database build && nest start --watch",
+    "build": "pnpm --filter @workspace/database build && nest build",
     "start": "node dist/src/main.js",
+    "start:prod": "node dist/src/main.js",
+    "start:debug": "pnpm --filter @workspace/database build && nest start --debug --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,json,md}\"",
+    "smoke:start": "node scripts/smoke-start.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.2.8",
@@ -28,10 +35,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.0.10",
     "@nestjs/testing": "^11.1.18",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.9",
+    "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2",
     "tsx": "^4.21.0",
     "typescript": "5.7.3",
     "vitest": "^3.2.4"

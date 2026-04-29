@@ -28,14 +28,18 @@ export class ResponseInterceptor implements NestInterceptor {
             ? (value as Record<string, unknown>)
             : null;
         const hasWrappedShape =
-          record !== null && "data" in record && Object.keys(record).length <= 2;
+          record !== null &&
+          "data" in record &&
+          Object.keys(record).length <= 2;
 
         return {
           success: true,
           data: hasWrappedShape ? record.data : value,
           meta: {
             timestamp,
-            ...(hasWrappedShape && record.meta && typeof record.meta === "object"
+            ...(hasWrappedShape &&
+            record.meta &&
+            typeof record.meta === "object"
               ? (record.meta as Record<string, unknown>)
               : {}),
           },

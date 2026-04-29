@@ -12,11 +12,11 @@ describe("FormsController", () => {
 
   it("declares GET /forms/project/:projectId", () => {
     expect(Reflect.getMetadata(PATH_METADATA, FormsController)).toBe("forms");
-    expect(Reflect.getMetadata(PATH_METADATA, FormsController.prototype.list)).toBe(
-      "project/:projectId",
-    );
-    expect(Reflect.getMetadata(METHOD_METADATA, FormsController.prototype.list)).toBe(
-      RequestMethod.GET,
-    );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, FormsController.prototype.list),
+    ).toBe("project/:projectId");
+    expect(
+      Reflect.getMetadata(METHOD_METADATA, FormsController.prototype.list),
+    ).toBe(RequestMethod.GET);
   });
 });

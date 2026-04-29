@@ -35,7 +35,9 @@ export const createWidgetBodySchema = z.object({
 
 export const updateWidgetBodySchema = createWidgetBodySchema.partial();
 
-export type ProjectWidgetsParamsDto = z.infer<typeof projectWidgetsParamsSchema>;
+export type ProjectWidgetsParamsDto = z.infer<
+  typeof projectWidgetsParamsSchema
+>;
 export type WidgetIdParamsDto = z.infer<typeof widgetIdParamsSchema>;
 export type WallSlugParamsDto = z.infer<typeof wallSlugParamsSchema>;
 export type CreateWidgetBodyDto = z.infer<typeof createWidgetBodySchema>;

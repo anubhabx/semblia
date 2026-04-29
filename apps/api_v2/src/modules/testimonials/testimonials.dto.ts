@@ -3,7 +3,9 @@ import { paginationQuerySchema } from "../../common/dto/pagination.dto.js";
 
 export const testimonialsListQuerySchema = paginationQuerySchema.extend({
   projectId: z.string().trim().min(1),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED", "FLAGGED", "ALL"]).optional(),
+  status: z
+    .enum(["PENDING", "APPROVED", "REJECTED", "FLAGGED", "ALL"])
+    .optional(),
   type: z.enum(["TEXT", "VIDEO", "AUDIO", "ALL"]).optional(),
   search: z.string().trim().optional(),
   sort: z.enum(["newest", "oldest", "rating_desc", "rating_asc"]).optional(),
@@ -44,12 +46,24 @@ export const createPublicTestimonialBodySchema = z.object({
   rating: z.number().int().min(1).max(10).nullable().optional(),
 });
 
-export type TestimonialsListQueryDto = z.infer<typeof testimonialsListQuerySchema>;
-export type TestimonialDetailParamsDto = z.infer<typeof testimonialDetailParamsSchema>;
-export type TestimonialDetailQueryDto = z.infer<typeof testimonialDetailQuerySchema>;
-export type ModerationActionParamsDto = z.infer<typeof moderationActionParamsSchema>;
-export type PublishTestimonialBodyDto = z.infer<typeof publishTestimonialBodySchema>;
-export type PublicProjectSlugParamsDto = z.infer<typeof publicProjectSlugParamsSchema>;
+export type TestimonialsListQueryDto = z.infer<
+  typeof testimonialsListQuerySchema
+>;
+export type TestimonialDetailParamsDto = z.infer<
+  typeof testimonialDetailParamsSchema
+>;
+export type TestimonialDetailQueryDto = z.infer<
+  typeof testimonialDetailQuerySchema
+>;
+export type ModerationActionParamsDto = z.infer<
+  typeof moderationActionParamsSchema
+>;
+export type PublishTestimonialBodyDto = z.infer<
+  typeof publishTestimonialBodySchema
+>;
+export type PublicProjectSlugParamsDto = z.infer<
+  typeof publicProjectSlugParamsSchema
+>;
 export type CreatePublicTestimonialBodyDto = z.infer<
   typeof createPublicTestimonialBodySchema
 >;
