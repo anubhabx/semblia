@@ -25,35 +25,35 @@ beforeEach(() => {
 describe("<StudioControls /> — rendering", () => {
   it("renders the header with Form Studio branding", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByText("Form Studio")).toBeInTheDocument();
-    expect(screen.getByText(/v0\.5/)).toBeInTheDocument();
+    expect(screen.getByText("Form Studio")).not.toBeNull();
+    expect(screen.getByText(/v0\.5/)).not.toBeNull();
   });
 
   it("renders device toggle pills (Desktop, Tablet, Mobile)", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByRole("button", { name: "Desktop" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tablet" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mobile" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desktop" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Tablet" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Mobile" })).not.toBeNull();
   });
 
   it("renders Remix and Reset buttons", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByRole("button", { name: /Remix/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Reset/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Remix/ })).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Reset/ })).not.toBeNull();
   });
 
   it("renders collapsible sections", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByText("House styles")).toBeInTheDocument();
-    expect(screen.getByText("Typography")).toBeInTheDocument();
-    expect(screen.getByText("Color")).toBeInTheDocument();
-    expect(screen.getByText("Shape & density")).toBeInTheDocument();
+    expect(screen.getByText("House styles")).not.toBeNull();
+    expect(screen.getByText("Typography")).not.toBeNull();
+    expect(screen.getByText("Color")).not.toBeNull();
+    expect(screen.getByText("Shape & density")).not.toBeNull();
     expect(
       screen.getByText("Static shell mode. Styling controls only."),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Layout")).not.toBeInTheDocument();
-    expect(screen.queryByText("Content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Questions & Logic")).not.toBeInTheDocument();
+    ).not.toBeNull();
+    expect(screen.queryByText("Layout")).toBeNull();
+    expect(screen.queryByText("Content")).toBeNull();
+    expect(screen.queryByText("Questions & Logic")).toBeNull();
   });
 
   it("returns null when formId has no snapshot", () => {
@@ -88,10 +88,10 @@ describe("<StudioControls /> — section collapse/expand", () => {
 describe("<StudioControls /> — color & typography", () => {
   it("renders color inputs for each design token", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByText("Background")).toBeInTheDocument();
-    expect(screen.getByText("Surface")).toBeInTheDocument();
-    expect(screen.getByText("Ink")).toBeInTheDocument();
-    expect(screen.getByText("Accent")).toBeInTheDocument();
+    expect(screen.getByText("Background")).not.toBeNull();
+    expect(screen.getByText("Surface")).not.toBeNull();
+    expect(screen.getByText("Ink")).not.toBeNull();
+    expect(screen.getByText("Accent")).not.toBeNull();
   });
 
   it("updates background color via text input", () => {
@@ -110,11 +110,11 @@ describe("<StudioControls /> — color & typography", () => {
 describe("<StudioControls /> — preset cards", () => {
   it("renders style preset cards", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.getByText("Editorial")).toBeInTheDocument();
-    expect(screen.getByText("Neo-Brutalist")).toBeInTheDocument();
+    expect(screen.getByText("Editorial")).not.toBeNull();
+    expect(screen.getByText("Neo-Brutalist")).not.toBeNull();
     // "Soft" may appear elsewhere (e.g. Shadow "Soft" pill), so use getAllByText
     expect(screen.getAllByText("Soft").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Noir")).toBeInTheDocument();
+    expect(screen.getByText("Noir")).not.toBeNull();
   });
 
   it("applies a preset when clicked", () => {
@@ -130,11 +130,9 @@ describe("<StudioControls /> — preset cards", () => {
 describe("<StudioControls /> — removed form builder surfaces", () => {
   it("does not render layout thumbnails or question controls", () => {
     render(<StudioControls formId={formId} />);
-    expect(screen.queryByText("Classic")).not.toBeInTheDocument();
-    expect(screen.queryByText("Hero Split")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Add question/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Classic")).toBeNull();
+    expect(screen.queryByText("Hero Split")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Add question/ })).toBeNull();
   });
 });
 

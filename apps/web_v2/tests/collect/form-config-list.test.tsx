@@ -26,7 +26,7 @@ describe("<FormConfigList />", () => {
 
     render(<FormConfigList slug="launchpad" />);
 
-    expect(await screen.findByText("Default Form")).toBeInTheDocument();
+    expect(await screen.findByText("Default Form")).not.toBeNull();
 
     const consoleOutput = errorSpy.mock.calls
       .flatMap((args) => args.map(String))

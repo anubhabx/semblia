@@ -38,10 +38,9 @@ describe("search placeholders", () => {
 
     await screen.findByLabelText("Search projects");
 
-    expect(screen.getByLabelText("Search projects")).toHaveAttribute(
-      "placeholder",
-      "Search projects…",
-    );
+    expect(
+      screen.getByLabelText("Search projects").getAttribute("placeholder"),
+    ).toBe("Search projects…");
   });
 
   it("renders the testimonials search placeholder with an ellipsis glyph", async () => {
@@ -49,9 +48,8 @@ describe("search placeholders", () => {
 
     await screen.findByText("No testimonials yet");
 
-    expect(screen.getByLabelText("Search testimonials")).toHaveAttribute(
-      "placeholder",
-      "Search testimonials…",
-    );
+    expect(
+      screen.getByLabelText("Search testimonials").getAttribute("placeholder"),
+    ).toBe("Search testimonials…");
   });
 });
