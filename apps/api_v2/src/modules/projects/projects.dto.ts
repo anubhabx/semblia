@@ -42,6 +42,12 @@ export const projectSlugParamsSchema = z.object({
   slug: z.string().trim().min(1),
 });
 
+export const memberRoleSchema = z.enum(["OWNER", "ADMIN", "EDITOR", "VIEWER"]);
+
+export const projectMemberParamsSchema = projectSlugParamsSchema.extend({
+  userId: z.string().trim().min(1),
+});
+
 export const listProjectsQuerySchema = paginationQuerySchema;
 
 export const createProjectBodySchema = z.object({
@@ -81,7 +87,24 @@ export const createProjectBodySchema = z.object({
 
 export const updateProjectBodySchema = createProjectBodySchema.partial();
 
+export const addProjectMemberBodySchema = z.object({
+  userId: z.string().trim().min(1),
+  role: memberRoleSchema.default("VIEWER"),
+});
+
+export const updateProjectMemberBodySchema = z.object({
+  role: memberRoleSchema,
+});
+
 export type ProjectSlugParamsDto = z.infer<typeof projectSlugParamsSchema>;
+export type MemberRoleDto = z.infer<typeof memberRoleSchema>;
+export type ProjectMemberParamsDto = z.infer<typeof projectMemberParamsSchema>;
 export type ListProjectsQueryDto = z.infer<typeof listProjectsQuerySchema>;
 export type CreateProjectBodyDto = z.infer<typeof createProjectBodySchema>;
 export type UpdateProjectBodyDto = z.infer<typeof updateProjectBodySchema>;
+export type AddProjectMemberBodyDto = z.infer<
+  typeof addProjectMemberBodySchema
+>;
+export type UpdateProjectMemberBodyDto = z.infer<
+  typeof updateProjectMemberBodySchema
+>;
