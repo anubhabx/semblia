@@ -43,22 +43,25 @@ model User {
 }
 
 model Project {
-  id                  String            @id @default(cuid())
-  userId              String
-  name                String            @db.VarChar(255)
-  shortDescription    String?           @db.VarChar(500)
-  description         String?           @db.Text
-  slug                String            @unique @db.VarChar(255)
-  logoUrl             String?           @db.VarChar(1000)
-  projectType         ProjectType?      @default(OTHER)
-  websiteUrl          String?           @db.VarChar(1000)
-  collectionFormUrl   String?           @db.VarChar(1000)
-  brandColorPrimary   String?           @db.VarChar(7) // Hex color code
-  brandColorSecondary String?           @db.VarChar(7) // Hex color code
-  socialLinks         Json? // { twitter: "...", linkedin: "...", github: "..." }
-  tags                String[] // Array of tags for internal categorization
-  visibility          ProjectVisibility @default(PRIVATE)
-  isActive            Boolean           @default(true)
+  id                     String            @id @default(cuid())
+  userId                 String
+  name                   String            @db.VarChar(255)
+  shortDescription       String?           @db.VarChar(500)
+  description            String?           @db.Text
+  slug                   String            @unique @db.VarChar(255)
+  logoUrl                String?           @db.VarChar(1000)
+  projectType            ProjectType?      @default(OTHER)
+  websiteUrl             String?           @db.VarChar(1000)
+  collectionFormUrl      String?           @db.VarChar(1000)
+  brandColorPrimary      String?           @db.VarChar(7) // Hex color code
+  brandColorSecondary    String?           @db.VarChar(7) // Hex color code
+  socialLinks            Json? // { twitter: "...", linkedin: "...", github: "..." }
+  tags                   String[] // Array of tags for internal categorization
+  allowedOrigins         String[]          @default([])
+  visibility             ProjectVisibility @default(PRIVATE)
+  isActive               Boolean           @default(true)
+  signingSecretEncrypted String?
+  signingSecretRotatedAt DateTime?
 
   // Auto-Moderation Settings
   autoModeration       Boolean @default(true) // Enable auto-moderation
@@ -88,13 +91,14 @@ model Project {
   // }
   formConfig Json?
 
-  testimonials           Testimonial[]
-  widgets                Widget[]
-  members                ProjectMember[]
-  collectionForms        CollectionForm[]
-  apiKeys                ApiKey[]
-  formImpressions        FormImpression[]
-  testimonialImpressions TestimonialImpression[]
+  testimonials              Testimonial[]
+  widgets                   Widget[]
+  members                   ProjectMember[]
+  publicSubmitIdempotencies PublicSubmitIdempotency[]
+  collectionForms           CollectionForm[]
+  apiKeys                   ApiKey[]
+  formImpressions           FormImpression[]
+  testimonialImpressions    TestimonialImpression[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -121,6 +125,22 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+}
+
+model PublicSubmitIdempotency {
+  id                 String   @id @default(cuid())
+  projectId          String
+  idempotencyKey     String   @db.VarChar(255)
+  payloadHash        String   @db.VarChar(64)
+  responseStatusCode Int
+  responseBody       Json
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, idempotencyKey])
+  @@index([expiresAt])
 }
 
 model Plan {

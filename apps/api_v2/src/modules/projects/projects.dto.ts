@@ -38,6 +38,98 @@ const formConfigSchema = z.object({
   allowFingerprintOptOut: z.boolean(),
 });
 
+const LOCALHOST_HTTP_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+  "::1",
+]);
+
+export const allowedOriginSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .superRefine((value, ctx) => {
+    let url: URL;
+
+    try {
+      url = new URL(value);
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must be a valid absolute URL",
+      });
+      return;
+    }
+
+    if (url.username || url.password) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must not include credentials",
+      });
+    }
+
+    if (value.includes("*")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must not include wildcards",
+      });
+    }
+
+    if (url.search) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must not include a query string",
+      });
+    }
+
+    if (url.hash) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must not include a fragment",
+      });
+    }
+
+    const hasTrailingSlashOrPath =
+      value.startsWith(`${url.origin}/`) && !url.search && !url.hash;
+    if (hasTrailingSlashOrPath) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must not include a trailing slash or path",
+      });
+    }
+
+    if (value !== url.origin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Allowed origin must be stored as exact scheme://host[:port]",
+      });
+    }
+
+    const protocol = url.protocol.toLowerCase();
+    const hostname = url.hostname.toLowerCase();
+    const isLocalHttp =
+      protocol === "http:" && LOCALHOST_HTTP_HOSTS.has(hostname);
+
+    if (protocol === "https:") {
+      return;
+    }
+
+    if (isLocalHttp && process.env.NODE_ENV !== "production") {
+      return;
+    }
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Allowed origin must use https://, except http://localhost, http://127.0.0.1, and http://[::1] outside production",
+    });
+  });
+
+export const replaceAllowedOriginsBodySchema = z.object({
+  origins: z.array(allowedOriginSchema).max(50),
+});
+
 export const projectSlugParamsSchema = z.object({
   slug: z.string().trim().min(1),
 });
@@ -107,4 +199,7 @@ export type AddProjectMemberBodyDto = z.infer<
 >;
 export type UpdateProjectMemberBodyDto = z.infer<
   typeof updateProjectMemberBodySchema
+>;
+export type ReplaceAllowedOriginsBodyDto = z.infer<
+  typeof replaceAllowedOriginsBodySchema
 >;

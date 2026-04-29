@@ -165,15 +165,13 @@ export class ProjectsService {
     }
   }
 
-  async getBySlug(userId: string, params: ProjectSlugParamsDto) {
+  async getBySlug(_userId: string, params: ProjectSlugParamsDto) {
     const project = await this.prisma.client.project.findUnique({
       where: { slug: params.slug },
       select: PROJECT_SELECT,
     });
 
     if (!project) throw new NotFoundException("Project not found");
-
-    await this.assertProjectMember(userId, project.id, project.userId);
 
     const pendingModeration = await this.prisma.client.testimonial.count({
       where: {
@@ -186,12 +184,11 @@ export class ProjectsService {
   }
 
   async update(
-    userId: string,
+    _userId: string,
     params: ProjectSlugParamsDto,
     body: UpdateProjectBodyDto,
   ) {
     const project = await this.getProjectOrThrow(params.slug);
-    await this.assertOwner(userId, project.id, project.userId);
 
     try {
       const updatedProject = await this.prisma.client.project.update({
@@ -249,9 +246,8 @@ export class ProjectsService {
     }
   }
 
-  async listMembers(userId: string, params: ProjectSlugParamsDto) {
+  async listMembers(_userId: string, params: ProjectSlugParamsDto) {
     const project = await this.getProjectOrThrow(params.slug);
-    await this.assertProjectMember(userId, project.id, project.userId);
 
     const members = await this.prisma.client.projectMember.findMany({
       where: { projectId: project.id },
@@ -263,12 +259,11 @@ export class ProjectsService {
   }
 
   async addMember(
-    userId: string,
+    _userId: string,
     params: ProjectSlugParamsDto,
     body: AddProjectMemberBodyDto,
   ) {
     const project = await this.getProjectOrThrow(params.slug);
-    await this.assertOwner(userId, project.id, project.userId);
 
     const targetUser = await this.prisma.client.user.findUnique({
       where: { id: body.userId },
@@ -297,12 +292,11 @@ export class ProjectsService {
   }
 
   async updateMember(
-    userId: string,
+    _userId: string,
     params: ProjectMemberParamsDto,
     body: UpdateProjectMemberBodyDto,
   ) {
     const project = await this.getProjectOrThrow(params.slug);
-    await this.assertOwner(userId, project.id, project.userId);
 
     const existingMember = await this.prisma.client.projectMember.findUnique({
       where: {
@@ -335,9 +329,8 @@ export class ProjectsService {
     }
   }
 
-  async removeMember(userId: string, params: ProjectMemberParamsDto) {
+  async removeMember(_userId: string, params: ProjectMemberParamsDto) {
     const project = await this.getProjectOrThrow(params.slug);
-    await this.assertOwner(userId, project.id, project.userId);
 
     const existingMember = await this.prisma.client.projectMember.findUnique({
       where: {
@@ -389,48 +382,42 @@ export class ProjectsService {
     return project;
   }
 
-  private async assertProjectMember(
-    userId: string,
-    projectId: string,
-    ownerUserId: string,
-  ) {
-    if (ownerUserId === userId) return;
-
-    const member = await this.prisma.client.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
-        },
-      },
-      select: { id: true },
+  async listAllowedOrigins(projectId: string): Promise<string[]> {
+    const project = await this.prisma.client.project.findUnique({
+      where: { id: projectId },
+      select: { allowedOrigins: true },
     });
 
-    if (!member) {
-      throw new ForbiddenException("You do not have access to this project");
+    if (!project) {
+      throw new NotFoundException("Project not found");
     }
+
+    return project.allowedOrigins;
   }
 
-  private async assertOwner(
-    userId: string,
+  async replaceAllowedOrigins(
     projectId: string,
-    ownerUserId: string,
-  ) {
-    if (ownerUserId === userId) return;
+    origins: string[],
+  ): Promise<string[]> {
+    const normalizedOrigins = [
+      ...new Map(
+        origins.map((origin) => {
+          const url = new URL(origin);
+          const hostname = url.hostname.toLowerCase();
+          const port = url.port ? `:${url.port}` : "";
+          const normalizedOrigin = `${url.protocol}//${hostname}${port}`;
+          return [normalizedOrigin, normalizedOrigin] as const;
+        }),
+      ).values(),
+    ].sort((left, right) => left.localeCompare(right));
 
-    const member = await this.prisma.client.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
-        },
-      },
-      select: { role: true },
+    const updatedProject = await this.prisma.client.project.update({
+      where: { id: projectId },
+      data: { allowedOrigins: normalizedOrigins },
+      select: { allowedOrigins: true },
     });
 
-    if (member?.role !== MemberRole.OWNER) {
-      throw new ForbiddenException("Only project owners can manage members");
-    }
+    return updatedProject.allowedOrigins;
   }
 
   private async assertCanChangeOwnerRole(

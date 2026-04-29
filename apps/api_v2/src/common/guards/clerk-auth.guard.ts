@@ -52,6 +52,7 @@ export class ClerkAuthGuard implements CanActivate {
 
     try {
       const payload = await verifyToken(token, verifyOptions);
+      request["user"] = { id: payload.sub };
       request["clerkUserId"] = payload.sub;
       return true;
     } catch {
