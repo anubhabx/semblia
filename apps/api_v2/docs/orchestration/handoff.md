@@ -107,15 +107,15 @@ These are non-negotiable; every build phase must end with all of these green:
 
 Ask the user before dispatching the listed phase:
 
-| Phase | Question |
-|---|---|
-| 3b (Projects) | Should `/v2/projects/:slug/members` (list/add/remove) endpoints ship in 3b or be held for a follow-up since web_v2 has no membership UI yet? Default plan: scaffold them in 3b, return real data, no UI consumer required. |
-| 3c (Widgets) | Confirm widget public-embed route shape. Phase 2 scaffolded `/v2/widgets/:widgetId/public`, `/v2/widgets/walls/:wallSlug`, and `/v2/widgets/embed/:widgetId` based on legacy. Are those the right URLs? |
-| 3d (Testimonials) | Confirm public submission route is `POST /v2/testimonials/public/projects/:slug` (slug-keyed, no API key) — or should it require an embed token / API key? |
-| 3e (Forms) | Same question for `POST /v2/forms/:formId/submissions` — is this expected to be unauthenticated and rate-limited only, or token-gated? |
-| 4a (Webhooks) | Razorpay webhook is scaffolded but billing is out of scope. Implement now (idempotency + ledger only, no business logic) or stub it until billing returns? |
-| 4b (Alerts/ops) | These have no web_v2 client calls. Confirm the orchestration plan: implement read-only Slack delivery + alert config persistence, leave UI surface entirely for a later pass. |
-| Cadence | Run remaining phases on autopilot (one delegation each, sequential, with checkpoint commits — user can revert any), or pause between phases for review? |
+| Phase | Question | Answer |
+|---|---| --- |
+| 3b (Projects) | Should `/v2/projects/:slug/members` (list/add/remove) endpoints ship in 3b or be held for a follow-up since web_v2 has no membership UI yet? Default plan: scaffold them in 3b, return real data, no UI consumer required. | Keep the endpoints ready. We shall add the UI in future refinements. |
+| 3c (Widgets) | Confirm widget public-embed route shape. Phase 2 scaffolded `/v2/widgets/:widgetId/public`, `/v2/widgets/walls/:wallSlug`, and `/v2/widgets/embed/:widgetId` based on legacy. Are those the right URLs? | We will adopt a new architecture of subdomain hostings. Or custom domains if the user add and verifies one. No legacy URLs will be used. The default subdomains will be at `<project-slug>.<feature[forms \| widgets \| walls]>.tresta.app` and an embed code for each widget will be provided. An SDK is also planned, but I need more research to start that development. |
+| 3d (Testimonials) | Confirm public submission route is `POST /v2/testimonials/public/projects/:slug` (slug-keyed, no API key) — or should it require an embed token / API key? | We will provide with self hosted endpoints, or a custom domain like how clerk operates. So, we will need to handle both the situations, the one where we are ones that hosts and collects the forms, and also, another way for the public endponits, that a user will send requests to programatically. If one single endpoint is able to handle both cases, well and good. But it would be better to actually follow the best priciples. |
+| 3e (Forms) | Same question for `POST /v2/forms/:formId/submissions` — is this expected to be unauthenticated and rate-limited only, or token-gated? | Same as above. |
+| 4a (Webhooks) | Razorpay webhook is scaffolded but billing is out of scope. Implement now (idempotency + ledger only, no business logic) or stub it until billing returns? | Purely scaffold now. |
+| 4b (Alerts/ops) | These have no web_v2 client calls. Confirm the orchestration plan: implement read-only Slack delivery + alert config persistence, leave UI surface entirely for a later pass. | Implement read-only Slack delivery + alert config persistence, leave UI surface entirely for a later pass. |
+| Cadence | Run remaining phases on autopilot (one delegation each, sequential, with checkpoint commits — user can revert any), or pause between phases for review? |  Pause between phases for review. |
 
 ## Open questions for future-me (Claude)
 
@@ -138,3 +138,7 @@ Then update `TaskList` to mark the phase `pending` again and re-dispatch with a 
 ## When to add a new phase
 
 If a delegated agent surfaces a contract gap that requires a separate cross-cutting change (e.g., "widgets need a new column"), don't fold it into the current phase. Stop, file a new task between the current phase and the next, and dispatch it as its own checkpoint commit. Phases are atomic for a reason.
+
+## Final note
+
+This is a one-way street. The v2 API rebuild is a full rewrite; there is no plan to merge it back into the legacy `apps/api`. Do not attempt to backport changes from `revamp/v2` into `main` or vice versa. Treat `revamp/v2` as an isolated line of development until cutover.
