@@ -7,96 +7,134 @@ import {
   Param,
   Patch,
   Post,
+  Req,
+  UseGuards,
 } from "@nestjs/common";
-import { Throttle, seconds } from "@nestjs/throttler";
+import { SkipThrottle, Throttle, seconds } from "@nestjs/throttler";
+import { Capability } from "../../common/authz/capabilities.js";
+import { CapabilityGuard } from "../../common/authz/capability.guard.js";
+import { RequireCapability } from "../../common/authz/require-capability.decorator.js";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
 import {
   createWidgetBodySchema,
+  publicWidgetParamsSchema,
   projectWidgetsParamsSchema,
   updateWidgetBodySchema,
   wallSlugParamsSchema,
-  widgetIdParamsSchema,
+  widgetParamsSchema,
   type CreateWidgetBodyDto,
   type ProjectWidgetsParamsDto,
+  type PublicWidgetParamsDto,
   type UpdateWidgetBodyDto,
   type WallSlugParamsDto,
-  type WidgetIdParamsDto,
+  type WidgetParamsDto,
 } from "./widgets.dto.js";
 import { WidgetsService } from "./widgets.service.js";
 
-@Controller("widgets")
+type ProjectRequest = { projectAccess?: { projectId: string } };
+
+@Controller("projects/:slug/widgets")
 export class WidgetsController {
   constructor(
     @Inject(WidgetsService) private readonly widgetsService: WidgetsService,
   ) {}
 
-  @Get("project/:projectId")
+  @Get()
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)
   list(
-    @CurrentUserId() userId: string,
+    @CurrentUserId() _userId: string,
     @Param(new ZodValidationPipe(projectWidgetsParamsSchema))
     params: ProjectWidgetsParamsDto,
+    @Req() request: ProjectRequest,
   ) {
-    return this.widgetsService.list(userId, params);
+    return this.widgetsService.list(params, request);
   }
 
   @Post()
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)
   create(
-    @CurrentUserId() userId: string,
+    @CurrentUserId() _userId: string,
+    @Param(new ZodValidationPipe(projectWidgetsParamsSchema))
+    params: ProjectWidgetsParamsDto,
     @Body(new ZodValidationPipe(createWidgetBodySchema))
     body: CreateWidgetBodyDto,
+    @Req() request: ProjectRequest,
   ) {
-    return this.widgetsService.create(userId, body);
+    return this.widgetsService.create(params, body, request);
+  }
+
+  @Get(":widgetId")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)
+  getById(
+    @CurrentUserId() _userId: string,
+    @Param(new ZodValidationPipe(widgetParamsSchema)) params: WidgetParamsDto,
+    @Req() request: ProjectRequest,
+  ) {
+    return this.widgetsService.getById(params, request);
   }
 
   @Patch(":widgetId")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)
   update(
-    @CurrentUserId() userId: string,
-    @Param(new ZodValidationPipe(widgetIdParamsSchema))
-    params: WidgetIdParamsDto,
+    @CurrentUserId() _userId: string,
+    @Param(new ZodValidationPipe(widgetParamsSchema)) params: WidgetParamsDto,
     @Body(new ZodValidationPipe(updateWidgetBodySchema))
     body: UpdateWidgetBodyDto,
+    @Req() request: ProjectRequest,
   ) {
-    return this.widgetsService.update(userId, params, body);
+    return this.widgetsService.update(params, body, request);
   }
 
   @Delete(":widgetId")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)
   delete(
-    @CurrentUserId() userId: string,
-    @Param(new ZodValidationPipe(widgetIdParamsSchema))
-    params: WidgetIdParamsDto,
+    @CurrentUserId() _userId: string,
+    @Param(new ZodValidationPipe(widgetParamsSchema)) params: WidgetParamsDto,
+    @Req() request: ProjectRequest,
   ) {
-    return this.widgetsService.delete(userId, params);
+    return this.widgetsService.delete(params, request);
   }
+}
+
+@Controller("widget-embeds")
+export class PublicWidgetEmbedsController {
+  constructor(
+    @Inject(WidgetsService) private readonly widgetsService: WidgetsService,
+  ) {}
 
   @Public()
-  @Throttle({ default: { limit: 300, ttl: seconds(60) } })
-  @Get(":widgetId/public")
-  getPublic(
-    @Param(new ZodValidationPipe(widgetIdParamsSchema))
-    params: WidgetIdParamsDto,
+  @SkipThrottle()
+  @Throttle({ "public-list": { limit: 120, ttl: seconds(60) } })
+  @Get(":widgetId")
+  getById(
+    @Param(new ZodValidationPipe(publicWidgetParamsSchema))
+    params: PublicWidgetParamsDto,
   ) {
-    return this.widgetsService.getPublic(params);
+    return this.widgetsService.getPublicEmbed(params);
   }
+}
+
+@Controller("walls")
+export class PublicWallsController {
+  constructor(
+    @Inject(WidgetsService) private readonly widgetsService: WidgetsService,
+  ) {}
 
   @Public()
-  @Throttle({ default: { limit: 300, ttl: seconds(60) } })
-  @Get("walls/:wallSlug")
-  getPublicWall(
+  @SkipThrottle()
+  @Throttle({ "public-list": { limit: 120, ttl: seconds(60) } })
+  @Get(":wallSlug")
+  getBySlug(
     @Param(new ZodValidationPipe(wallSlugParamsSchema))
     params: WallSlugParamsDto,
   ) {
     return this.widgetsService.getPublicWall(params);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 300, ttl: seconds(60) } })
-  @Get("embed/:widgetId")
-  renderEmbed(
-    @Param(new ZodValidationPipe(widgetIdParamsSchema))
-    params: WidgetIdParamsDto,
-  ) {
-    return this.widgetsService.renderEmbed(params);
   }
 }
