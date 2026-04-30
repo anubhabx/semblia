@@ -1,6 +1,6 @@
 # v2 API Rebuild — Orchestration Handoff
 
-> Last updated: 2026-04-29. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
+> Last updated: 2026-04-30. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
 
 ## Mission
 
@@ -39,7 +39,7 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 3a | Users domain implementation | ✓ done | `35e8f08` |
 | 3b | Projects domain implementation | ✓ done | `d8004b0` |
 | 3b.5 | Public-routes prerequisites: schema deltas + crypto/authz infra | ✓ done | `d562bb4` |
-| 3c | Widgets domain implementation | pending | — |
+| 3c | Widgets domain implementation | ✓ done | `ecdea31` |
 | 3d | Testimonials domain implementation | ✓ done | `5a9e784` |
 | 3e | Forms domain implementation | ✓ done | `88c200f` |
 | 4a | Webhooks (Clerk + Razorpay if added) | ✓ done | `2de8edc` |
@@ -53,7 +53,7 @@ Recommended sequencing for remaining phases (cleanest contract first, deepest la
 4. **3d Testimonials** → ✓ done. `/v2/projects/:slug/testimonials/*` (capability-guarded) + canonical public submit/list at `/v2/testimonials/public/projects/:slug` with HMAC waterfall, Origin allowlist (derived default + stored allowlist), idempotency ledger (replay/409), 60s Redis-cached safe-projection list, split rate-limit buckets (10/min browser, 120/min HMAC), auto-mod honoring `project.autoModeration` + `autoApproveVerified`.
 5. **4a Webhooks** → ✓ done. Idempotent ledger writes for Clerk (`ClerkWebhookEvent` keyed on `svix-id`) and Razorpay (`PaymentWebhookEvent`, deterministic `providerEventId = sha256(event.created_at.rawBody).slice(0,64)`); Razorpay is purely scaffolded (no billing logic), Clerk re-runs `upsertFromClerk` only on first delivery or after a previously-`failed` row, short-circuits otherwise. Svix + HMAC signature verification untouched.
 6. **3e Forms** → ✓ done. Project-scoped CRUD `/v2/projects/:slug/forms[/:formId]` (MANAGE_PROJECT). Public render `GET /v2/forms/public/projects/:slug` (active forms only, safe projection, 60s Redis cache, single key per slug). Public submit `POST /v2/forms/public/projects/:slug/:formId/submissions` reuses the testimonials `PublicSubmitTrustService` + throttler guard, the `PublicSubmitIdempotency` ledger (24h, 409 on payload mismatch), and the same auto-mod policy — creates a `Testimonial` with `formId` set and busts the public testimonials cache. Submission flow duplicates the testimonials create path intentionally; consolidation is a follow-up. `body.answers` is validated but not yet persisted.
-7. **3c Widgets** → deepest. Normalized scalar columns; embed/wall public surface (subdomain routing, see public-routes handoff §10, §17.8).
+7. **3c Widgets** → ✓ done. Project-scoped CRUD `/v2/projects/:slug/widgets[/:widgetId]` (MANAGE_PUBLISH_SURFACES). Public embed payload `GET /v2/widget-embeds/:widgetId` and public wall payload `GET /v2/walls/:wallSlug` are split from dashboard management, use safe testimonial projections without author emails, short Redis TTL caching, normalized/reserved-word-protected global wall slugs, and best-effort cache busting on mutations. Hosted widget pages remain deferred; embeddable widgets stay script/embed-driven.
 8. **4b Alerts + ops/admin** → groundwork only. No web_v2 client calls yet.
 9. **5 Cross-cutting validation** → final.
 
