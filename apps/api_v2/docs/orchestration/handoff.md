@@ -42,7 +42,7 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 3c | Widgets domain implementation | pending | — |
 | 3d | Testimonials domain implementation | ✓ done | `5a9e784` |
 | 3e | Forms domain implementation | pending | — |
-| 4a | Webhooks (Clerk + Razorpay if added) | pending | — |
+| 4a | Webhooks (Clerk + Razorpay if added) | ✓ done | _pending commit_ |
 | 4b | Alerts + ops/admin | pending | — |
 | 5 | Cross-cutting validation | pending | — |
 
@@ -51,7 +51,7 @@ Recommended sequencing for remaining phases (cleanest contract first, deepest la
 2. **3b Projects** → ✓ done. Adds ProjectMember owner-row at create.
 3. **3b.5 Public-routes prerequisites** → ✓ done. Schema deltas + crypto + capability guard (read `docs/tresta-v2-architecture-handoff-public-routes.md`).
 4. **3d Testimonials** → ✓ done. `/v2/projects/:slug/testimonials/*` (capability-guarded) + canonical public submit/list at `/v2/testimonials/public/projects/:slug` with HMAC waterfall, Origin allowlist (derived default + stored allowlist), idempotency ledger (replay/409), 60s Redis-cached safe-projection list, split rate-limit buckets (10/min browser, 120/min HMAC), auto-mod honoring `project.autoModeration` + `autoApproveVerified`.
-5. **4a Webhooks** → clean. Svix verification already working.
+5. **4a Webhooks** → ✓ done. Idempotent ledger writes for Clerk (`ClerkWebhookEvent` keyed on `svix-id`) and Razorpay (`PaymentWebhookEvent`, deterministic `providerEventId = sha256(event.created_at.rawBody).slice(0,64)`); Razorpay is purely scaffolded (no billing logic), Clerk re-runs `upsertFromClerk` only on first delivery or after a previously-`failed` row, short-circuits otherwise. Svix + HMAC signature verification untouched.
 6. **3e Forms** → moderate. Studio config is now normalized as `FormConfig`; submission endpoint feeds testimonials.
 7. **3c Widgets** → deepest. Normalized scalar columns; embed/wall public surface (subdomain routing, see public-routes handoff §10, §17.8).
 8. **4b Alerts + ops/admin** → groundwork only. No web_v2 client calls yet.

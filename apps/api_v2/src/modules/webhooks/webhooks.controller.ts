@@ -22,7 +22,6 @@ import {
   razorpayWebhookBodySchema,
   type RazorpayWebhookBodyDto,
 } from "./webhooks.dto.js";
-import { UsersService } from "../users/users.service.js";
 import { WebhooksService } from "./webhooks.service.js";
 
 type WebhookRequest = Request & {
@@ -36,8 +35,6 @@ export class WebhooksController {
   constructor(
     @Inject(WebhooksService)
     private readonly webhooksService: WebhooksService,
-    @Inject(UsersService)
-    private readonly usersService: UsersService,
     @Inject(ConfigService)
     private readonly configService: ConfigService,
   ) {}
@@ -74,11 +71,7 @@ export class WebhooksController {
       throw new UnauthorizedException("Invalid webhook signature");
     }
 
-    if (event.type === "user.created" || event.type === "user.updated") {
-      await this.usersService.upsertFromClerk(event.data);
-    }
-
-    return { received: true };
+    return this.webhooksService.handleClerkEvent(event, svixId);
   }
 
   @Public()
@@ -106,7 +99,10 @@ export class WebhooksController {
       throw new UnauthorizedException("Invalid Razorpay webhook signature");
     }
 
-    return this.webhooksService.handleRazorpayWebhook(body);
+    return this.webhooksService.handleRazorpayWebhook({
+      body,
+      rawBody: req.rawBody,
+    });
   }
 
   private getHeaderValue(value: string | string[] | undefined) {

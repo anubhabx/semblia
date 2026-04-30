@@ -27,4 +27,22 @@ describe("WebhooksController", () => {
       ),
     ).toBe(RequestMethod.POST);
   });
+
+  it("declares POST /webhooks/razorpay", () => {
+    expect(Reflect.getMetadata(PATH_METADATA, WebhooksController)).toBe(
+      "webhooks",
+    );
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        WebhooksController.prototype.handleRazorpayWebhook,
+      ),
+    ).toBe("razorpay");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        WebhooksController.prototype.handleRazorpayWebhook,
+      ),
+    ).toBe(RequestMethod.POST);
+  });
 });
