@@ -41,7 +41,7 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 3b.5 | Public-routes prerequisites: schema deltas + crypto/authz infra | ✓ done | `d562bb4` |
 | 3c | Widgets domain implementation | pending | — |
 | 3d | Testimonials domain implementation | ✓ done | `5a9e784` |
-| 3e | Forms domain implementation | ✓ done | _pending commit_ |
+| 3e | Forms domain implementation | ✓ done | `88c200f` |
 | 4a | Webhooks (Clerk + Razorpay if added) | ✓ done | `2de8edc` |
 | 4b | Alerts + ops/admin | pending | — |
 | 5 | Cross-cutting validation | pending | — |
