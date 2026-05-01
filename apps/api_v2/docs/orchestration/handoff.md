@@ -1,6 +1,6 @@
 # v2 API Rebuild — Orchestration Handoff
 
-> Last updated: 2026-04-30. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
+> Last updated: 2026-05-01. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
 
 ## Mission
 
@@ -43,7 +43,7 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 3d | Testimonials domain implementation | ✓ done | `5a9e784` |
 | 3e | Forms domain implementation | ✓ done | `88c200f` |
 | 4a | Webhooks (Clerk + Razorpay if added) | ✓ done | `2de8edc` |
-| 4b | Alerts + ops/admin | pending | — |
+| 4b | Alerts + ops/admin | ✓ done | `f95e784` |
 | 5 | Cross-cutting validation | pending | — |
 
 Recommended sequencing for remaining phases (cleanest contract first, deepest last):
