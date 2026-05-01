@@ -21,6 +21,21 @@ import { HybridStdioServerTransport } from "./hybrid-stdio-transport.js";
 import { OpenCodeClient, summarizeMessage } from "./opencode-client.js";
 
 const responseFormatSchema = z.enum(["markdown", "json"]);
+const effortLevelSchema = z.enum(["minimal", "low", "medium", "high", "max"]);
+const variantInputSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .optional()
+  .describe(
+    "Raw OpenCode variant value to forward, such as `minimal`, `high`, or `max`.",
+  );
+const effortLevelInputSchema = effortLevelSchema
+  .optional()
+  .describe(
+    "Convenience reasoning-effort selector. This is mapped to OpenCode's `variant` field for Claude, Codex, and other model families.",
+  );
 
 const statusOutputSchema = z.object({
   cliAvailable: z.boolean(),
@@ -40,8 +55,18 @@ const agentOutputSchema = z.object({
   ),
 });
 
+const modelDetailSchema = z.object({
+  model: z.string(),
+  providerId: z.string(),
+  modelId: z.string(),
+  name: z.string().nullable(),
+  family: z.string().nullable(),
+  variants: z.array(z.string()),
+});
+
 const modelsOutputSchema = z.object({
   models: z.array(z.string()),
+  modelDetails: z.array(modelDetailSchema),
 });
 
 const sessionSummarySchema = z.object({
@@ -66,6 +91,7 @@ const messageSummarySchema = z.object({
   id: z.string(),
   role: z.string().nullable(),
   agent: z.string().nullable(),
+  variant: z.string().nullable(),
   modelID: z.string().nullable(),
   providerID: z.string().nullable(),
   text: z.string(),
@@ -81,6 +107,7 @@ const sendMessageOutputSchema = z.object({
   actualAgent: z.string().nullable(),
   modelId: z.string().nullable(),
   providerId: z.string().nullable(),
+  variant: z.string().nullable(),
   finalText: z.string(),
 });
 
@@ -91,6 +118,7 @@ const delegateOutputSchema = z.object({
   actualAgent: z.string().nullable(),
   providerId: z.string(),
   modelId: z.string(),
+  variant: z.string().nullable(),
   eventTypes: z.array(z.string()),
   finalText: z.string(),
   messageCount: z.number(),
@@ -181,7 +209,7 @@ server.registerTool(
   {
     title: "List OpenCode Models",
     description:
-      "List OpenCode models available from configured providers. Optionally filter to a single provider, for example `opencode`, `openai`, or `amazon-bedrock`.",
+      "List OpenCode models available from configured providers. The response preserves the plain model list and also includes per-model variant metadata when OpenCode exposes it. Optionally filter to a single provider, for example `opencode`, `openai`, or `amazon-bedrock`.",
     inputSchema: z.object({
       provider: z
         .string()
@@ -203,8 +231,12 @@ server.registerTool(
     },
   },
   async ({ provider, response_format }) => {
-    const output = { models: await client.listModels(provider) };
-    return successResult(output, formatModels(output.models, response_format));
+    const modelDetails = await client.listModels(provider);
+    const output = {
+      models: modelDetails.map((model) => model.model),
+      modelDetails,
+    };
+    return successResult(output, formatModels(output, response_format));
   },
 );
 
@@ -315,6 +347,7 @@ server.registerTool(
       id: message.info.id,
       role: message.info.role ?? null,
       agent: message.info.agent ?? null,
+      variant: message.info.variant ?? null,
       modelID: message.info.modelID ?? null,
       providerID: message.info.providerID ?? null,
       text: summarizeMessage(message).text,
@@ -353,6 +386,8 @@ server.registerTool(
         .min(1)
         .default(DEFAULT_MODEL_ID)
         .describe("Model ID, such as `nemotron-3-super-free`."),
+      effort_level: effortLevelInputSchema,
+      variant: variantInputSchema,
       system: z
         .string()
         .min(1)
@@ -367,12 +402,14 @@ server.registerTool(
       openWorldHint: true,
     },
   },
-  async ({ session_id, prompt, agent, provider_id, model_id, system }) => {
+  async ({ session_id, prompt, agent, provider_id, model_id, effort_level, variant, system }) => {
+    const resolvedVariant = resolveVariantInput({ effort_level, variant });
     const message = await client.sendMessage({
       sessionId: session_id,
       prompt,
       agent,
       model: { providerID: provider_id, modelID: model_id },
+      variant: resolvedVariant,
       system,
     });
 
@@ -381,6 +418,7 @@ server.registerTool(
       actualAgent: message.info.agent ?? null,
       modelId: message.info.modelID ?? null,
       providerId: message.info.providerID ?? null,
+      variant: message.info.variant ?? resolvedVariant ?? null,
       finalText: summarizeMessage(message).text,
     };
 
@@ -389,6 +427,7 @@ server.registerTool(
       [
         `OpenCode responded in session ${session_id}.`,
         output.actualAgent ? `Agent: ${output.actualAgent}` : null,
+        output.variant ? `Variant: ${output.variant}` : null,
         output.finalText,
       ]
         .filter(Boolean)
@@ -425,6 +464,8 @@ server.registerTool(
         .min(1)
         .default(DEFAULT_MODEL_ID)
         .describe("Model ID, such as `nemotron-3-super-free`."),
+      effort_level: effortLevelInputSchema,
+      variant: variantInputSchema,
       wait_timeout_ms: z
         .number()
         .int()
@@ -441,12 +482,14 @@ server.registerTool(
       openWorldHint: true,
     },
   },
-  async ({ prompt, session_id, agent, provider_id, model_id, wait_timeout_ms }) => {
+  async ({ prompt, session_id, agent, provider_id, model_id, effort_level, variant, wait_timeout_ms }) => {
+    const resolvedVariant = resolveVariantInput({ effort_level, variant });
     const output = await client.delegateTask({
       prompt,
       sessionId: session_id,
       agent,
       model: { providerID: provider_id, modelID: model_id },
+      variant: resolvedVariant,
       waitTimeoutMs: wait_timeout_ms,
     });
 
@@ -566,18 +609,27 @@ function formatAgents(
   ].join("\n");
 }
 
-function formatModels(models: string[], format: ResponseFormat): string {
+function formatModels(
+  output: z.infer<typeof modelsOutputSchema>,
+  format: ResponseFormat,
+): string {
   if (format === "json") {
-    return JSON.stringify({ models }, null, 2);
+    return JSON.stringify(output, null, 2);
   }
 
-  if (models.length === 0) {
+  if (output.models.length === 0) {
     return "No OpenCode models found.";
   }
 
-  return ["# OpenCode Models", "", ...models.map((model) => `- ${model}`)].join(
-    "\n",
-  );
+  return [
+    "# OpenCode Models",
+    "",
+    ...output.modelDetails.map((model) =>
+      model.variants.length > 0
+        ? `- ${model.model} | variants: ${model.variants.join(", ")}`
+        : `- ${model.model}`,
+    ),
+  ].join("\n");
 }
 
 function formatSessions(
@@ -622,6 +674,7 @@ function formatMessages(
     ...output.messages.flatMap((message) => [
       `## ${message.role ?? "unknown"} (${message.id})`,
       message.agent ? `- Agent: ${message.agent}` : null,
+      message.variant ? `- Variant: ${message.variant}` : null,
       message.modelID ? `- Model: ${message.providerID ?? "unknown"}/${message.modelID}` : null,
       message.text || "(no text content)",
       "",
@@ -640,6 +693,7 @@ function formatDelegateResult(
     `Requested agent: ${output.requestedAgent}`,
     `Actual agent: ${output.actualAgent ?? "unknown"}`,
     `Model: ${output.providerId}/${output.modelId}`,
+    output.variant ? `Variant: ${output.variant}` : null,
     `Events: ${output.eventTypes.join(", ") || "none"}`,
     output.errorMessage ? `Error: ${output.errorMessage}` : null,
     "",
@@ -647,4 +701,17 @@ function formatDelegateResult(
   ]
     .filter((line): line is string => Boolean(line))
     .join("\n");
+}
+
+function resolveVariantInput(input: {
+  effort_level?: z.infer<typeof effortLevelSchema>;
+  variant?: string;
+}): string | undefined {
+  if (input.variant && input.effort_level && input.variant !== input.effort_level) {
+    throw new Error(
+      `Conflicting OpenCode variant settings: variant=${input.variant} and effort_level=${input.effort_level}. Provide one value or make them match.`,
+    );
+  }
+
+  return input.variant ?? input.effort_level;
 }

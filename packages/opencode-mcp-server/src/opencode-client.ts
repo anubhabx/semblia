@@ -8,6 +8,7 @@ import type {
   OpenCodeMessage,
   OpenCodeMessageInfo,
   OpenCodeModelRef,
+  OpenCodeModelSummary,
   OpenCodeSession,
   OpenCodeSessionListItem,
   OpenCodeStatus,
@@ -20,11 +21,20 @@ type CommandResult = {
   exitCode: number;
 };
 
+type OpenCodeVerboseModelRecord = {
+  id?: string;
+  providerID?: string;
+  name?: string;
+  family?: string;
+  variants?: Record<string, unknown>;
+};
+
 type DelegateTaskInput = {
   prompt: string;
   sessionId?: string;
   agent: string;
   model: OpenCodeModelRef;
+  variant?: string;
   waitTimeoutMs?: number;
 };
 
@@ -33,6 +43,7 @@ type SendMessageInput = {
   prompt: string;
   agent?: string;
   model?: OpenCodeModelRef;
+  variant?: string;
   system?: string;
 };
 
@@ -81,15 +92,37 @@ export class OpenCodeClient {
     return agents;
   }
 
-  async listModels(provider?: string): Promise<string[]> {
+  async listModels(provider?: string): Promise<OpenCodeModelSummary[]> {
     const args = ["models"];
     if (provider) args.push(provider);
+
+    try {
+      const verboseResult = await this.runCommand([...args, "--verbose"]);
+      const parsed = parseVerboseModelOutput(verboseResult.stdout);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // Fall back to the basic list when verbose output is unavailable.
+    }
+
     const result = await this.runCommand(args);
 
     return result.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((line) => /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+$/.test(line));
+      .filter(isModelReference)
+      .map((model) => {
+        const { providerId, modelId } = splitModelReference(model);
+        return {
+          model,
+          providerId,
+          modelId,
+          name: null,
+          family: null,
+          variants: [],
+        };
+      });
   }
 
   async listSessions(maxCount: number): Promise<OpenCodeSessionListItem[]> {
@@ -134,6 +167,7 @@ export class OpenCodeClient {
         body: JSON.stringify({
           agent: input.agent,
           model: input.model,
+          variant: input.variant,
           system: input.system,
           parts: [{ type: "text", text: input.prompt }],
         }),
@@ -166,6 +200,7 @@ export class OpenCodeClient {
       body: JSON.stringify({
         agent: input.agent,
         model: input.model,
+        variant: input.variant,
         parts: [{ type: "text", text: input.prompt }],
       }),
     });
@@ -181,6 +216,7 @@ export class OpenCodeClient {
       actualAgent: assistant?.info.agent ?? null,
       providerId: input.model.providerID,
       modelId: input.model.modelID,
+      variant: assistant?.info.variant ?? input.variant ?? null,
       eventTypes: waitResult.eventTypes,
       finalText: getMessageText(assistant),
       messageCount: messages.length,
@@ -522,4 +558,105 @@ function unique(values: string[]): string[] {
 function truncate(value: string, maxLength = 5000): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength)}...`;
+}
+
+function parseVerboseModelOutput(stdout: string): OpenCodeModelSummary[] {
+  const lines = stdout.split(/\r?\n/);
+  const models: OpenCodeModelSummary[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const modelRef = lines[index]?.trim();
+    if (!modelRef || !isModelReference(modelRef)) {
+      continue;
+    }
+
+    let cursor = index + 1;
+    while (cursor < lines.length && lines[cursor]?.trim().length === 0) {
+      cursor += 1;
+    }
+
+    if (cursor >= lines.length || !lines[cursor]?.trim().startsWith("{")) {
+      models.push(createFallbackModelSummary(modelRef));
+      index = cursor - 1;
+      continue;
+    }
+
+    let jsonBuffer = "";
+    let parsedRecord: OpenCodeVerboseModelRecord | null = null;
+    let parsedIndex = cursor;
+
+    for (; parsedIndex < lines.length; parsedIndex += 1) {
+      jsonBuffer += `${lines[parsedIndex]}\n`;
+
+      try {
+        const candidate = JSON.parse(jsonBuffer) as OpenCodeVerboseModelRecord;
+        if (candidate && typeof candidate === "object") {
+          parsedRecord = candidate;
+          break;
+        }
+      } catch {
+        // Keep reading until the JSON object is complete.
+      }
+    }
+
+    if (!parsedRecord) {
+      models.push(createFallbackModelSummary(modelRef));
+      index = cursor - 1;
+      continue;
+    }
+
+    const variantNames =
+      parsedRecord.variants && typeof parsedRecord.variants === "object"
+        ? Object.keys(parsedRecord.variants)
+        : [];
+    const providerId = parsedRecord.providerID ?? splitModelReference(modelRef).providerId;
+    const modelId = parsedRecord.id ?? splitModelReference(modelRef).modelId;
+
+    models.push({
+      model: `${providerId}/${modelId}`,
+      providerId,
+      modelId,
+      name: parsedRecord.name ?? null,
+      family: parsedRecord.family ?? null,
+      variants: variantNames,
+    });
+
+    index = parsedIndex;
+  }
+
+  return models;
+}
+
+function createFallbackModelSummary(model: string): OpenCodeModelSummary {
+  const { providerId, modelId } = splitModelReference(model);
+  return {
+    model,
+    providerId,
+    modelId,
+    name: null,
+    family: null,
+    variants: [],
+  };
+}
+
+function splitModelReference(model: string): {
+  providerId: string;
+  modelId: string;
+} {
+  const separatorIndex = model.indexOf("/");
+  if (separatorIndex === -1) {
+    return {
+      providerId: model,
+      modelId: model,
+    };
+  }
+
+  return {
+    providerId: model.slice(0, separatorIndex),
+    modelId: model.slice(separatorIndex + 1),
+  };
+}
+
+function isModelReference(line: string): boolean {
+  return /^[^\s/]+\/[^\s]+$/.test(line);
 }
