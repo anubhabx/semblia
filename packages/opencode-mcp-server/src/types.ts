@@ -30,6 +30,7 @@ export interface OpenCodeMessageInfo {
   role?: string;
   agent?: string;
   mode?: string;
+  variant?: string;
   modelID?: string;
   providerID?: string;
   sessionID?: string;
@@ -63,6 +64,15 @@ export interface OpenCodeAgentSummary {
   kind: string;
 }
 
+export interface OpenCodeModelSummary {
+  model: string;
+  providerId: string;
+  modelId: string;
+  name: string | null;
+  family: string | null;
+  variants: string[];
+}
+
 export interface OpenCodeStatus {
   cliAvailable: boolean;
   cliVersion: string | null;
@@ -79,6 +89,7 @@ export interface OpenCodeDelegateResult {
   actualAgent: string | null;
   providerId: string;
   modelId: string;
+  variant: string | null;
   eventTypes: string[];
   finalText: string;
   messageCount: number;
