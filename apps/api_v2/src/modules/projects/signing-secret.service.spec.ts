@@ -6,6 +6,10 @@ import type { ConfigService } from "@nestjs/config";
 
 const mockProjectUpdate = vi.fn();
 const mockProjectFindUnique = vi.fn();
+const mockProjectSigningSecretFindFirst = vi.fn();
+const mockProjectSigningSecretAggregate = vi.fn();
+const mockProjectSigningSecretUpdateMany = vi.fn();
+const mockProjectSigningSecretCreate = vi.fn();
 const mockConfigGet = vi.fn();
 
 const prismaMock = {
@@ -13,6 +17,12 @@ const prismaMock = {
     project: {
       update: mockProjectUpdate,
       findUnique: mockProjectFindUnique,
+    },
+    projectSigningSecret: {
+      findFirst: mockProjectSigningSecretFindFirst,
+      aggregate: mockProjectSigningSecretAggregate,
+      updateMany: mockProjectSigningSecretUpdateMany,
+      create: mockProjectSigningSecretCreate,
     },
   },
 } as unknown as PrismaService;
@@ -30,11 +40,32 @@ describe("SigningSecretService", () => {
     service = new SigningSecretService(prismaMock, configServiceMock);
     vi.clearAllMocks();
     mockConfigGet.mockReturnValue(base64Key);
+    mockProjectSigningSecretAggregate.mockResolvedValue({
+      _max: { version: 0 },
+    });
+    mockProjectSigningSecretCreate.mockImplementation(({ data }) =>
+      Promise.resolve({ id: "secret_1", ...data }),
+    );
   });
 
-  it("generates and persists an encrypted signing secret", async () => {
+  it("generates a normalized signing secret and keeps project columns as a shim", async () => {
     await service.generateOrRotate("project_1");
 
+    expect(mockProjectSigningSecretUpdateMany).toHaveBeenCalledWith({
+      where: { projectId: "project_1", status: "ACTIVE" },
+      data: {
+        status: "REVOKED",
+        revokedAt: expect.any(Date),
+      },
+    });
+    expect(mockProjectSigningSecretCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        version: 1,
+        secretEncrypted: expect.any(String),
+        status: "ACTIVE",
+      }),
+    });
     expect(mockProjectUpdate).toHaveBeenCalledWith({
       where: { id: "project_1" },
       data: expect.objectContaining({
@@ -52,11 +83,12 @@ describe("SigningSecretService", () => {
     mockProjectUpdate.mockResolvedValue(undefined);
 
     const generated = await service.generateOrRotate("project_1");
-    expect(mockProjectUpdate.mock.calls[0]).toBeDefined();
+    expect(mockProjectSigningSecretCreate.mock.calls[0]).toBeDefined();
     const encrypted =
-      mockProjectUpdate.mock.calls[0]![0].data.signingSecretEncrypted;
-    mockProjectFindUnique.mockResolvedValue({
-      signingSecretEncrypted: encrypted,
+      mockProjectSigningSecretCreate.mock.calls[0]![0].data.secretEncrypted;
+    mockProjectSigningSecretFindFirst.mockResolvedValue({
+      id: "secret_1",
+      secretEncrypted: encrypted,
     });
 
     await expect(service.getDecrypted("project_1")).resolves.toBe(
@@ -66,14 +98,17 @@ describe("SigningSecretService", () => {
 
   it("rotates by replacing the stored encrypted blob", async () => {
     await service.generateOrRotate("project_1");
-    expect(mockProjectUpdate.mock.calls[0]).toBeDefined();
+    expect(mockProjectSigningSecretCreate.mock.calls[0]).toBeDefined();
     const firstEncrypted =
-      mockProjectUpdate.mock.calls[0]![0].data.signingSecretEncrypted;
+      mockProjectSigningSecretCreate.mock.calls[0]![0].data.secretEncrypted;
 
+    mockProjectSigningSecretAggregate.mockResolvedValue({
+      _max: { version: 1 },
+    });
     await service.generateOrRotate("project_1");
-    expect(mockProjectUpdate.mock.calls[1]).toBeDefined();
+    expect(mockProjectSigningSecretCreate.mock.calls[1]).toBeDefined();
     const secondEncrypted =
-      mockProjectUpdate.mock.calls[1]![0].data.signingSecretEncrypted;
+      mockProjectSigningSecretCreate.mock.calls[1]![0].data.secretEncrypted;
 
     expect(secondEncrypted).not.toBe(firstEncrypted);
   });

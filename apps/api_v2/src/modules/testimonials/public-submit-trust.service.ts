@@ -18,6 +18,8 @@ export type PublicSubmitTrustResult = {
   principal: string;
   rateLimitTracker: string;
   allowedOrigins: string[];
+  trustedOriginId?: string;
+  signingSecretId?: string;
 };
 
 export type PublicSubmitRequestLike = {
@@ -58,10 +60,16 @@ export class PublicSubmitTrustService {
     }
 
     const origin = this.readHeader(request, "origin");
-    if (
-      origin &&
-      this.isAllowedOrigin(origin, project.slug, project.allowedOrigins)
-    ) {
+    const trustedOrigin = origin
+      ? await this.resolveTrustedOrigin(
+          origin,
+          project.id,
+          project.slug,
+          project.allowedOrigins,
+        )
+      : { allowed: false };
+
+    if (origin && trustedOrigin.allowed) {
       const ip = this.getClientIp(request);
       return {
         projectId: project.id,
@@ -70,6 +78,7 @@ export class PublicSubmitTrustService {
         principal: ip,
         rateLimitTracker: `${project.id}:browser:${ip}`,
         allowedOrigins: project.allowedOrigins,
+        ...(trustedOrigin.id ? { trustedOriginId: trustedOrigin.id } : {}),
       };
     }
 
@@ -120,8 +129,9 @@ export class PublicSubmitTrustService {
       );
     }
 
-    const signingSecret =
-      await this.signingSecretService.getDecrypted(projectId);
+    const activeSecret =
+      await this.signingSecretService.getActiveDecrypted(projectId);
+    const signingSecret = activeSecret?.plaintext;
     if (!signingSecret) {
       throw new UnauthorizedException(
         "Project does not accept signed submissions",
@@ -143,6 +153,9 @@ export class PublicSubmitTrustService {
       throw new UnauthorizedException("Invalid Tresta signature");
     }
 
+    const clientIp = this.getClientIp(request);
+    await this.signingSecretService.markUsed(activeSecret.id, clientIp);
+
     return {
       projectId,
       slug,
@@ -150,6 +163,7 @@ export class PublicSubmitTrustService {
       principal: `project:${projectId}`,
       rateLimitTracker: `${projectId}:hmac:project:${projectId}`,
       allowedOrigins: [],
+      signingSecretId: activeSecret.id,
     };
   }
 
@@ -182,15 +196,40 @@ export class PublicSubmitTrustService {
     return "";
   }
 
-  private isAllowedOrigin(
+  private async resolveTrustedOrigin(
     origin: string,
+    projectId: string,
     slug: string,
     allowedOrigins: string[],
-  ): boolean {
-    return (
-      origin === `https://${slug}.testimonials.tresta.app` ||
-      allowedOrigins.includes(origin)
-    );
+  ): Promise<{ allowed: boolean; id?: string }> {
+    if (origin === `https://${slug}.testimonials.tresta.app`) {
+      return { allowed: true };
+    }
+
+    const normalizedOrigin = this.normalizeOrigin(origin);
+    const trustedOrigin =
+      await this.prisma.client.projectTrustedOrigin.findFirst({
+        where: {
+          projectId,
+          origin: normalizedOrigin,
+          status: "ACTIVE",
+        },
+        select: { id: true, origin: true },
+      });
+
+    if (trustedOrigin) {
+      return { allowed: true, id: trustedOrigin.id };
+    }
+
+    return { allowed: allowedOrigins.includes(normalizedOrigin) };
+  }
+
+  private normalizeOrigin(origin: string): string {
+    try {
+      return new URL(origin).origin;
+    } catch {
+      return origin;
+    }
   }
 
   private readHeader(

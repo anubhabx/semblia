@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { decodeSecretEncryptionKey } from "../../config/env.js";
 import {
@@ -27,6 +27,27 @@ export class SigningSecretService {
     const plaintext = randomBytes(32).toString("base64");
     const rotatedAt = new Date();
     const signingSecretEncrypted = encryptSecret(plaintext, key);
+    const secretHash = this.hashSecret(plaintext);
+    const nextVersion = await this.getNextVersion(projectId);
+
+    await this.prisma.client.projectSigningSecret.updateMany({
+      where: { projectId, status: "ACTIVE" },
+      data: {
+        status: "REVOKED",
+        revokedAt: rotatedAt,
+      },
+    });
+
+    await this.prisma.client.projectSigningSecret.create({
+      data: {
+        projectId,
+        version: nextVersion,
+        secretEncrypted: signingSecretEncrypted,
+        secretHash,
+        status: "ACTIVE",
+        rotatedAt,
+      },
+    });
 
     await this.prisma.client.project.update({
       where: { id: projectId },
@@ -40,6 +61,15 @@ export class SigningSecretService {
   }
 
   async clear(projectId: string): Promise<void> {
+    const revokedAt = new Date();
+    await this.prisma.client.projectSigningSecret.updateMany({
+      where: { projectId, status: "ACTIVE" },
+      data: {
+        status: "REVOKED",
+        revokedAt,
+      },
+    });
+
     await this.prisma.client.project.update({
       where: { id: projectId },
       data: {
@@ -49,8 +79,44 @@ export class SigningSecretService {
     });
   }
 
+  async getActiveDecrypted(projectId: string): Promise<{
+    id: string;
+    plaintext: string;
+  } | null> {
+    const key = this.getEncryptionKeyOrThrow();
+    const activeSecret =
+      await this.prisma.client.projectSigningSecret.findFirst({
+        where: { projectId, status: "ACTIVE" },
+        orderBy: { version: "desc" },
+        select: { id: true, secretEncrypted: true },
+      });
+
+    if (!activeSecret) {
+      const legacySecret = await this.getDecrypted(projectId);
+      return legacySecret
+        ? { id: "legacy-project-signing-secret", plaintext: legacySecret }
+        : null;
+    }
+
+    return {
+      id: activeSecret.id,
+      plaintext: decryptSecret(activeSecret.secretEncrypted, key),
+    };
+  }
+
   async getDecrypted(projectId: string): Promise<string | null> {
     const key = this.getEncryptionKeyOrThrow();
+    const activeSecret =
+      await this.prisma.client.projectSigningSecret.findFirst({
+        where: { projectId, status: "ACTIVE" },
+        orderBy: { version: "desc" },
+        select: { secretEncrypted: true },
+      });
+
+    if (activeSecret) {
+      return decryptSecret(activeSecret.secretEncrypted, key);
+    }
+
     const project = await this.prisma.client.project.findUnique({
       where: { id: projectId },
       select: { signingSecretEncrypted: true },
@@ -61,6 +127,35 @@ export class SigningSecretService {
     }
 
     return decryptSecret(project.signingSecretEncrypted, key);
+  }
+
+  async markUsed(secretId: string, ipAddress: string): Promise<void> {
+    if (secretId === "legacy-project-signing-secret") return;
+
+    await this.prisma.client.projectSigningSecret.update({
+      where: { id: secretId },
+      data: {
+        lastUsedAt: new Date(),
+        lastUsedFromIpHash: this.hashIdentifier(ipAddress),
+      },
+    });
+  }
+
+  private async getNextVersion(projectId: string) {
+    const aggregate = await this.prisma.client.projectSigningSecret.aggregate({
+      where: { projectId },
+      _max: { version: true },
+    });
+
+    return (aggregate._max.version ?? 0) + 1;
+  }
+
+  private hashSecret(secret: string) {
+    return createHash("sha256").update(secret, "utf8").digest("hex");
+  }
+
+  private hashIdentifier(value: string) {
+    return createHash("sha256").update(value, "utf8").digest("hex");
   }
 
   private getEncryptionKeyOrThrow(): Buffer {

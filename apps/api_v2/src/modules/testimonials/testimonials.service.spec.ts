@@ -22,12 +22,15 @@ const mockTestimonialCreate = vi.fn();
 const mockIdempotencyCreate = vi.fn();
 const mockIdempotencyFindUnique = vi.fn();
 const mockIdempotencyUpdate = vi.fn();
+const mockProjectTrustedOriginFindFirst = vi.fn();
 const mockRedisGet = vi.fn();
 const mockRedisSet = vi.fn();
 const mockRedisScan = vi.fn();
 const mockRedisDel = vi.fn();
 const mockTrustEvaluate = vi.fn();
 const mockSigningSecretGetDecrypted = vi.fn();
+const mockSigningSecretGetActiveDecrypted = vi.fn();
+const mockSigningSecretMarkUsed = vi.fn();
 
 const prismaMock = {
   client: {
@@ -45,6 +48,9 @@ const prismaMock = {
       create: mockIdempotencyCreate,
       findUnique: mockIdempotencyFindUnique,
       update: mockIdempotencyUpdate,
+    },
+    projectTrustedOrigin: {
+      findFirst: mockProjectTrustedOriginFindFirst,
     },
   },
 } as unknown as PrismaService;
@@ -65,6 +71,8 @@ const trustServiceMock = {
 
 const signingSecretServiceMock = {
   getDecrypted: mockSigningSecretGetDecrypted,
+  getActiveDecrypted: mockSigningSecretGetActiveDecrypted,
+  markUsed: mockSigningSecretMarkUsed,
 } as unknown as SigningSecretService;
 
 describe("PublicSubmitTrustService", () => {
@@ -90,7 +98,10 @@ describe("PublicSubmitTrustService", () => {
       slug: "acme",
       allowedOrigins: [],
     });
-    mockSigningSecretGetDecrypted.mockResolvedValue(secret);
+    mockSigningSecretGetActiveDecrypted.mockResolvedValue({
+      id: "secret_1",
+      plaintext: secret,
+    });
 
     const result = await service.evaluate(
       {
@@ -109,7 +120,12 @@ describe("PublicSubmitTrustService", () => {
       slug: "acme",
       trust: "hmac",
       principal: "project:project_1",
+      signingSecretId: "secret_1",
     });
+    expect(mockSigningSecretMarkUsed).toHaveBeenCalledWith(
+      "secret_1",
+      "203.0.113.10",
+    );
   });
 
   it("rejects signed requests with stale timestamps", async () => {
@@ -120,7 +136,10 @@ describe("PublicSubmitTrustService", () => {
       slug: "acme",
       allowedOrigins: [],
     });
-    mockSigningSecretGetDecrypted.mockResolvedValue("test-signing-secret");
+    mockSigningSecretGetActiveDecrypted.mockResolvedValue({
+      id: "secret_1",
+      plaintext: "test-signing-secret",
+    });
 
     await expect(
       service.evaluate(
@@ -144,6 +163,7 @@ describe("PublicSubmitTrustService", () => {
       slug: "acme",
       allowedOrigins: ["https://allowed.example"],
     });
+    mockProjectTrustedOriginFindFirst.mockResolvedValue(null);
 
     await expect(
       service.evaluate(

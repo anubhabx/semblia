@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildApiV2CorsOptions,
   buildClerkVerifyOptions,
+  extractPublicProjectSlugFromPath,
+  isDefaultHostedPublicOrigin,
   parseCommaSeparatedEnvList,
   verifyRazorpayWebhookSignature,
 } from "./security.js";
@@ -32,6 +34,40 @@ describe("security config helpers", () => {
     expect(buildApiV2CorsOptions(undefined).origin).toEqual([
       "http://localhost:3002",
     ]);
+    expect(buildApiV2CorsOptions(undefined).allowedHeaders).toEqual(
+      expect.arrayContaining([
+        "X-Tresta-Signature",
+        "X-Tresta-Timestamp",
+        "Idempotency-Key",
+      ]),
+    );
+  });
+
+  it("extracts project slugs from public project routes only", () => {
+    expect(
+      extractPublicProjectSlugFromPath("/v2/testimonials/public/projects/acme"),
+    ).toBe("acme");
+    expect(
+      extractPublicProjectSlugFromPath(
+        "/v2/forms/public/projects/acme/form_1/submissions",
+      ),
+    ).toBe("acme");
+    expect(extractPublicProjectSlugFromPath("/v2/projects/acme")).toBeNull();
+  });
+
+  it("recognizes default hosted public origins", () => {
+    expect(
+      isDefaultHostedPublicOrigin(
+        "https://acme.testimonials.tresta.app",
+        "acme",
+      ),
+    ).toBe(true);
+    expect(
+      isDefaultHostedPublicOrigin("https://acme.walls.tresta.app", "acme"),
+    ).toBe(true);
+    expect(
+      isDefaultHostedPublicOrigin("https://evil.example.com", "acme"),
+    ).toBe(false);
   });
 
   it("validates Razorpay webhook signatures using the raw body", () => {

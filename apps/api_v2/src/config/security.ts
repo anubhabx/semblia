@@ -1,6 +1,18 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const DEFAULT_API_V2_CORS_ORIGINS = ["http://localhost:3002"];
+export const PUBLIC_API_V2_CORS_ALLOWED_HEADERS = [
+  "Authorization",
+  "Content-Type",
+  "X-Requested-With",
+  "X-Tresta-Signature",
+  "X-Tresta-Timestamp",
+  "Idempotency-Key",
+  "X-Razorpay-Signature",
+  "svix-id",
+  "svix-timestamp",
+  "svix-signature",
+];
 
 export function parseCommaSeparatedEnvList(
   value: string | undefined,
@@ -20,18 +32,32 @@ export function buildApiV2CorsOptions(corsOrigins: string | undefined) {
         ? configuredOrigins
         : DEFAULT_API_V2_CORS_ORIGINS,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Authorization",
-      "Content-Type",
-      "X-Requested-With",
-      "X-Razorpay-Signature",
-      "svix-id",
-      "svix-timestamp",
-      "svix-signature",
-    ],
+    allowedHeaders: PUBLIC_API_V2_CORS_ALLOWED_HEADERS,
     credentials: false,
     maxAge: 86400,
   };
+}
+
+export function extractPublicProjectSlugFromPath(path: string) {
+  const match = path.match(
+    /^\/v2\/(?:testimonials|forms)\/public\/projects\/([^/]+)/,
+  );
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+export function isDefaultHostedPublicOrigin(origin: string, slug: string) {
+  return (
+    origin === `https://${slug}.testimonials.tresta.app` ||
+    origin === `https://${slug}.walls.tresta.app`
+  );
+}
+
+export function normalizeOrigin(origin: string): string {
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return origin;
+  }
 }
 
 export function buildClerkVerifyOptions({

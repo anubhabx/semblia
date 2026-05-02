@@ -151,6 +151,12 @@ export class ProjectsService {
             },
           });
 
+          await this.createDefaultPublicSurfaceHosts(
+            tx,
+            createdProject.id,
+            createdProject.slug,
+          );
+
           return createdProject;
         },
       );
@@ -383,16 +389,28 @@ export class ProjectsService {
   }
 
   async listAllowedOrigins(projectId: string): Promise<string[]> {
-    const project = await this.prisma.client.project.findUnique({
-      where: { id: projectId },
-      select: { allowedOrigins: true },
-    });
+    const [project, trustedOrigins] = await Promise.all([
+      this.prisma.client.project.findUnique({
+        where: { id: projectId },
+        select: { allowedOrigins: true },
+      }),
+      this.prisma.client.projectTrustedOrigin.findMany({
+        where: { projectId, status: "ACTIVE" },
+        orderBy: { origin: "asc" },
+        select: { origin: true },
+      }),
+    ]);
 
     if (!project) {
       throw new NotFoundException("Project not found");
     }
 
-    return project.allowedOrigins;
+    return [
+      ...new Set([
+        ...project.allowedOrigins,
+        ...trustedOrigins.map((entry) => entry.origin),
+      ]),
+    ].sort((left, right) => left.localeCompare(right));
   }
 
   async replaceAllowedOrigins(
@@ -411,10 +429,44 @@ export class ProjectsService {
       ).values(),
     ].sort((left, right) => left.localeCompare(right));
 
-    const updatedProject = await this.prisma.client.project.update({
-      where: { id: projectId },
-      data: { allowedOrigins: normalizedOrigins },
-      select: { allowedOrigins: true },
+    const updatedProject = await this.prisma.client.$transaction(async (tx) => {
+      await tx.projectTrustedOrigin.updateMany({
+        where: {
+          projectId,
+          status: "ACTIVE",
+          origin: { notIn: normalizedOrigins },
+        },
+        data: { status: "DISABLED" },
+      });
+
+      await Promise.all(
+        normalizedOrigins.map((origin) =>
+          tx.projectTrustedOrigin.upsert({
+            where: {
+              projectId_origin: {
+                projectId,
+                origin,
+              },
+            },
+            update: {
+              kind: "COLLECTION",
+              status: "ACTIVE",
+            },
+            create: {
+              projectId,
+              origin,
+              kind: "COLLECTION",
+              status: "ACTIVE",
+            },
+          }),
+        ),
+      );
+
+      return tx.project.update({
+        where: { id: projectId },
+        data: { allowedOrigins: normalizedOrigins },
+        select: { allowedOrigins: true },
+      });
     });
 
     return updatedProject.allowedOrigins;
@@ -456,6 +508,38 @@ export class ProjectsService {
         projectId,
         role: MemberRole.OWNER,
       },
+    });
+  }
+
+  private createDefaultPublicSurfaceHosts(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    slug: string,
+  ) {
+    const verifiedAt = new Date();
+
+    return tx.publicSurfaceHost.createMany({
+      data: [
+        {
+          projectId,
+          feature: "COLLECTION",
+          resourceType: "PROJECT",
+          hostname: `${slug}.testimonials.tresta.app`,
+          isDefault: true,
+          status: "ACTIVE",
+          verifiedAt,
+        },
+        {
+          projectId,
+          feature: "WALL",
+          resourceType: "PROJECT",
+          hostname: `${slug}.walls.tresta.app`,
+          isDefault: true,
+          status: "ACTIVE",
+          verifiedAt,
+        },
+      ],
+      skipDuplicates: true,
     });
   }
 
