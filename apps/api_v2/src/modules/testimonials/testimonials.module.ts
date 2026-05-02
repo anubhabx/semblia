@@ -7,6 +7,7 @@ import {
 } from "./testimonials.controller.js";
 import { PublicSubmitThrottlerGuard } from "./public-submit-throttler.guard.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
+import { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { TestimonialsService } from "./testimonials.service.js";
 
 @Module({
@@ -16,7 +17,12 @@ import { TestimonialsService } from "./testimonials.service.js";
     TestimonialsService,
     PublicSubmitTrustService,
     PublicSubmitThrottlerGuard,
+    TestimonialPrivateMetadataService,
   ],
-  exports: [PublicSubmitTrustService, PublicSubmitThrottlerGuard],
+  exports: [
+    PublicSubmitTrustService,
+    PublicSubmitThrottlerGuard,
+    TestimonialPrivateMetadataService,
+  ],
 })
 export class TestimonialsModule {}

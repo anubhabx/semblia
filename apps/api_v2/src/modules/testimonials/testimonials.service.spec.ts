@@ -8,6 +8,7 @@ import { ModerationStatus, TestimonialType } from "@workspace/database/prisma";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
 import { TestimonialsService } from "./testimonials.service.js";
+import type { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { hashIdempotencyPayload } from "./testimonials.dto.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { RedisService } from "../redis/redis.service.js";
@@ -19,6 +20,9 @@ const mockTestimonialCount = vi.fn();
 const mockTestimonialFindFirst = vi.fn();
 const mockTestimonialUpdate = vi.fn();
 const mockTestimonialCreate = vi.fn();
+const mockTransaction = vi.fn();
+const mockCreatePrivateMetadataForPublicSubmit = vi.fn();
+const mockDecryptAuthorEmail = vi.fn();
 const mockIdempotencyCreate = vi.fn();
 const mockIdempotencyFindUnique = vi.fn();
 const mockIdempotencyUpdate = vi.fn();
@@ -34,6 +38,7 @@ const mockSigningSecretMarkUsed = vi.fn();
 
 const prismaMock = {
   client: {
+    $transaction: mockTransaction,
     project: {
       findUnique: mockProjectFindUnique,
     },
@@ -68,6 +73,11 @@ const trustServiceMock = {
   evaluate: mockTrustEvaluate,
   getClientIp: (request: { ip?: string }) => request.ip ?? "unknown",
 } as unknown as PublicSubmitTrustService;
+
+const privateMetadataServiceMock = {
+  createForPublicSubmit: mockCreatePrivateMetadataForPublicSubmit,
+  decryptAuthorEmail: mockDecryptAuthorEmail,
+} as unknown as TestimonialPrivateMetadataService;
 
 const signingSecretServiceMock = {
   getDecrypted: mockSigningSecretGetDecrypted,
@@ -238,8 +248,69 @@ describe("TestimonialsService", () => {
       prismaMock,
       redisServiceMock,
       trustServiceMock,
+      privateMetadataServiceMock,
     );
     vi.clearAllMocks();
+    mockCreatePrivateMetadataForPublicSubmit.mockResolvedValue(null);
+    mockDecryptAuthorEmail.mockReturnValue(null);
+    mockTransaction.mockImplementation(
+      async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(prismaMock.client),
+    );
+  });
+
+  it("rehydrates authenticated author email from private metadata", async () => {
+    mockTestimonialCount.mockResolvedValue(1);
+    mockDecryptAuthorEmail.mockReturnValue("ava@example.com");
+    mockTestimonialFindMany.mockResolvedValue([
+      {
+        id: "testimonial_1",
+        projectId: "project_1",
+        userId: null,
+        authorName: "Ava",
+        authorEmail: null,
+        authorRole: null,
+        authorCompany: null,
+        authorAvatar: null,
+        content: "Great product",
+        type: TestimonialType.TEXT,
+        videoUrl: null,
+        mediaUrl: null,
+        source: null,
+        sourceUrl: null,
+        isPublished: false,
+        rating: null,
+        isApproved: false,
+        isOAuthVerified: false,
+        oauthProvider: null,
+        moderationStatus: ModerationStatus.PENDING,
+        moderationScore: null,
+        moderationFlags: null,
+        autoPublished: false,
+        createdAt: new Date("2026-04-30T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-30T00:00:00.000Z"),
+        privateMetadata: {
+          authorEmailEncrypted: "ciphertext",
+        },
+      },
+    ]);
+
+    const result = await service.list(
+      {
+        status: "ALL",
+        type: "ALL",
+        sort: "newest",
+        page: 1,
+        pageSize: 10,
+      },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(result.items[0]).toMatchObject({
+      id: "testimonial_1",
+      authorEmail: "ava@example.com",
+    });
+    expect(result.items[0]).not.toHaveProperty("privateMetadata");
   });
 
   it("replays the stored response for an idempotent public submit with the same payload hash", async () => {
@@ -369,6 +440,7 @@ describe("TestimonialsService", () => {
       { slug: "acme" },
       {
         authorName: "Ava",
+        authorEmail: "ava@example.com",
         content: "Great product",
       },
       {
@@ -390,12 +462,31 @@ describe("TestimonialsService", () => {
           moderationStatus: ModerationStatus.APPROVED,
           isApproved: true,
           autoPublished: true,
-          ipAddress: "203.0.113.10",
-          userAgent: "Vitest",
+          authorEmail: null,
+          ipAddress: null,
+          userAgent: null,
         }),
       }),
     );
+    expect(mockCreatePrivateMetadataForPublicSubmit).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        testimonialId: "testimonial_1",
+        authorEmail: "ava@example.com",
+        ipAddress: "203.0.113.10",
+        userAgent: "Vitest",
+      }),
+    );
     expect(mockIdempotencyUpdate).toHaveBeenCalled();
+    expect(mockIdempotencyUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          responseBody: expect.not.objectContaining({
+            authorEmail: "ava@example.com",
+          }),
+        }),
+      }),
+    );
   });
 
   it("auto-approves verified origin submissions only when the project allows it", async () => {

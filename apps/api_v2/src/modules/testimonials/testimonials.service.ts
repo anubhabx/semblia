@@ -14,6 +14,7 @@ import {
 import { paginate } from "../../common/utils/paginate.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
+import { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
 import type {
   CreatePublicTestimonialBodyDto,
@@ -51,6 +52,11 @@ const AUTHENTICATED_TESTIMONIAL_SELECT = {
   autoPublished: true,
   createdAt: true,
   updatedAt: true,
+  privateMetadata: {
+    select: {
+      authorEmailEncrypted: true,
+    },
+  },
 } satisfies Prisma.TestimonialSelect;
 
 const PUBLIC_TESTIMONIAL_SELECT = {
@@ -99,6 +105,8 @@ export class TestimonialsService {
     @Inject(RedisService) private readonly redisService: RedisService,
     @Inject(PublicSubmitTrustService)
     private readonly publicSubmitTrustService: PublicSubmitTrustService,
+    @Inject(TestimonialPrivateMetadataService)
+    private readonly privateMetadataService: TestimonialPrivateMetadataService,
   ) {}
 
   async list(query: TestimonialsListQueryDto, request: ProjectRequest) {
@@ -259,34 +267,49 @@ export class TestimonialsService {
       }
     }
 
-    const created = await this.prisma.client.testimonial.create({
-      data: {
-        projectId: trust.projectId,
-        authorName: body.authorName,
-        authorEmail: body.authorEmail ?? null,
-        authorRole: body.authorRole ?? null,
-        authorCompany: body.authorCompany ?? null,
-        authorAvatar: body.authorAvatar ?? null,
-        content: body.content,
-        type: body.type ?? TestimonialType.TEXT,
-        videoUrl: body.videoUrl ?? null,
-        mediaUrl: body.mediaUrl ?? null,
-        source: body.source ?? null,
-        sourceUrl: body.sourceUrl ?? null,
-        rating: body.rating ?? null,
-        isPublished: false,
-        isApproved,
-        isOAuthVerified: body.isOAuthVerified ?? false,
-        oauthProvider: body.oauthProvider ?? null,
-        moderationStatus,
-        autoPublished,
-        ipAddress: this.publicSubmitTrustService.getClientIp(request),
-        userAgent: this.readHeader(request, "user-agent") ?? null,
-      },
-      select: AUTHENTICATED_TESTIMONIAL_SELECT,
+    const clientIp = this.publicSubmitTrustService.getClientIp(request);
+    const userAgent = this.readHeader(request, "user-agent") ?? null;
+
+    const created = await this.prisma.client.$transaction(async (tx) => {
+      const testimonial = await tx.testimonial.create({
+        data: {
+          projectId: trust.projectId,
+          authorName: body.authorName,
+          authorEmail: null,
+          authorRole: body.authorRole ?? null,
+          authorCompany: body.authorCompany ?? null,
+          authorAvatar: body.authorAvatar ?? null,
+          content: body.content,
+          type: body.type ?? TestimonialType.TEXT,
+          videoUrl: body.videoUrl ?? null,
+          mediaUrl: body.mediaUrl ?? null,
+          source: body.source ?? null,
+          sourceUrl: body.sourceUrl ?? null,
+          rating: body.rating ?? null,
+          isPublished: false,
+          isApproved,
+          isOAuthVerified: body.isOAuthVerified ?? false,
+          oauthProvider: body.oauthProvider ?? null,
+          moderationStatus,
+          autoPublished,
+          ipAddress: null,
+          userAgent: null,
+        },
+        select: AUTHENTICATED_TESTIMONIAL_SELECT,
+      });
+
+      await this.privateMetadataService.createForPublicSubmit(tx, {
+        testimonialId: testimonial.id,
+        authorEmail: body.authorEmail,
+        ipAddress: clientIp,
+        userAgent,
+        consentSnapshot: this.toPublicSubmitConsentSnapshot(body),
+      });
+
+      return testimonial;
     });
 
-    const response = this.toAuthenticatedDto(created);
+    const response = this.toPublicSubmitDto(created);
 
     if (idempotencyKey) {
       await this.prisma.client.publicSubmitIdempotency.update({
@@ -513,8 +536,28 @@ export class TestimonialsService {
   }
 
   private toAuthenticatedDto(testimonial: AuthenticatedTestimonialRecord) {
+    const { privateMetadata, ...dto } = testimonial;
+
     return {
-      ...testimonial,
+      ...dto,
+      authorEmail:
+        dto.authorEmail ??
+        this.privateMetadataService.decryptAuthorEmail(privateMetadata),
+      tags: [],
+    };
+  }
+
+  private toPublicSubmitDto(testimonial: AuthenticatedTestimonialRecord) {
+    const {
+      authorEmail: _authorEmail,
+      privateMetadata: _metadata,
+      ...safe
+    } = testimonial;
+    void _authorEmail;
+    void _metadata;
+
+    return {
+      ...safe,
       tags: [],
     };
   }
@@ -551,6 +594,13 @@ export class TestimonialsService {
     }
 
     return value;
+  }
+
+  private toPublicSubmitConsentSnapshot(body: CreatePublicTestimonialBodyDto) {
+    return {
+      isOAuthVerified: body.isOAuthVerified ?? false,
+      oauthProvider: body.oauthProvider ?? null,
+    };
   }
 
   private isPrismaUniqueViolation(error: unknown): error is { code: string } {

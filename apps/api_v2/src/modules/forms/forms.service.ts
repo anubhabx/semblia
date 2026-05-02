@@ -14,6 +14,7 @@ import {
 } from "@workspace/database/prisma";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
+import { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
 import { hashIdempotencyPayload } from "../testimonials/testimonials.dto.js";
 import type {
@@ -105,6 +106,8 @@ export class FormsService {
     @Inject(RedisService) private readonly redisService: RedisService,
     @Inject(PublicSubmitTrustService)
     private readonly publicSubmitTrustService: PublicSubmitTrustService,
+    @Inject(TestimonialPrivateMetadataService)
+    private readonly privateMetadataService: TestimonialPrivateMetadataService,
   ) {}
 
   async list(params: ProjectFormsParamsDto, request: ProjectRequest) {
@@ -300,6 +303,9 @@ export class FormsService {
       }
     }
 
+    const clientIp = this.publicSubmitTrustService.getClientIp(request);
+    const userAgent = this.readHeader(request, "user-agent") ?? null;
+
     const { testimonial: created, submission } =
       await this.prisma.client.$transaction(async (tx) => {
         const testimonial = await tx.testimonial.create({
@@ -307,7 +313,7 @@ export class FormsService {
             projectId: trust.projectId,
             formId: form.id,
             authorName: body.authorName,
-            authorEmail: body.authorEmail ?? null,
+            authorEmail: null,
             authorRole: body.authorRole ?? null,
             authorCompany: body.authorCompany ?? null,
             authorAvatar: body.authorAvatar ?? null,
@@ -324,8 +330,8 @@ export class FormsService {
             oauthProvider: body.oauthProvider ?? null,
             moderationStatus,
             autoPublished,
-            ipAddress: this.publicSubmitTrustService.getClientIp(request),
-            userAgent: this.readHeader(request, "user-agent") ?? null,
+            ipAddress: null,
+            userAgent: null,
           },
           select: TESTIMONIAL_SELECT,
         });
@@ -347,6 +353,15 @@ export class FormsService {
             ratingValue: body.rating ?? null,
             ratingScale: this.toSubmissionRatingScale(body.rating),
           },
+        });
+
+        await this.privateMetadataService.createForPublicSubmit(tx, {
+          testimonialId: testimonial.id,
+          submissionId: submission.id,
+          authorEmail: body.authorEmail,
+          ipAddress: clientIp,
+          userAgent,
+          consentSnapshot: this.toPublicSubmitConsentSnapshot(body),
         });
 
         return { testimonial, submission };
@@ -423,8 +438,11 @@ export class FormsService {
   }
 
   private toTestimonialDto(testimonial: TestimonialRecord) {
+    const { authorEmail: _authorEmail, ...safeTestimonial } = testimonial;
+    void _authorEmail;
+
     return {
-      ...testimonial,
+      ...safeTestimonial,
       tags: [],
     };
   }
@@ -451,6 +469,13 @@ export class FormsService {
     }
 
     return rating > 5 ? 10 : 5;
+  }
+
+  private toPublicSubmitConsentSnapshot(body: CreateFormSubmissionBodyDto) {
+    return {
+      isOAuthVerified: body.isOAuthVerified ?? false,
+      oauthProvider: body.oauthProvider ?? null,
+    };
   }
 
   private readHeader(request: PublicSubmitRequest, name: string) {

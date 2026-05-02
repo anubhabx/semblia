@@ -8,6 +8,7 @@ import {
 import { FormsService } from "./forms.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { RedisService } from "../redis/redis.service.js";
+import type { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import type { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
 import { hashIdempotencyPayload } from "../testimonials/testimonials.dto.js";
 
@@ -29,6 +30,7 @@ const mockRedisDel = vi.fn();
 const mockRedisScan = vi.fn();
 const mockEvaluateTrust = vi.fn();
 const mockGetClientIp = vi.fn();
+const mockCreatePrivateMetadataForPublicSubmit = vi.fn();
 
 const prismaMock = {
   client: {
@@ -71,8 +73,17 @@ const trustServiceMock = {
   getClientIp: mockGetClientIp,
 } as unknown as PublicSubmitTrustService;
 
+const privateMetadataServiceMock = {
+  createForPublicSubmit: mockCreatePrivateMetadataForPublicSubmit,
+} as unknown as TestimonialPrivateMetadataService;
+
 function makeService() {
-  return new FormsService(prismaMock, redisMock, trustServiceMock);
+  return new FormsService(
+    prismaMock,
+    redisMock,
+    trustServiceMock,
+    privateMetadataServiceMock,
+  );
 }
 
 function makeForm(overrides: Record<string, unknown> = {}) {
@@ -127,6 +138,7 @@ describe("FormsService", () => {
     vi.clearAllMocks();
     mockRedisScan.mockResolvedValue(["0", []]);
     mockGetClientIp.mockReturnValue("198.51.100.10");
+    mockCreatePrivateMetadataForPublicSubmit.mockResolvedValue(null);
     mockTransaction.mockImplementation(
       async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(prismaMock.client),
@@ -290,7 +302,9 @@ describe("FormsService", () => {
       autoModeration: true,
       autoApproveVerified: true,
     });
-    mockTestimonialCreate.mockResolvedValue(makeTestimonial({ rating: null }));
+    mockTestimonialCreate.mockResolvedValue(
+      makeTestimonial({ authorEmail: null, rating: null }),
+    );
     mockCollectionFormSubmissionCreate.mockResolvedValue({
       id: "submission_1",
       testimonialId: "testimonial_1",
@@ -322,6 +336,9 @@ describe("FormsService", () => {
           formId: "form_1",
           moderationStatus: ModerationStatus.APPROVED,
           autoPublished: true,
+          authorEmail: null,
+          ipAddress: null,
+          userAgent: null,
           rating: null,
         }),
       }),
@@ -343,11 +360,22 @@ describe("FormsService", () => {
         ratingScale: 10,
       }),
     });
+    expect(mockCreatePrivateMetadataForPublicSubmit).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        testimonialId: "testimonial_1",
+        submissionId: "submission_1",
+        authorEmail: "ada@example.com",
+        ipAddress: "198.51.100.10",
+        userAgent: "Vitest",
+      }),
+    );
     expect(result).toMatchObject({
       formId: "form_1",
       moderationStatus: ModerationStatus.APPROVED,
       autoPublished: true,
     });
+    expect(result).not.toHaveProperty("authorEmail");
     expect(mockRedisScan).toHaveBeenCalled();
   });
 
