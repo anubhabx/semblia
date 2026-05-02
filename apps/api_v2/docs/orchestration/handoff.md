@@ -1,6 +1,6 @@
 # v2 API Rebuild — Orchestration Handoff
 
-> Last updated: 2026-05-01. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
+> Last updated: 2026-05-02. Branch: `revamp/v2`. Read this before picking up the v2 API rebuild in a new session.
 
 ## Mission
 
@@ -45,6 +45,30 @@ The v2 UI (`apps/web_v2`) is finalized and runs on mocked data. We are now rebui
 | 4a | Webhooks (Clerk + Razorpay if added) | ✓ done | `2de8edc` |
 | 4b | Alerts + ops/admin | ✓ done | `f95e784` |
 | 5 | Cross-cutting validation | ✓ done | `cf4476f` |
+
+## 2026-05-02 backend-first API surface foundation
+
+The current implementation source for the backend-first continuation is:
+
+- `docs/plans/2026-05-02-api-ui-db-gap-map consolidated.md`
+- `docs/plans/2026-05-02-api-surface-implementation-phases.md`
+
+Phase 1a through 1d are now implemented and checkpointed on `revamp/v2`:
+
+| Phase | Description | Status | Commit |
+|---|---|---|---|
+| 1 migration | Phase 1 database foundation migration catch-up | ✓ done | `01d0cae` |
+| 1a | Public trusted origins, signing secrets, hosted public-surface trust, route-aware public CORS | ✓ done | `8b8c4a3` |
+| 1b | Canonical `CollectionFormSubmission` writes for public form submit, with rating/answer/trust/idempotency linkage | ✓ done | `0c9f618` |
+| 1c | `TestimonialPrivateMetadata` service, encrypted PII writes, hashed identifiers, public-submit PII removal, authenticated email compatibility shim | ✓ done | `7aae66d` |
+| 1d | Shared `StudioDraft` service and `GET`/`PUT .../draft` endpoints for forms and widgets with optimistic concurrency | ✓ done | `c56cf68` |
+
+Operational notes:
+
+- Public form submissions no longer store arbitrary answers only on testimonial rows. `CollectionFormSubmission` is the canonical source.
+- New public testimonial/form submission writes keep email, IP, and user agent out of `Testimonial`; raw values are encrypted into `TestimonialPrivateMetadata` and normalized hashes are stored for abuse/support workflows.
+- Public submit responses intentionally omit `authorEmail`; authenticated testimonial reads rehydrate `authorEmail` from private metadata while legacy row data remains as a compatibility fallback.
+- Draft writes require `expectedVersion`; first save uses `expectedVersion: 0`, then each successful save increments `version`. Stale writes return `409 Conflict`.
 
 Recommended sequencing for remaining phases (cleanest contract first, deepest last):
 1. **3a Users** → ✓ done.
