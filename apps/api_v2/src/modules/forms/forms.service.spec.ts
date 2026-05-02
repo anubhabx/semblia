@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConflictException, NotFoundException } from "@nestjs/common";
-import { ModerationStatus, TestimonialType } from "@workspace/database/prisma";
+import {
+  ModerationStatus,
+  PublicSubmitTrustMode,
+  TestimonialType,
+} from "@workspace/database/prisma";
 import { FormsService } from "./forms.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { RedisService } from "../redis/redis.service.js";
@@ -17,6 +21,8 @@ const mockPublicSubmitIdempotencyCreate = vi.fn();
 const mockPublicSubmitIdempotencyFindUnique = vi.fn();
 const mockPublicSubmitIdempotencyUpdate = vi.fn();
 const mockTestimonialCreate = vi.fn();
+const mockCollectionFormSubmissionCreate = vi.fn();
+const mockTransaction = vi.fn();
 const mockRedisGet = vi.fn();
 const mockRedisSet = vi.fn();
 const mockRedisDel = vi.fn();
@@ -26,6 +32,7 @@ const mockGetClientIp = vi.fn();
 
 const prismaMock = {
   client: {
+    $transaction: mockTransaction,
     collectionForm: {
       findMany: mockCollectionFormFindMany,
       create: mockCollectionFormCreate,
@@ -38,6 +45,9 @@ const prismaMock = {
     },
     testimonial: {
       create: mockTestimonialCreate,
+    },
+    collectionFormSubmission: {
+      create: mockCollectionFormSubmissionCreate,
     },
     publicSubmitIdempotency: {
       create: mockPublicSubmitIdempotencyCreate,
@@ -117,6 +127,10 @@ describe("FormsService", () => {
     vi.clearAllMocks();
     mockRedisScan.mockResolvedValue(["0", []]);
     mockGetClientIp.mockReturnValue("198.51.100.10");
+    mockTransaction.mockImplementation(
+      async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(prismaMock.client),
+    );
   });
 
   it("list returns forms for the project ordered by createdAt asc", async () => {
@@ -263,11 +277,12 @@ describe("FormsService", () => {
     expect(mockCollectionFormFindMany).not.toHaveBeenCalled();
   });
 
-  it("submitPublic creates an approved auto-published testimonial for hmac trust", async () => {
+  it("submitPublic persists answers in a canonical submission and projects a testimonial", async () => {
     mockEvaluateTrust.mockResolvedValue({
       projectId: "project_1",
       trust: "hmac",
       principal: "project:project_1",
+      signingSecretId: "secret_1",
     });
     mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
     mockProjectFindUnique.mockResolvedValue({
@@ -275,7 +290,11 @@ describe("FormsService", () => {
       autoModeration: true,
       autoApproveVerified: true,
     });
-    mockTestimonialCreate.mockResolvedValue(makeTestimonial());
+    mockTestimonialCreate.mockResolvedValue(makeTestimonial({ rating: null }));
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
 
     const service = makeService();
     const result = await service.submitPublic(
@@ -285,6 +304,10 @@ describe("FormsService", () => {
         authorEmail: "ada@example.com",
         content: "Loved it",
         rating: 10,
+        answers: {
+          nps: 10,
+          favoriteFeature: "wall",
+        },
         isOAuthVerified: true,
       },
       {
@@ -299,9 +322,27 @@ describe("FormsService", () => {
           formId: "form_1",
           moderationStatus: ModerationStatus.APPROVED,
           autoPublished: true,
+          rating: null,
         }),
       }),
     );
+    expect(mockCollectionFormSubmissionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        formId: "form_1",
+        testimonialId: "testimonial_1",
+        signingSecretId: "secret_1",
+        trustedOriginId: null,
+        trustMode: PublicSubmitTrustMode.HMAC,
+        idempotencyKey: null,
+        answers: {
+          nps: 10,
+          favoriteFeature: "wall",
+        },
+        ratingValue: 10,
+        ratingScale: 10,
+      }),
+    });
     expect(result).toMatchObject({
       formId: "form_1",
       moderationStatus: ModerationStatus.APPROVED,

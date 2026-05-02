@@ -9,6 +9,7 @@ import {
 import {
   ModerationStatus,
   Prisma,
+  PublicSubmitTrustMode,
   TestimonialType,
 } from "@workspace/database/prisma";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -299,33 +300,57 @@ export class FormsService {
       }
     }
 
-    const created = await this.prisma.client.testimonial.create({
-      data: {
-        projectId: trust.projectId,
-        formId: form.id,
-        authorName: body.authorName,
-        authorEmail: body.authorEmail ?? null,
-        authorRole: body.authorRole ?? null,
-        authorCompany: body.authorCompany ?? null,
-        authorAvatar: body.authorAvatar ?? null,
-        content: body.content,
-        type: body.type ?? TestimonialType.TEXT,
-        videoUrl: body.videoUrl ?? null,
-        mediaUrl: body.mediaUrl ?? null,
-        source: body.source ?? null,
-        sourceUrl: body.sourceUrl ?? null,
-        rating: body.rating ?? null,
-        isPublished: false,
-        isApproved,
-        isOAuthVerified: body.isOAuthVerified ?? false,
-        oauthProvider: body.oauthProvider ?? null,
-        moderationStatus,
-        autoPublished,
-        ipAddress: this.publicSubmitTrustService.getClientIp(request),
-        userAgent: this.readHeader(request, "user-agent") ?? null,
-      },
-      select: TESTIMONIAL_SELECT,
-    });
+    const { testimonial: created, submission } =
+      await this.prisma.client.$transaction(async (tx) => {
+        const testimonial = await tx.testimonial.create({
+          data: {
+            projectId: trust.projectId,
+            formId: form.id,
+            authorName: body.authorName,
+            authorEmail: body.authorEmail ?? null,
+            authorRole: body.authorRole ?? null,
+            authorCompany: body.authorCompany ?? null,
+            authorAvatar: body.authorAvatar ?? null,
+            content: body.content,
+            type: body.type ?? TestimonialType.TEXT,
+            videoUrl: body.videoUrl ?? null,
+            mediaUrl: body.mediaUrl ?? null,
+            source: body.source ?? null,
+            sourceUrl: body.sourceUrl ?? null,
+            rating: this.toProjectedTestimonialRating(body.rating),
+            isPublished: false,
+            isApproved,
+            isOAuthVerified: body.isOAuthVerified ?? false,
+            oauthProvider: body.oauthProvider ?? null,
+            moderationStatus,
+            autoPublished,
+            ipAddress: this.publicSubmitTrustService.getClientIp(request),
+            userAgent: this.readHeader(request, "user-agent") ?? null,
+          },
+          select: TESTIMONIAL_SELECT,
+        });
+
+        const submission = await tx.collectionFormSubmission.create({
+          data: {
+            projectId: trust.projectId,
+            formId: form.id,
+            testimonialId: testimonial.id,
+            trustedOriginId: trust.trustedOriginId ?? null,
+            signingSecretId: trust.signingSecretId ?? null,
+            trustMode:
+              trust.trust === "hmac"
+                ? PublicSubmitTrustMode.HMAC
+                : PublicSubmitTrustMode.ORIGIN,
+            idempotencyKey: idempotencyKey ?? null,
+            payloadHash,
+            answers: this.toJsonObjectInput(body.answers ?? {}),
+            ratingValue: body.rating ?? null,
+            ratingScale: this.toSubmissionRatingScale(body.rating),
+          },
+        });
+
+        return { testimonial, submission };
+      });
 
     const response = this.toTestimonialDto(created);
 
@@ -338,6 +363,7 @@ export class FormsService {
           },
         },
         data: {
+          submissionId: submission.id,
           responseStatusCode: 201,
           responseBody: response,
         },
@@ -405,6 +431,26 @@ export class FormsService {
 
   private toJsonObjectInput(value: Record<string, unknown>) {
     return value as Prisma.InputJsonObject;
+  }
+
+  private toProjectedTestimonialRating(
+    rating: CreateFormSubmissionBodyDto["rating"],
+  ) {
+    if (rating === null || rating === undefined) {
+      return null;
+    }
+
+    return rating <= 5 ? rating : null;
+  }
+
+  private toSubmissionRatingScale(
+    rating: CreateFormSubmissionBodyDto["rating"],
+  ) {
+    if (rating === null || rating === undefined) {
+      return null;
+    }
+
+    return rating > 5 ? 10 : 5;
   }
 
   private readHeader(request: PublicSubmitRequest, name: string) {
