@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -9,6 +8,7 @@ import {
 import {
   ModerationStatus,
   Prisma,
+  PublicSubmitSurface,
   PublicSubmitTrustMode,
   StudioDraftResourceType,
   TestimonialType,
@@ -18,6 +18,10 @@ import { RedisService } from "../redis/redis.service.js";
 import { StudioDraftsService } from "../studio-drafts/studio-drafts.service.js";
 import { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
+import {
+  publicSubmitIdempotencyWhere,
+  replayCompletedPublicSubmit,
+} from "../testimonials/public-submit-idempotency.js";
 import { hashIdempotencyPayload } from "../testimonials/testimonials.dto.js";
 import type {
   CreateFormBodyDto,
@@ -406,12 +410,11 @@ export class FormsService {
 
     if (idempotencyKey) {
       await this.prisma.client.publicSubmitIdempotency.update({
-        where: {
-          projectId_idempotencyKey: {
-            projectId: trust.projectId,
-            idempotencyKey,
-          },
-        },
+        where: publicSubmitIdempotencyWhere(
+          trust.projectId,
+          PublicSubmitSurface.FORM,
+          idempotencyKey,
+        ),
         data: {
           submissionId: submission.id,
           responseStatusCode: 201,
@@ -531,6 +534,7 @@ export class FormsService {
       await this.prisma.client.publicSubmitIdempotency.create({
         data: {
           projectId,
+          surface: PublicSubmitSurface.FORM,
           idempotencyKey,
           payloadHash,
           responseStatusCode: 201,
@@ -546,12 +550,11 @@ export class FormsService {
 
       const existing =
         await this.prisma.client.publicSubmitIdempotency.findUnique({
-          where: {
-            projectId_idempotencyKey: {
-              projectId,
-              idempotencyKey,
-            },
-          },
+          where: publicSubmitIdempotencyWhere(
+            projectId,
+            PublicSubmitSurface.FORM,
+            idempotencyKey,
+          ),
         });
 
       if (!existing) {
@@ -560,13 +563,7 @@ export class FormsService {
         );
       }
 
-      if (existing.payloadHash !== payloadHash) {
-        throw new ConflictException(
-          "Idempotency key reused with a different payload",
-        );
-      }
-
-      return existing.responseBody;
+      return replayCompletedPublicSubmit(existing, payloadHash);
     }
   }
 

@@ -555,6 +555,73 @@ describe("FormsService", () => {
     ).resolves.toEqual({ id: "testimonial_cached" });
   });
 
+  it("submitPublic reserves form idempotency keys under the form surface", async () => {
+    const rawBody = JSON.stringify({ authorName: "Ada", content: "Loved it" });
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "hmac",
+      principal: "project:project_1",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockPublicSubmitIdempotencyCreate.mockResolvedValue({ id: "idem_row_1" });
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+    });
+    mockTestimonialCreate.mockResolvedValue(makeTestimonial());
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
+
+    const service = makeService();
+    await service.submitPublic(
+      { slug: "acme", formId: "form_1" },
+      { authorName: "Ada", content: "Loved it" },
+      {
+        headers: { "idempotency-key": "idem-1" },
+        rawBody,
+      },
+    );
+
+    expect(mockPublicSubmitIdempotencyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        surface: "FORM",
+        idempotencyKey: "idem-1",
+      }),
+    });
+  });
+
+  it("submitPublic returns 409 when a matching idempotency key is still processing", async () => {
+    const rawBody = JSON.stringify({ authorName: "Ada", content: "Loved it" });
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "hmac",
+      principal: "project:project_1",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockPublicSubmitIdempotencyCreate.mockRejectedValue({ code: "P2002" });
+    mockPublicSubmitIdempotencyFindUnique.mockResolvedValue({
+      payloadHash: hashIdempotencyPayload(rawBody),
+      responseBody: {},
+    });
+
+    const service = makeService();
+
+    await expect(
+      service.submitPublic(
+        { slug: "acme", formId: "form_1" },
+        { authorName: "Ada", content: "Loved it" },
+        {
+          headers: { "idempotency-key": "idem-1" },
+          rawBody,
+        },
+      ),
+    ).rejects.toThrow(ConflictException);
+  });
+
   it("submitPublic returns 409 when the same idempotency key is reused with a different payload", async () => {
     const rawBody = JSON.stringify({ authorName: "Ada", content: "Loved it" });
     mockEvaluateTrust.mockResolvedValue({

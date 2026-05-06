@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -9,6 +8,7 @@ import {
 import {
   ModerationStatus,
   Prisma,
+  PublicSubmitSurface,
   TestimonialType,
 } from "@workspace/database/prisma";
 import { paginate } from "../../common/utils/paginate.js";
@@ -16,6 +16,10 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
 import { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
+import {
+  publicSubmitIdempotencyWhere,
+  replayCompletedPublicSubmit,
+} from "./public-submit-idempotency.js";
 import type {
   CreatePublicTestimonialBodyDto,
   PublicProjectSlugParamsDto,
@@ -313,12 +317,11 @@ export class TestimonialsService {
 
     if (idempotencyKey) {
       await this.prisma.client.publicSubmitIdempotency.update({
-        where: {
-          projectId_idempotencyKey: {
-            projectId: trust.projectId,
-            idempotencyKey,
-          },
-        },
+        where: publicSubmitIdempotencyWhere(
+          trust.projectId,
+          PublicSubmitSurface.TESTIMONIALS,
+          idempotencyKey,
+        ),
         data: {
           responseStatusCode: 201,
           responseBody: response,
@@ -460,6 +463,7 @@ export class TestimonialsService {
       await this.prisma.client.publicSubmitIdempotency.create({
         data: {
           projectId,
+          surface: PublicSubmitSurface.TESTIMONIALS,
           idempotencyKey,
           payloadHash,
           responseStatusCode: 201,
@@ -475,12 +479,11 @@ export class TestimonialsService {
 
       const existing =
         await this.prisma.client.publicSubmitIdempotency.findUnique({
-          where: {
-            projectId_idempotencyKey: {
-              projectId,
-              idempotencyKey,
-            },
-          },
+          where: publicSubmitIdempotencyWhere(
+            projectId,
+            PublicSubmitSurface.TESTIMONIALS,
+            idempotencyKey,
+          ),
         });
 
       if (!existing) {
@@ -489,13 +492,7 @@ export class TestimonialsService {
         );
       }
 
-      if (existing.payloadHash !== payloadHash) {
-        throw new ConflictException(
-          "Idempotency key reused with a different payload",
-        );
-      }
-
-      return existing.responseBody;
+      return replayCompletedPublicSubmit(existing, payloadHash);
     }
   }
 

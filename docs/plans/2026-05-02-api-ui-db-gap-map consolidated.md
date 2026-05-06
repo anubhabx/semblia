@@ -2,6 +2,7 @@
 
 _Date: 2026-05-02_
 _Branch: `revamp/v2`_
+_Last refreshed: 2026-05-06 security audit and UI-gap update_
 
 Status: **Gap map plus locked decisions for v2 API surface completion**, not a full implementation plan.
 
@@ -9,9 +10,30 @@ Scope: Same as the original gap map – compare `apps/web_v2` UI, `apps/api_v2` 
 
 ## Executive Verdict
 
-The core v2 API is usable but not yet shaped for the current UI; users, projects, testimonials, forms, widgets, public submit, and public widget/wall reads already exist. The gaps are still primarily cross-boundary: response envelope handling, role/capability projection, slug-vs-id wiring, server persistence for studio state and form answers, public hosted surfaces, and mock-driven product areas.
+The core v2 API is usable but not yet shaped for the current UI; users, projects, testimonials, forms, widgets, public submit, public widget/wall reads, shared drafts, scoped private API keys, and scoped agent keys now exist. The gaps are still primarily cross-boundary: response envelope handling, role/capability projection, slug-vs-id wiring, public hosted surfaces, auxiliary analytics/notifications/billing, and mock-driven product areas.
 
 Two meta-decisions now govern the rest of the work. First, the backend and database are canonical: API and schema move first even if they diverge from current mocks, and the UI is expected to adjust to the new contracts rather than constraining them. Second, UI differences are tracked explicitly in a living UI wiring/diff document, and those mismatches are resolved by updating `web_v2` to the new surface.
+
+## 2026-05-06 UI Wiring Gap Refresh
+
+The security refresh found no dependency advisories that affect `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`; repo-wide audit findings remain rooted in legacy/admin/widget/tooling paths. The API-side fixes from the refresh are now part of the backend contract:
+
+- public submit idempotency is scoped by surface (`TESTIMONIALS` vs `FORM`) instead of only by project/key
+- an idempotency collision replays only a completed response; an in-flight duplicate returns `409 Conflict`
+- invalid public submit trust attempts are counted by the public-submit throttler before the original trust error is returned
+- public throttling is mode-specific: public list reads, browser submits, and HMAC submits use separate buckets
+- API-key authentication checks all active candidates for a public key prefix, so prefix collisions cannot block a valid key
+
+Current UI gaps against the newer API surface:
+
+| Surface | Backend status | UI implementation gap |
+|---|---|---|
+| Private API keys | `GET/POST /v2/projects/:slug/api-keys`, `POST /:keyId/rotate`, `POST /:keyId/revoke`, and `GET /:keyId/events` exist with one-time secret reveal and metadata-only list/events. | Replace mock API-key pages with real calls; show raw secret only on create/rotate responses; wire scopes, expiry, usage limit, rate limit, status, rotation, revocation, and events; gate controls by credential capabilities. |
+| Agent access | `GET /v2/projects/:slug/agent-access`, `POST /agent-access/keys`, `POST /agent-access/keys/:keyId/revoke`, and `GET /agent-access/actions` exist. | Add or wire the Agent Access UI around presets, one-time agent key reveal, revoke flow, usage metadata, and action log. |
+| Project access projection | Server authorization is enforced through `CapabilityGuard`, Clerk organization checks, and credential actors. | Project list/detail still need a frontend-consumable `access` block, or the UI needs an explicit alternative contract before broad capability-aware wiring. |
+| Public submit clients | Browser origin and HMAC trust remain separate; API keys are still not public submit trust. Idempotent retries now surface-scoped, incomplete duplicates return `409`, and browser/HMAC/list throttles use separate buckets. | Public form/testimonial clients should keep using `Origin` or HMAC, send `Idempotency-Key` only for retryable submits, and treat `409` as either in-progress retry/backoff or key/payload mismatch depending on response copy. |
+| Studio drafts | Form/widget server drafts with optimistic concurrency exist. | Replace durable local-only editor state with draft `GET`/`PUT` calls and handle `expectedVersion` conflicts in the editor. |
+| Analytics, notifications, billing | Still pending beyond the API-key usage/event pieces and existing schema groundwork. | Keep mock surfaces marked as unwired until read APIs/event capture/preference/read-only billing projections land. |
 
 ## Public Trust And Hosts
 
@@ -105,9 +127,15 @@ For now, payment methods, billing-address edits, checkout, plan switching, and c
 
 ### API keys
 
-API keys remain a separate programmatic access layer for authenticated private APIs, not for public testimonial submit. The gap map already notes that the current `ApiKey` schema is not sufficient for secure launch and should be revamped to include a better key model with scopes, prefix/last4, status, rotation metadata, and usage/event tracking.
+API keys remain a separate programmatic access layer for authenticated private APIs, not for public testimonial submit. The backend now has project-bound scoped private keys with scrypt hashes, prefix/last4 metadata, status, rotation/revocation, usage limits, daily usage, and event history.
 
-The product decision is that API keys are not dropped, but they are clearly separated from browser `Origin` trust and HMAC signing secrets. Public submit continues to use `Origin` or HMAC, while API keys evolve as the credential for authenticated programmatic access to private project APIs.
+The product decision is that API keys are not dropped, but they are clearly separated from browser `Origin` trust and HMAC signing secrets. Public submit continues to use `Origin` or HMAC, while API keys are the credential for authenticated programmatic access to private project APIs. The remaining gap is mostly `web_v2` wiring and product copy around one-time secret handling, scope selection, rotation, revocation, events, and usage limits.
+
+### Agent access
+
+Agent access is now a first-class credential surface over scoped agent keys. The backend exposes overview, key creation, key revocation, and action-log endpoints with launch presets: `READ_ONLY`, `CONTENT_MANAGER`, `AUTOMATION_MANAGER`, and `DEVELOPER`.
+
+The UI should present this as a friendly agent-access surface rather than a raw API-key clone. It must explain presets through product copy, reveal generated agent keys only once, show revocation/usage state, and keep dangerous scopes such as billing writes, member writes, project deletion, credential reveal, and source-content rewrites out of the launch UX.
 
 ## Consolidated Locked Decisions
 

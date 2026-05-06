@@ -394,6 +394,52 @@ describe("TestimonialsService", () => {
     ).rejects.toThrow(ConflictException);
   });
 
+  it("rejects idempotency replay while the first matching request is still processing", async () => {
+    mockTrustEvaluate.mockResolvedValue({
+      projectId: "project_1",
+      slug: "acme",
+      trust: "origin",
+      principal: "203.0.113.10",
+      rateLimitTracker: "project_1:browser:203.0.113.10",
+    });
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+    });
+    mockIdempotencyCreate.mockRejectedValue({ code: "P2002" });
+    mockIdempotencyFindUnique.mockResolvedValue({
+      projectId: "project_1",
+      idempotencyKey: "idem-1",
+      payloadHash: hashIdempotencyPayload(
+        Buffer.from('{"authorName":"Ava","content":"Great product"}', "utf8"),
+      ),
+      responseStatusCode: 201,
+      responseBody: {},
+    });
+
+    await expect(
+      service.createPublic(
+        { slug: "acme" },
+        {
+          authorName: "Ava",
+          content: "Great product",
+        },
+        {
+          headers: {
+            "idempotency-key": "idem-1",
+            origin: "https://allowed.example",
+          },
+          rawBody: Buffer.from(
+            '{"authorName":"Ava","content":"Great product"}',
+            "utf8",
+          ),
+          ip: "203.0.113.10",
+        },
+      ),
+    ).rejects.toThrow(ConflictException);
+  });
+
   it("auto-approves and auto-publishes trusted HMAC submissions when auto moderation is enabled", async () => {
     mockTrustEvaluate.mockResolvedValue({
       projectId: "project_1",
@@ -478,6 +524,13 @@ describe("TestimonialsService", () => {
       }),
     );
     expect(mockIdempotencyUpdate).toHaveBeenCalled();
+    expect(mockIdempotencyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        surface: "TESTIMONIALS",
+        idempotencyKey: "idem-1",
+      }),
+    });
     expect(mockIdempotencyUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

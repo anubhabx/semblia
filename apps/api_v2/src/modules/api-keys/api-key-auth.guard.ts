@@ -39,7 +39,7 @@ export class ApiKeyAuthenticator {
     if (!keyPrefix) return null;
 
     const now = new Date();
-    const credential = await this.prisma.client.apiKey.findFirst({
+    const credentials = await this.prisma.client.apiKey.findMany({
       where: {
         keyPrefix,
         status: ApiKeyStatus.ACTIVE,
@@ -58,33 +58,37 @@ export class ApiKeyAuthenticator {
       },
     });
 
-    if (!credential) return null;
-    if (
-      credential.usageLimit !== null &&
-      credential.usageCount >= credential.usageLimit
-    ) {
-      return null;
+    for (const credential of credentials) {
+      if (!verifyCredentialSecret(secret, credential.keyHash)) {
+        continue;
+      }
+
+      if (
+        credential.usageLimit !== null &&
+        credential.usageCount >= credential.usageLimit
+      ) {
+        return null;
+      }
+
+      await this.recordUsage(credential.id, now);
+
+      const actorType =
+        credential.keyType === ApiKeyType.AGENT ? "agent_key" : "api_key";
+
+      return {
+        user: { id: credential.userId },
+        clerkUserId: credential.userId,
+        actor: buildCredentialActorContext({
+          actorType,
+          userId: credential.userId,
+          projectId: credential.projectId,
+          credentialId: credential.id,
+          scopes: credential.scopes,
+        }),
+      };
     }
-    if (!verifyCredentialSecret(secret, credential.keyHash)) {
-      return null;
-    }
 
-    await this.recordUsage(credential.id, now);
-
-    const actorType =
-      credential.keyType === ApiKeyType.AGENT ? "agent_key" : "api_key";
-
-    return {
-      user: { id: credential.userId },
-      clerkUserId: credential.userId,
-      actor: buildCredentialActorContext({
-        actorType,
-        userId: credential.userId,
-        projectId: credential.projectId,
-        credentialId: credential.id,
-        scopes: credential.scopes,
-      }),
-    };
+    return null;
   }
 
   private async recordUsage(apiKeyId: string, now: Date) {

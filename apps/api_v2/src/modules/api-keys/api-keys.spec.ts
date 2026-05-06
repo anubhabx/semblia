@@ -236,16 +236,18 @@ describe("ApiKeyAuthenticator", () => {
 
   it("authenticates active project-bound agent keys into actor context and records usage", async () => {
     const generated = generateCredentialSecret("AGENT");
-    mockApiKeyFindFirst.mockResolvedValue({
-      id: "key_agent_1",
-      keyHash: hashCredentialSecret(generated.secret),
-      keyType: ApiKeyType.AGENT,
-      scopes: ["project:read", "agent:read"],
-      userId: "user_1",
-      projectId: "project_1",
-      usageCount: 0,
-      usageLimit: null,
-    });
+    mockApiKeyFindMany.mockResolvedValue([
+      {
+        id: "key_agent_1",
+        keyHash: hashCredentialSecret(generated.secret),
+        keyType: ApiKeyType.AGENT,
+        scopes: ["project:read", "agent:read"],
+        userId: "user_1",
+        projectId: "project_1",
+        usageCount: 0,
+        usageLimit: null,
+      },
+    ]);
 
     const authenticator = new ApiKeyAuthenticator(prismaMock);
     const result = await authenticator.authenticate(generated.secret);
@@ -272,5 +274,66 @@ describe("ApiKeyAuthenticator", () => {
         }),
       }),
     );
+  });
+
+  it("checks every active candidate when key prefixes collide", async () => {
+    const generated = generateCredentialSecret("SECRET");
+    mockApiKeyFindMany.mockResolvedValue([
+      {
+        id: "key_collision_1",
+        keyHash: hashCredentialSecret(`${generated.secret}wrong`),
+        keyType: ApiKeyType.SECRET,
+        scopes: ["project:read"],
+        userId: "user_1",
+        projectId: "project_1",
+        usageCount: 0,
+        usageLimit: null,
+      },
+      {
+        id: "key_collision_2",
+        keyHash: hashCredentialSecret(generated.secret),
+        keyType: ApiKeyType.SECRET,
+        scopes: ["project:read"],
+        userId: "user_1",
+        projectId: "project_1",
+        usageCount: 0,
+        usageLimit: null,
+      },
+    ]);
+
+    const authenticator = new ApiKeyAuthenticator(prismaMock);
+    const result = await authenticator.authenticate(generated.secret);
+
+    expect(result?.actor).toMatchObject({
+      actorType: "api_key",
+      credentialId: "key_collision_2",
+    });
+    expect(mockApiKeyUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "key_collision_2" },
+      }),
+    );
+  });
+
+  it("rejects a matching key after its usage limit is exhausted", async () => {
+    const generated = generateCredentialSecret("SECRET");
+    mockApiKeyFindMany.mockResolvedValue([
+      {
+        id: "key_agent_1",
+        keyHash: hashCredentialSecret(generated.secret),
+        keyType: ApiKeyType.SECRET,
+        scopes: ["project:read"],
+        userId: "user_1",
+        projectId: "project_1",
+        usageCount: 10,
+        usageLimit: 10,
+      },
+    ]);
+
+    const authenticator = new ApiKeyAuthenticator(prismaMock);
+    const result = await authenticator.authenticate(generated.secret);
+
+    expect(result).toBeNull();
+    expect(mockTransaction).not.toHaveBeenCalled();
   });
 });
