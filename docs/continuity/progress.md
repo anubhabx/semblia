@@ -5,12 +5,12 @@ Last updated: 2026-05-08
 ## Current Snapshot
 
 - Branch at last sync: `revamp/v2`.
-- Git state after the V1 Task 3 checkpoint: `revamp/v2...origin/revamp/v2 [ahead 34]`.
-- Worktree after the V1 Task 3 checkpoint: clean.
-- Current stage: V1 Task 3 feedback integrity APIs complete; next implementation resumes at outbound webhooks and export foundation.
-- Current checkpoint: V1 Task 3 feedback integrity APIs. Security hardening is already committed as `0bc7bd1`.
-- Latest committed implementation checkpoint: V1 Task 3 added immutable feedback workflow APIs, display suggestions, submission annotations/moderation, and project actor audit.
-- Next implementation checkpoint: V1 Task 4 outbound webhook and export foundation from `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md`.
+- Git state at Task 4 implementation verification: `revamp/v2...origin/revamp/v2 [ahead 36]`.
+- Worktree at Task 4 implementation verification: outbound webhook/export source and schema files modified; continuity docs refreshed afterward.
+- Current stage: V1 Task 4 outbound webhook and async CSV export foundation implemented and verified.
+- Current checkpoint: V1 Task 4 outbound webhook and async CSV export foundation. Security hardening remains committed as `0bc7bd1`.
+- Latest committed implementation checkpoint: V1 Task 3 feedback integrity APIs. Task 4 is implemented in the worktree and ready for a reviewable checkpoint commit.
+- Next implementation checkpoint: V1 Task 5 thin native integrations, unless the user chooses to checkpoint/commit Task 4 first.
 
 Always re-run `git status --short --branch` and `git log --oneline -12` before using this snapshot as current state.
 
@@ -32,6 +32,8 @@ Also on 2026-05-03, the first two v1 control-plane implementation checkpoints la
 On 2026-05-06, implementation paused for a fresh V2 security audit of the recently landed public trust, form submission, testimonial PII, draft, organization, and credential surfaces. The audit found no dependency advisories affecting the V2 workspaces and produced root hardening fixes for public-submit idempotency, invalid-submit throttling, and API-key prefix-collision handling. The UI gap map was refreshed against the new credential and agent-access API surface.
 
 On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionFormSubmission` is now the immutable source record with workflow moderation state; annotations, display suggestions, and project actor audit rows are separate workflow/presentation layers. Agents and API keys can annotate, moderate, suggest display copy, and publish/unpublish only through scoped capability-gated routes; display-copy approval is restricted to user actors.
+
+Later on 2026-05-08, V1 Task 4 added the outbound webhook and async CSV export foundation. Projects now have capability-gated webhook endpoint management, one-time encrypted webhook secrets, signed async delivery processing, delivery retries, and audit rows for mutating actions. CSV exports now create async database-backed delivery artifacts with display-safe testimonial fields only, download readiness checks, project isolation, and an `export.delivery_failed` webhook event hook.
 
 ## Phase Ledger
 
@@ -73,7 +75,8 @@ On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionF
 | Deprecated design helper cleanup | Done | `63aec50` | Removed unused `docs/tresta_claude_design/src/*` helper module files. |
 | Security audit refresh | Done | `0bc7bd1` | Fresh dependency/CVE and code audit before continuing V1 Task 3. Fixed surface-scoped public idempotency, invalid-submit and mode-specific public throttling, API-key prefix collision handling, and refreshed the UI gap map for credentials/agent access. |
 | V1 Task 3 Feedback integrity APIs | Done | `09fa77a` | Added immutable submission workflow state, submission annotations/moderation APIs, testimonial display suggestions, human-only display approval, and project actor audit. |
-| 1e Auxiliary product data | Partially complete | n/a | API key, agent key, and feedback integrity foundations are implemented. Remaining auxiliary slices: billing projections, notifications, analytics capture/rollups. |
+| V1 Task 4 Outbound webhooks and async CSV exports | Implemented, uncommitted | n/a | Added encrypted webhook endpoints, signed async deliveries/retries, async DB-backed CSV export deliveries/downloads, shared DTOs, and audit rows. |
+| 1e Auxiliary product data | Partially complete | n/a | API key, agent key, feedback integrity, outbound webhook, and async CSV export foundations are implemented. Remaining auxiliary slices: native thin integrations, billing projections, notifications, analytics capture/rollups. |
 | 2 Common API contracts | Pending | n/a | Access block, shared DTO/client contracts, errors, idempotency, concurrency conventions. |
 | 3 Public surface API | Pending | n/a | Host-aware public rendering/submission and event capture. |
 | 4 Studio API | Pending | n/a | Form/widget studio persistence and explicit mappings. |
@@ -103,6 +106,13 @@ On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionF
 - Submission annotations, moderation updates, display suggestions, display approvals/rejections, and testimonial publish/unpublish actions now create project actor audit rows.
 - Display suggestions are presentation-layer records. User actors can approve them into `Testimonial.content`; agent/API-key actors can suggest but cannot approve display copy.
 - Rejecting or flagging a linked submission unpublishes the projected testimonial and does not mutate submission answers, rating values, or private metadata.
+- Outbound webhook endpoint secrets are encrypted with `API_V2_SECRET_ENCRYPTION_KEY`; raw `whsec_...` values are exposed only in create and rotate responses.
+- Outbound webhook deliveries are signed with `X-Tresta-Event`, `X-Tresta-Delivery`, `X-Tresta-Timestamp`, and `X-Tresta-Signature: v1=<hmac>`.
+- Outbound webhook dispatch has a bounded network wait and bounded response capture: requests time out after 10 seconds, and stored response snippets are capped without reading arbitrary-size remote bodies.
+- V1 webhook subscriptions require explicit event names only; no wildcard subscription exists in Task 4.
+- CSV export deliveries store artifacts in the database for v1 and include display-safe testimonial fields only. Private metadata, IP, user agent, raw answers, and email are excluded by default.
+- Export delivery failures emit the generic `export.delivery_failed` outbound webhook event for subscribed endpoints.
+- Root `pnpm.overrides.hono` is pinned to `4.12.18` so the Prisma tooling path no longer matches the May 2026 Hono advisories.
 - Broad `web_v2` wiring stays deferred until the remaining backend-canonical V1 differentiator surfaces are complete.
 
 ## Latest Verification
@@ -123,10 +133,20 @@ On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionF
 - V1 Task 3 build passed: `pnpm.cmd build --filter api_v2`.
 - V1 Task 3 index refresh passed: `python scripts/update-indexes.py` indexed 3 changed files, 1047 chunks total, and refreshed the graph incrementally.
 - V1 Task 3 graph refresh passed: `python scripts/rebuild-graphify.py`; semantic extraction remains skipped because it requires Claude.
+- V1 Task 4 database schema verification passed: `pnpm.cmd --filter @workspace/database generate` and `pnpm.cmd --filter @workspace/database exec prisma validate`.
+- V1 Task 4 shared types verification passed: `pnpm.cmd --filter @workspace/types build`.
+- V1 Task 4 dependency audit refresh passed for active V2 workspaces after the Hono override update: `pnpm.cmd audit --prod --json` reported 67 repo-wide advisories and 0 advisory paths matching `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`; `pnpm.cmd audit --json` reported 108 repo-wide advisories and 0 matching active V2 workspace paths.
+- V1 Task 4 targeted API verification passed after webhook dispatch hardening: `pnpm.cmd --filter api_v2 test -- --run modules/outbound-webhooks modules/exports` reported 40 test files and 218 tests passing.
+- V1 Task 4 full API tests passed after webhook dispatch hardening: `pnpm.cmd --filter api_v2 test` reported 40 test files and 218 tests passing.
+- V1 Task 4 API typecheck passed: `pnpm.cmd --filter api_v2 typecheck`.
+- V1 Task 4 API lint passed: `pnpm.cmd --filter api_v2 lint`.
+- V1 Task 4 build passed: `pnpm.cmd build --filter api_v2`.
+- V1 Task 4 index refresh passed: `python scripts/update-indexes.py` indexed the initial Task 4 changes, then was rerun successfully after the webhook dispatch hardening and docs refresh.
+- V1 Task 4 graph refresh passed: `python scripts/rebuild-graphify.py`; the final rerun refreshed 199 changed files, and semantic extraction remains skipped because it requires Claude.
 
 ## Known Doc Drift
 
-- `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` is the current UI/API/shared-types gap inventory after V1 Task 3. Use it for implementation-state wiring checks; keep the 2026-05-02 consolidated gap map for locked decisions and rationale.
+- `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` was current after V1 Task 3, but is now stale for outbound webhooks, exports, Prisma models, and shared DTOs after the Task 4 implementation.
 - `docs/plans/2026-05-02-api-surface-implementation-phases.md` has been annotated so its original starting point does not override this live ledger.
 - `apps/api_v2/docs/orchestration/handoff.md` has been annotated so original-rebuild scope language does not override the current auxiliary-surface decisions.
 - `memory/` and `docs/codex-claude-memory-migration.md` are historical context, not the live progress ledger.

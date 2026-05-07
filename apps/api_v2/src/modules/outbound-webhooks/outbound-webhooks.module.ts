@@ -1,0 +1,30 @@
+import { Module } from "@nestjs/common";
+import { BullModule } from "@nestjs/bullmq";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
+import { AuthzModule } from "../../common/authz/authz.module.js";
+import { OutboundWebhookDispatcher } from "./outbound-webhook-dispatcher.js";
+import { OutboundWebhooksController } from "./outbound-webhooks.controller.js";
+import { OutboundWebhooksProcessor } from "./outbound-webhooks.processor.js";
+import {
+  OUTBOUND_WEBHOOK_QUEUE,
+  OutboundWebhooksService,
+} from "./outbound-webhooks.service.js";
+
+@Module({
+  imports: [
+    AuthzModule,
+    BullModule.registerQueue({ name: OUTBOUND_WEBHOOK_QUEUE }),
+  ],
+  controllers: [OutboundWebhooksController],
+  providers: [
+    OutboundWebhooksService,
+    OutboundWebhooksProcessor,
+    ProjectActionAuditService,
+    {
+      provide: "OUTBOUND_WEBHOOK_DISPATCHER",
+      useClass: OutboundWebhookDispatcher,
+    },
+  ],
+  exports: [OutboundWebhooksService],
+})
+export class OutboundWebhooksModule {}

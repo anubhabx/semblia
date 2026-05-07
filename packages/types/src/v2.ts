@@ -68,6 +68,29 @@ export type V2SubscriptionStatus =
   | "PAUSED"
   | "INCOMPLETE"
   | "TRIALING";
+export type V2OutboundWebhookEventType =
+  | "submission.created"
+  | "submission.moderated"
+  | "testimonial.approved"
+  | "testimonial.published"
+  | "testimonial.unpublished"
+  | "export.delivery_failed"
+  | "agent.action_created";
+export type V2DeliveryStatus =
+  | "PENDING"
+  | "DELIVERING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "EXHAUSTED";
+export type V2OutboundWebhookStatus = "ACTIVE" | "DISABLED" | "REVOKED";
+export type V2ExportDestinationProvider =
+  | "CSV"
+  | "WEBHOOK"
+  | "SLACK"
+  | "NOTION"
+  | "LINEAR"
+  | "GITHUB";
+export type V2ExportDestinationStatus = "ACTIVE" | "DISABLED" | "REVOKED";
 
 export interface V2PaginatedResponse<T> {
   items: T[];
@@ -429,6 +452,100 @@ export interface V2AgentAccessPresetDTO {
 export interface V2AgentAccessOverviewDTO {
   presets: V2AgentAccessPresetDTO[];
   keys: V2ApiKeyDTO[];
+}
+
+// ── Outbound webhooks and exports ─────────────────────────────────────────
+
+export interface V2OutboundWebhookEndpointDTO {
+  id: string;
+  projectId: string;
+  name: string;
+  url: string;
+  subscribedEvents: V2OutboundWebhookEventType[];
+  status: V2OutboundWebhookStatus;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2CreatedOutboundWebhookEndpointDTO
+  extends V2OutboundWebhookEndpointDTO {
+  signingSecret: string;
+}
+
+export interface V2OutboundWebhookDeliveryDTO {
+  id: string;
+  endpointId: string;
+  projectId: string;
+  eventType: V2OutboundWebhookEventType;
+  payload: Record<string, unknown>;
+  status: V2DeliveryStatus;
+  attempts: number;
+  nextAttemptAt: string | null;
+  responseStatus: number | null;
+  responseBodySnippet: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2CreateOutboundWebhookEndpointBody {
+  name: string;
+  url: string;
+  subscribedEvents: V2OutboundWebhookEventType[];
+}
+
+export interface V2UpdateOutboundWebhookEndpointBody {
+  name?: string;
+  url?: string;
+  subscribedEvents?: V2OutboundWebhookEventType[];
+}
+
+export interface V2ExportDestinationDTO {
+  id: string;
+  projectId: string;
+  provider: V2ExportDestinationProvider;
+  name: string;
+  config: Record<string, unknown>;
+  status: V2ExportDestinationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2ExportRuleDTO {
+  id: string;
+  projectId: string;
+  destinationId: string;
+  name: string;
+  eventTypes: V2OutboundWebhookEventType[];
+  filter: Record<string, unknown> | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2ExportDeliveryDTO {
+  id: string;
+  projectId: string;
+  destinationId: string;
+  ruleId: string | null;
+  eventType: string;
+  payload: Record<string, unknown>;
+  status: V2DeliveryStatus;
+  attempts: number;
+  nextAttemptAt: string | null;
+  error: string | null;
+  artifactContent: string | null;
+  artifactContentType: string | null;
+  artifactFilename: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2CreateCsvExportBody {
+  filename?: string;
 }
 
 // ── Studio drafts ──────────────────────────────────────────────────────────

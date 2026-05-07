@@ -129,6 +129,11 @@ model Project {
   submissionAnnotations       CollectionFormSubmissionAnnotation[]
   testimonialDisplayRevisions TestimonialDisplayRevision[]
   actionAudits                ProjectActionAudit[]
+  outboundWebhookEndpoints    OutboundWebhookEndpoint[]
+  outboundWebhookDeliveries   OutboundWebhookDelivery[]
+  exportDestinations          ExportDestination[]
+  exportRules                 ExportRule[]
+  exportDeliveries            ExportDelivery[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -241,6 +246,35 @@ enum PublicSurfaceHostStatus {
   DISABLED
 }
 
+enum OutboundWebhookStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERING
+  SUCCEEDED
+  FAILED
+  EXHAUSTED
+}
+
+enum ExportDestinationProvider {
+  CSV
+  WEBHOOK
+  SLACK
+  NOTION
+  LINEAR
+  GITHUB
+}
+
+enum ExportDestinationStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
 model PublicSurfaceHost {
   id                    String                    @id @default(cuid())
   projectId             String
@@ -260,6 +294,117 @@ model PublicSurfaceHost {
   @@index([projectId, feature, status])
   @@index([resourceType, resourceId])
   @@index([hostname, status])
+}
+
+model OutboundWebhookEndpoint {
+  id                     String                @id @default(cuid())
+  projectId              String
+  name                   String                @db.VarChar(255)
+  url                    String                @db.VarChar(2000)
+  signingSecretEncrypted String                @db.Text
+  signingSecretHash      String?               @db.VarChar(128)
+  subscribedEvents       String[]              @default([])
+  status                 OutboundWebhookStatus @default(ACTIVE)
+  lastSuccessAt          DateTime?
+  lastFailureAt          DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  project    Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliveries OutboundWebhookDelivery[]
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+}
+
+model OutboundWebhookDelivery {
+  id                  String         @id
+  endpointId          String
+  projectId           String
+  eventType           String         @db.VarChar(120)
+  payload             Json
+  status              DeliveryStatus @default(PENDING)
+  attempts            Int            @default(0)
+  nextAttemptAt       DateTime?
+  responseStatus      Int?
+  responseBodySnippet String?        @db.Text
+  error               String?        @db.Text
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  endpoint OutboundWebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  project  Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, status])
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([eventType, createdAt])
+}
+
+model ExportDestination {
+  id        String                    @id @default(cuid())
+  projectId String
+  provider  ExportDestinationProvider
+  name      String                    @db.VarChar(255)
+  config    Json
+  status    ExportDestinationStatus   @default(ACTIVE)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rules      ExportRule[]
+  deliveries ExportDelivery[]
+
+  @@index([projectId, provider])
+  @@index([projectId, status])
+}
+
+model ExportRule {
+  id            String   @id @default(cuid())
+  projectId     String
+  destinationId String
+  name          String   @db.VarChar(255)
+  eventTypes    String[] @default([])
+  filter        Json?
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  destination ExportDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  deliveries  ExportDelivery[]
+
+  @@index([projectId, enabled])
+  @@index([destinationId])
+}
+
+model ExportDelivery {
+  id                  String         @id
+  projectId           String
+  destinationId       String
+  ruleId              String?
+  eventType           String         @db.VarChar(120)
+  payload             Json
+  status              DeliveryStatus @default(PENDING)
+  attempts            Int            @default(0)
+  nextAttemptAt       DateTime?
+  error               String?        @db.Text
+  artifactContent     String?        @db.Text
+  artifactContentType String?        @db.VarChar(120)
+  artifactFilename    String?        @db.VarChar(255)
+  completedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  destination ExportDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  rule        ExportRule?       @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([destinationId, status])
+  @@index([ruleId])
+  @@index([eventType, createdAt])
 }
 
 model PublicSubmitIdempotency {

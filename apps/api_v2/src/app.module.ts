@@ -22,6 +22,8 @@ import { OrganizationsModule } from "./modules/organizations/organizations.modul
 import { ApiKeysModule } from "./modules/api-keys/api-keys.module.js";
 import { AgentAccessModule } from "./modules/agent-access/agent-access.module.js";
 import { SubmissionsModule } from "./modules/submissions/submissions.module.js";
+import { OutboundWebhooksModule } from "./modules/outbound-webhooks/outbound-webhooks.module.js";
+import { ExportsModule } from "./modules/exports/exports.module.js";
 
 @Module({
   imports: [
@@ -76,6 +78,8 @@ import { SubmissionsModule } from "./modules/submissions/submissions.module.js";
     ApiKeysModule,
     AgentAccessModule,
     SubmissionsModule,
+    OutboundWebhooksModule,
+    ExportsModule,
     ProjectsModule,
     WidgetsModule,
     TestimonialsModule,
