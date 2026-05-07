@@ -1,5 +1,32 @@
 export type V2UserPlan = "FREE" | "PRO";
 
+// ── API envelope ────────────────────────────────────────────────────────────
+
+export interface V2ApiMeta {
+  timestamp: string;
+  [key: string]: unknown;
+}
+
+export interface V2ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  meta: V2ApiMeta;
+}
+
+// ── User ────────────────────────────────────────────────────────────────────
+
+export interface V2UserDTO {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatar: string | null;
+  plan: V2UserPlan;
+  onboardingCompletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type V2ProjectType =
   | "SAAS_APP"
   | "PORTFOLIO"
@@ -81,12 +108,12 @@ export interface V2ProjectDTO {
   profanityFilterLevel: string | null;
   createdAt: string;
   updatedAt: string;
+  formConfig: Record<string, unknown> | null;
   _count: {
     testimonials: number;
     pendingModeration: number;
     widgets: number;
     apiKeys: number;
-    forms: number;
   };
 }
 
@@ -402,6 +429,38 @@ export interface V2AgentAccessPresetDTO {
 export interface V2AgentAccessOverviewDTO {
   presets: V2AgentAccessPresetDTO[];
   keys: V2ApiKeyDTO[];
+}
+
+// ── Studio drafts ──────────────────────────────────────────────────────────
+
+export type V2StudioDraftResourceType = "FORM" | "WIDGET";
+
+export interface V2StudioDraftDTO {
+  resourceType: V2StudioDraftResourceType;
+  resourceId: string;
+  version: number;
+  publishedVersion: number | null;
+  draft: Record<string, unknown> | null;
+  updatedByUserId: string | null;
+  updatedAt: string | null;
+}
+
+// ── Project members ────────────────────────────────────────────────────────
+
+export type V2ProjectMemberRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface V2ProjectMemberDTO {
+  id: string;
+  userId: string;
+  role: V2ProjectMemberRole;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    avatar: string | null;
+  };
 }
 
 export interface V2NotificationDTO {
