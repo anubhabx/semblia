@@ -4,6 +4,8 @@ _Date: 2026-05-02_
 _Branch: `revamp/v2`_
 _Last refreshed: 2026-05-06 security audit and UI-gap update_
 
+_Current implementation-state companion: `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` after V1 Task 3 feedback integrity APIs._
+
 Status: **Gap map plus locked decisions for v2 API surface completion**, not a full implementation plan.
 
 Scope: Same as the original gap map – compare `apps/web_v2` UI, `apps/api_v2` runtime contracts, and `packages/database/prisma/schema.prisma` so the API surface can be completed before serious UI wiring; admin/ops endpoints and API docs remain out of scope.

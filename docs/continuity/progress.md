@@ -72,7 +72,7 @@ On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionF
 | V1 Task 2 Scoped private API keys and agent keys | Done | `5ac7c34` | Added `ApiKeyType.AGENT`, project-bound scrypt-hashed private/agent keys, one-time secret responses, revocation/rotation/usage metadata, API-key actor auth, agent presets, and read/write scope capability mapping. |
 | Deprecated design helper cleanup | Done | `63aec50` | Removed unused `docs/tresta_claude_design/src/*` helper module files. |
 | Security audit refresh | Done | `0bc7bd1` | Fresh dependency/CVE and code audit before continuing V1 Task 3. Fixed surface-scoped public idempotency, invalid-submit and mode-specific public throttling, API-key prefix collision handling, and refreshed the UI gap map for credentials/agent access. |
-| V1 Task 3 Feedback integrity APIs | Done | checkpoint commit | Added immutable submission workflow state, submission annotations/moderation APIs, testimonial display suggestions, human-only display approval, and project actor audit. |
+| V1 Task 3 Feedback integrity APIs | Done | `09fa77a` | Added immutable submission workflow state, submission annotations/moderation APIs, testimonial display suggestions, human-only display approval, and project actor audit. |
 | 1e Auxiliary product data | Partially complete | n/a | API key, agent key, and feedback integrity foundations are implemented. Remaining auxiliary slices: billing projections, notifications, analytics capture/rollups. |
 | 2 Common API contracts | Pending | n/a | Access block, shared DTO/client contracts, errors, idempotency, concurrency conventions. |
 | 3 Public surface API | Pending | n/a | Host-aware public rendering/submission and event capture. |
@@ -126,6 +126,7 @@ On 2026-05-08, V1 Task 3 landed the feedback integrity API surface. `CollectionF
 
 ## Known Doc Drift
 
+- `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` is the current UI/API/shared-types gap inventory after V1 Task 3. Use it for implementation-state wiring checks; keep the 2026-05-02 consolidated gap map for locked decisions and rationale.
 - `docs/plans/2026-05-02-api-surface-implementation-phases.md` has been annotated so its original starting point does not override this live ledger.
 - `apps/api_v2/docs/orchestration/handoff.md` has been annotated so original-rebuild scope language does not override the current auxiliary-surface decisions.
 - `memory/` and `docs/codex-claude-memory-migration.md` are historical context, not the live progress ledger.
