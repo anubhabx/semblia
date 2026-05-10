@@ -25,6 +25,7 @@ import { SubmissionsModule } from "./modules/submissions/submissions.module.js";
 import { OutboundWebhooksModule } from "./modules/outbound-webhooks/outbound-webhooks.module.js";
 import { ExportsModule } from "./modules/exports/exports.module.js";
 import { IntegrationsModule } from "./modules/integrations/integrations.module.js";
+import { AnalyticsModule } from "./modules/analytics/analytics.module.js";
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { IntegrationsModule } from "./modules/integrations/integrations.module.j
     OutboundWebhooksModule,
     ExportsModule,
     IntegrationsModule,
+    AnalyticsModule,
     ProjectsModule,
     WidgetsModule,
     TestimonialsModule,

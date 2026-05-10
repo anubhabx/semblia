@@ -60,18 +60,18 @@ docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md
 
 ## Phase Order
 
-| Phase | Checkpoint | Why This Order |
-|---|---|---|
-| 0 | Plan and continuity checkpoint | Preserve the product stance before code starts. |
-| 1 | Clerk organization and actor foundation | All project access, keys, integrations, and agents need the same tenant boundary. |
-| 2 | Credential and scope system | Private API keys, agent keys, and server submit secrets need distinct authorization paths. |
-| 3 | Feedback integrity and moderation boundary | Agents/integrations must not mutate original submissions. |
-| 4 | Outbound webhook and export foundation | Native integrations should reuse the same event/delivery substrate. |
-| 5 | Native thin integrations | Slack, Notion, Linear, and GitHub become destinations, not one-off special cases. |
-| 6 | Agent access and MCP server | Agents use scoped keys over the stable private API. |
-| 7 | OpenAPI and developer docs | API keys and agent access need self-serve documentation. |
-| 8 | `web_v2` friendly UX | Expose the control plane without making users think in security jargon. |
-| 9 | Verification and hardening | Close tenant isolation, credentials, webhook signing, and immutable feedback risks. |
+| Phase | Checkpoint                                 | Why This Order                                                                             |
+| ----- | ------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| 0     | Plan and continuity checkpoint             | Preserve the product stance before code starts.                                            |
+| 1     | Clerk organization and actor foundation    | All project access, keys, integrations, and agents need the same tenant boundary.          |
+| 2     | Credential and scope system                | Private API keys, agent keys, and server submit secrets need distinct authorization paths. |
+| 3     | Feedback integrity and moderation boundary | Agents/integrations must not mutate original submissions.                                  |
+| 4     | Outbound webhook and export foundation     | Native integrations should reuse the same event/delivery substrate.                        |
+| 5     | Native thin integrations                   | Slack, Notion, Linear, and GitHub become destinations, not one-off special cases.          |
+| 6     | Agent access and MCP server                | Agents use scoped keys over the stable private API.                                        |
+| 7     | OpenAPI and developer docs                 | API keys and agent access need self-serve documentation.                                   |
+| 8     | `web_v2` friendly UX                       | Expose the control plane without making users think in security jargon.                    |
+| 9     | Verification and hardening                 | Close tenant isolation, credentials, webhook signing, and immutable feedback risks.        |
 
 ## File Structure Map
 
@@ -972,7 +972,9 @@ export type ConnectedAccountToken = {
 };
 
 export interface ConnectedAccountTokenProvider {
-  getToken(request: ConnectedAccountTokenRequest): Promise<ConnectedAccountToken>;
+  getToken(
+    request: ConnectedAccountTokenRequest,
+  ): Promise<ConnectedAccountToken>;
 }
 ```
 
@@ -1037,7 +1039,7 @@ Implemented in `8e82c74` with project-scoped integration connections, Clerk conn
 - Test: `apps/api_v2/src/modules/agent-access/agent-access.spec.ts`
 - Test: `packages/tresta-mcp-server/src/*.spec.ts`
 
-- [ ] **Step 1: Implement agent-safe private API routes**
+- [x] **Step 1: Implement agent-safe private API routes**
 
 Agent-safe routes must be wrappers over existing project APIs or new narrow endpoints:
 
@@ -1059,7 +1061,9 @@ GET  /v2/projects/:slug/outbound-webhooks/deliveries
 
 Every mutating route called by an agent key must write an audit event.
 
-- [ ] **Step 2: Create MCP server package**
+Implementation note, 2026-05-10: the stable private APIs already covered the submission, testimonial, export-delivery, outbound-webhook-delivery, and native integration export workflows. Task 6 added `GET /v2/projects/:slug/analytics/summary`, hardened `GET /v2/projects` and `POST /v2/projects` for project-scoped credentials, and kept MCP export triggering on the actual Task 4/5 API shapes: CSV via `POST /v2/projects/:slug/exports/csv`, native integration export via `POST /v2/projects/:slug/integrations/connections/:connectionId/exports`.
+
+- [x] **Step 2: Create MCP server package**
 
 `packages/tresta-mcp-server` runs as a local stdio MCP server and calls Tresta APIs with:
 
@@ -1070,7 +1074,7 @@ TRESTA_AGENT_KEY
 
 It must not connect directly to the database.
 
-- [ ] **Step 3: Expose MCP tools**
+- [x] **Step 3: Expose MCP tools**
 
 Initial tools:
 
@@ -1104,7 +1108,7 @@ rewrite_submission
 rewrite_original_testimonial
 ```
 
-- [ ] **Step 4: Expose MCP resources**
+- [x] **Step 4: Expose MCP resources**
 
 Initial resources:
 
@@ -1116,7 +1120,7 @@ tresta://projects/{slug}/testimonials
 tresta://projects/{slug}/delivery-failures
 ```
 
-- [ ] **Step 5: Expose MCP prompts**
+- [x] **Step 5: Expose MCP prompts**
 
 Initial prompts:
 
@@ -1127,7 +1131,7 @@ debug_project_collection_setup
 summarize_delivery_failures
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 

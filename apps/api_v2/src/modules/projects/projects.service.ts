@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -149,6 +150,12 @@ export class ProjectsService {
     body: CreateProjectBodyDto,
     actor?: ActorContext | null,
   ) {
+    if (actor && actor.actorType !== "user") {
+      throw new ForbiddenException(
+        "Project credentials cannot create projects",
+      );
+    }
+
     try {
       const organization = actor?.clerkOrgId
         ? await this.organizationsService.ensureForActor(actor)
@@ -384,6 +391,16 @@ export class ProjectsService {
     userId: string,
     actor?: ActorContext | null,
   ): Prisma.ProjectWhereInput {
+    if (actor && actor.actorType !== "user") {
+      if (!actor.projectId) {
+        throw new ForbiddenException(
+          "Project credentials must be bound to a project",
+        );
+      }
+
+      return { id: actor.projectId };
+    }
+
     if (actor?.clerkOrgId) {
       return {
         organization: {

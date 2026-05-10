@@ -5,12 +5,11 @@ Last updated: 2026-05-10
 ## Current Snapshot
 
 - Branch at last sync: `revamp/v2`.
-- Git state after the V1 Task 5 implementation checkpoint and before this docs follow-up: `revamp/v2...origin/revamp/v2 [ahead 39]`.
-- Worktree note: pre-existing local `apps/web_v2` edits remain in `hooks/api/keys.ts`, `lib/tresta-api-server.ts`, and `lib/tresta-api.ts`; they were not part of Task 5.
-- Current stage: V1 Task 5 native thin integrations implemented, verified, and checkpoint-committed.
-- Current checkpoint: V1 Task 5 native thin integrations committed as `8e82c74`. Security hardening remains committed as `0bc7bd1`.
+- Git state before the V1 Task 6 implementation checkpoint: `revamp/v2...origin/revamp/v2 [ahead 41]`, clean worktree.
+- Current stage: V1 Task 6 agent access and MCP server implemented and verified, pending checkpoint commit.
+- Current checkpoint: V1 Task 6 local checkpoint pending commit. V1 Task 5 native thin integrations remain committed as `8e82c74`; security hardening remains committed as `0bc7bd1`.
 - Latest committed implementation checkpoint: V1 Task 5 added project-scoped native integration connections, Clerk connected-account token retrieval, Slack/Notion/Linear/GitHub one-way export adapters, native export delivery queueing, shared DTOs, and provider-mapping tests.
-- Next implementation checkpoint: V1 Task 6 agent access and MCP server.
+- Next implementation checkpoint after Task 6: V1 Task 7 OpenAPI and developer-facing contracts.
 
 Always re-run `git status --short --branch` and `git log --oneline -12` before using this snapshot as current state.
 
@@ -37,55 +36,58 @@ Later on 2026-05-08, V1 Task 4 added the outbound webhook and async CSV export f
 
 On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store Slack, Notion, Linear, and GitHub integration connections, resolve user connected-account OAuth tokens through a Clerk-backed token-provider boundary, queue one-way native export deliveries, and map safe feedback/testimonial payloads into provider-native messages, pages, and issues without bidirectional sync.
 
+Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agent clients, a project analytics summary endpoint for agent-safe read workflows, and project-list credential boundary hardening. The MCP server uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, calls the stable private API routes only, exposes safe tools/resources/prompts, and never connects directly to the database. Analytics event capture and rollups are still future auxiliary work; the new summary endpoint is a read projection over existing daily rows and live submission/impression tables.
+
 ## Phase Ledger
 
 ### Original API Rebuild
 
-| Phase | Status | Commit | Notes |
-|---|---|---|---|
-| 0 Discovery dossier | Done | `1e43be8` | Historical API rebuild discovery. |
-| 1 Prisma schema refactor | Done | `bf05b49` | Initial v2 schema refactor. |
-| 2 `api_v2` scaffolding and shared infra | Done | `6443bb6` | Nest v2 scaffold and shared infra. |
-| 2.5 tooling hardening | Done | `b281279` | Nest CLI, ESLint, Prettier, smoke-start. |
-| 2.6 `web_v2` Vitest compatibility | Done | `7a4d75d` | jest-dom to Vitest-native matcher cleanup. |
-| 3a Users | Done | `35e8f08` | User domain. |
-| 3b Projects | Done | `d8004b0` | Project domain and owner membership. |
-| 3b.5 Public-route prerequisites | Done | `d562bb4` | Schema deltas, crypto, authz infra. |
-| 3c Widgets | Done | `ecdea31` | Auth widgets, public embeds, public walls. |
-| 3d Testimonials | Done | `5a9e784` | Auth and public testimonial APIs. |
-| 3e Forms | Done | `88c200f` | Auth forms and public form submit. |
-| 4a Webhooks | Done | `2de8edc` | Clerk and Razorpay idempotency ledgers. |
-| 4b Alerts and ops/admin | Done | `f95e784` | Backend groundwork only; no `web_v2` wiring. |
-| 5 Cross-cutting validation | Done | `cf4476f` | Validation-only close-out. |
+| Phase                                   | Status | Commit    | Notes                                        |
+| --------------------------------------- | ------ | --------- | -------------------------------------------- |
+| 0 Discovery dossier                     | Done   | `1e43be8` | Historical API rebuild discovery.            |
+| 1 Prisma schema refactor                | Done   | `bf05b49` | Initial v2 schema refactor.                  |
+| 2 `api_v2` scaffolding and shared infra | Done   | `6443bb6` | Nest v2 scaffold and shared infra.           |
+| 2.5 tooling hardening                   | Done   | `b281279` | Nest CLI, ESLint, Prettier, smoke-start.     |
+| 2.6 `web_v2` Vitest compatibility       | Done   | `7a4d75d` | jest-dom to Vitest-native matcher cleanup.   |
+| 3a Users                                | Done   | `35e8f08` | User domain.                                 |
+| 3b Projects                             | Done   | `d8004b0` | Project domain and owner membership.         |
+| 3b.5 Public-route prerequisites         | Done   | `d562bb4` | Schema deltas, crypto, authz infra.          |
+| 3c Widgets                              | Done   | `ecdea31` | Auth widgets, public embeds, public walls.   |
+| 3d Testimonials                         | Done   | `5a9e784` | Auth and public testimonial APIs.            |
+| 3e Forms                                | Done   | `88c200f` | Auth forms and public form submit.           |
+| 4a Webhooks                             | Done   | `2de8edc` | Clerk and Razorpay idempotency ledgers.      |
+| 4b Alerts and ops/admin                 | Done   | `f95e784` | Backend groundwork only; no `web_v2` wiring. |
+| 5 Cross-cutting validation              | Done   | `cf4476f` | Validation-only close-out.                   |
 
 ### Backend-First API Surface Continuation
 
-| Phase | Status | Commit | Notes |
-|---|---|---|---|
-| Gap map and locked decisions | Done | docs only | Consolidated in `docs/plans/2026-05-02-api-ui-db-gap-map consolidated.md`. |
-| Implementation phase map | Done | docs only | Stored in `docs/plans/2026-05-02-api-surface-implementation-phases.md`. |
-| 1 migration | Done | `01d0cae` | Phase 1 database foundation migration catch-up. |
-| 1a Public trust and host models | Done | `8b8c4a3` | Trusted origins, signing secrets, hosted public-surface trust, route-aware public CORS. |
-| 1b Canonical form submissions | Done | `0c9f618` | `CollectionFormSubmission` writes with rating, answers, trust, idempotency linkage. |
-| 1c Testimonial private metadata | Done | `7aae66d` | Encrypted PII writes, hashed identifiers, public-submit PII removal, authenticated email compatibility shim. |
-| 1d Studio drafts | Done | `c56cf68` | Shared `StudioDraft` service and form/widget `GET`/`PUT .../draft` endpoints with optimistic concurrency. |
-| Phase 1 progress docs | Done | `0f14884` | Recorded Phase 1a-1d progress. |
-| Continuity docs structure | Done | `b7c88cf` | Made `docs/continuity/` the canonical durable memory and doc map. |
-| V1 control-plane plan | Planned | docs only | `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` defines the next implementation track: Clerk org mirror, actor model, private/agent keys, outbound webhooks, exports, native integrations, MCP agent access, and friendly UX. |
-| V1 Task 1 Clerk organization and actor foundation | Done | `ffae2cf` | Added local organization schema/migration, request actor context, current organization endpoint, org-aware project listing/creation/access checks, and v1 capability presets. |
-| V1 Task 2 Scoped private API keys and agent keys | Done | `5ac7c34` | Added `ApiKeyType.AGENT`, project-bound scrypt-hashed private/agent keys, one-time secret responses, revocation/rotation/usage metadata, API-key actor auth, agent presets, and read/write scope capability mapping. |
-| Deprecated design helper cleanup | Done | `63aec50` | Removed unused `docs/tresta_claude_design/src/*` helper module files. |
-| Security audit refresh | Done | `0bc7bd1` | Fresh dependency/CVE and code audit before continuing V1 Task 3. Fixed surface-scoped public idempotency, invalid-submit and mode-specific public throttling, API-key prefix collision handling, and refreshed the UI gap map for credentials/agent access. |
-| V1 Task 3 Feedback integrity APIs | Done | `09fa77a` | Added immutable submission workflow state, submission annotations/moderation APIs, testimonial display suggestions, human-only display approval, and project actor audit. |
-| V1 Task 4 Outbound webhooks and async CSV exports | Done | `3742765` | Added encrypted webhook endpoints, signed async deliveries/retries, async DB-backed CSV export deliveries/downloads, shared DTOs, webhook dispatch hardening, Hono override refresh, and audit rows. |
-| V1 Task 5 Native thin integrations | Done | `8e82c74` | Added `IntegrationConnection`, Clerk connected-account token provider boundary, native export queueing, Slack/Notion/Linear/GitHub one-way adapters, shared DTOs, and provider tests. |
-| 1e Auxiliary product data | Partially complete | n/a | API key, agent key, feedback integrity, outbound webhook, async CSV export, and native thin integration foundations are implemented. Remaining auxiliary slices: billing projections, notifications, analytics capture/rollups. |
-| 2 Common API contracts | Pending | n/a | Access block, shared DTO/client contracts, errors, idempotency, concurrency conventions. |
-| 3 Public surface API | Pending | n/a | Host-aware public rendering/submission and event capture. |
-| 4 Studio API | Pending | n/a | Form/widget studio persistence and explicit mappings. |
-| 5 Auxiliary API surfaces | Pending | n/a | Analytics, notifications, billing read projections, API keys. |
-| 6 `web_v2` adaptation | Pending | n/a | Replace mocks and adapt UI to backend-canonical contracts. |
-| 7 Verification and hardening | Pending | n/a | Security, performance, migration, and end-to-end checks. |
+| Phase                                             | Status             | Commit             | Notes                                                                                                                                                                                                                                                          |
+| ------------------------------------------------- | ------------------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gap map and locked decisions                      | Done               | docs only          | Consolidated in `docs/plans/2026-05-02-api-ui-db-gap-map consolidated.md`.                                                                                                                                                                                     |
+| Implementation phase map                          | Done               | docs only          | Stored in `docs/plans/2026-05-02-api-surface-implementation-phases.md`.                                                                                                                                                                                        |
+| 1 migration                                       | Done               | `01d0cae`          | Phase 1 database foundation migration catch-up.                                                                                                                                                                                                                |
+| 1a Public trust and host models                   | Done               | `8b8c4a3`          | Trusted origins, signing secrets, hosted public-surface trust, route-aware public CORS.                                                                                                                                                                        |
+| 1b Canonical form submissions                     | Done               | `0c9f618`          | `CollectionFormSubmission` writes with rating, answers, trust, idempotency linkage.                                                                                                                                                                            |
+| 1c Testimonial private metadata                   | Done               | `7aae66d`          | Encrypted PII writes, hashed identifiers, public-submit PII removal, authenticated email compatibility shim.                                                                                                                                                   |
+| 1d Studio drafts                                  | Done               | `c56cf68`          | Shared `StudioDraft` service and form/widget `GET`/`PUT .../draft` endpoints with optimistic concurrency.                                                                                                                                                      |
+| Phase 1 progress docs                             | Done               | `0f14884`          | Recorded Phase 1a-1d progress.                                                                                                                                                                                                                                 |
+| Continuity docs structure                         | Done               | `b7c88cf`          | Made `docs/continuity/` the canonical durable memory and doc map.                                                                                                                                                                                              |
+| V1 control-plane plan                             | Planned            | docs only          | `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` defines the next implementation track: Clerk org mirror, actor model, private/agent keys, outbound webhooks, exports, native integrations, MCP agent access, and friendly UX. |
+| V1 Task 1 Clerk organization and actor foundation | Done               | `ffae2cf`          | Added local organization schema/migration, request actor context, current organization endpoint, org-aware project listing/creation/access checks, and v1 capability presets.                                                                                  |
+| V1 Task 2 Scoped private API keys and agent keys  | Done               | `5ac7c34`          | Added `ApiKeyType.AGENT`, project-bound scrypt-hashed private/agent keys, one-time secret responses, revocation/rotation/usage metadata, API-key actor auth, agent presets, and read/write scope capability mapping.                                           |
+| Deprecated design helper cleanup                  | Done               | `63aec50`          | Removed unused `docs/tresta_claude_design/src/*` helper module files.                                                                                                                                                                                          |
+| Security audit refresh                            | Done               | `0bc7bd1`          | Fresh dependency/CVE and code audit before continuing V1 Task 3. Fixed surface-scoped public idempotency, invalid-submit and mode-specific public throttling, API-key prefix collision handling, and refreshed the UI gap map for credentials/agent access.    |
+| V1 Task 3 Feedback integrity APIs                 | Done               | `09fa77a`          | Added immutable submission workflow state, submission annotations/moderation APIs, testimonial display suggestions, human-only display approval, and project actor audit.                                                                                      |
+| V1 Task 4 Outbound webhooks and async CSV exports | Done               | `3742765`          | Added encrypted webhook endpoints, signed async deliveries/retries, async DB-backed CSV export deliveries/downloads, shared DTOs, webhook dispatch hardening, Hono override refresh, and audit rows.                                                           |
+| V1 Task 5 Native thin integrations                | Done               | `8e82c74`          | Added `IntegrationConnection`, Clerk connected-account token provider boundary, native export queueing, Slack/Notion/Linear/GitHub one-way adapters, shared DTOs, and provider tests.                                                                          |
+| V1 Task 6 Agent access and MCP server             | Done               | pending checkpoint | Added `@workspace/tresta-mcp-server`, safe MCP tools/resources/prompts over private API routes, `GET /v2/projects/:slug/analytics/summary`, and project-scoped credential hardening for project list/create.                                                   |
+| 1e Auxiliary product data                         | Partially complete | n/a                | API key, agent key, feedback integrity, outbound webhook, async CSV export, and native thin integration foundations are implemented. Remaining auxiliary slices: billing projections, notifications, analytics capture/rollups.                                |
+| 2 Common API contracts                            | Pending            | n/a                | Access block, shared DTO/client contracts, errors, idempotency, concurrency conventions.                                                                                                                                                                       |
+| 3 Public surface API                              | Pending            | n/a                | Host-aware public rendering/submission and event capture.                                                                                                                                                                                                      |
+| 4 Studio API                                      | Pending            | n/a                | Form/widget studio persistence and explicit mappings.                                                                                                                                                                                                          |
+| 5 Auxiliary API surfaces                          | Pending            | n/a                | Analytics, notifications, billing read projections, API keys.                                                                                                                                                                                                  |
+| 6 `web_v2` adaptation                             | Pending            | n/a                | Replace mocks and adapt UI to backend-canonical contracts.                                                                                                                                                                                                     |
+| 7 Verification and hardening                      | Pending            | n/a                | Security, performance, migration, and end-to-end checks.                                                                                                                                                                                                       |
 
 ## Operational Notes
 
@@ -119,6 +121,10 @@ On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store 
 - Native integration exports reuse `ExportDestination` and `ExportDelivery` records, with a separate `native-integration-export` queue for Slack, Notion, Linear, and GitHub deliveries.
 - Clerk connected OAuth tokens are resolved server-side through `ClerkConnectedAccountTokenProvider`; missing or revoked connected tokens fail as connect-required authorization errors.
 - V1 native integrations are intentionally one-way. They create Slack messages, Notion pages, Linear issues, or GitHub issues from safe export payloads and do not import remote edits, sync provider membership, or depend on provider webhooks for core Tresta state.
+- Project-scoped API keys and agent keys can list only their bound project from `GET /v2/projects` and cannot create projects. Creation remains a user-session action.
+- `GET /v2/projects/:slug/analytics/summary` is a project-scoped read endpoint over existing analytics daily rows and live submission/impression counts. It does not complete the future analytics capture/rollup slice.
+- `packages/tresta-mcp-server` is the official local stdio MCP adapter for Task 6. It uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, exposes safe feedback/testimonial/export/delivery tools, resources, and prompts, and calls private APIs instead of the database.
+- MCP export triggering uses the actual Task 4/5 API shapes: CSV via `POST /v2/projects/:slug/exports/csv`, native integrations via `POST /v2/projects/:slug/integrations/connections/:connectionId/exports`.
 - Root `pnpm.overrides.hono` is pinned to `4.12.18` so the Prisma tooling path no longer matches the May 2026 Hono advisories.
 - Broad `web_v2` wiring stays deferred until the remaining backend-canonical V1 differentiator surfaces are complete.
 
@@ -158,6 +164,14 @@ On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store 
 - V1 Task 5 build passed: `pnpm.cmd build --filter api_v2`.
 - V1 Task 5 index refresh completed after the final source change, but vector embedding was skipped because Ollama was unreachable; `python scripts/update-indexes.py` reported 20 files skipped and kept the vector store at 1100 chunks while refreshing the AST knowledge graph.
 - V1 Task 5 graph refresh passed: `python scripts/rebuild-graphify.py`; the final rerun refreshed 199 changed files, and semantic extraction remains skipped because it requires Claude.
+- V1 Task 6 MCP package tests passed: `pnpm.cmd --filter @workspace/tresta-mcp-server test` reported 4 files and 9 tests passing.
+- V1 Task 6 MCP package build passed: `pnpm.cmd --filter @workspace/tresta-mcp-server build`.
+- V1 Task 6 API typecheck passed: `pnpm.cmd --filter api_v2 typecheck`.
+- V1 Task 6 API lint passed: `pnpm.cmd --filter api_v2 lint`.
+- V1 Task 6 full API tests passed: `pnpm.cmd --filter api_v2 test` reported 42 files and 233 tests passing.
+- V1 Task 6 API build passed: `pnpm.cmd build --filter api_v2`.
+- V1 Task 6 index refresh passed: `python scripts/update-indexes.py` indexed 8 changed files, skipped 0, and increased the vector store to 1156 chunks while refreshing the AST knowledge graph.
+- V1 Task 6 graph refresh passed: `python scripts/rebuild-graphify.py`; the final rerun refreshed 478 changed files, and semantic extraction remains skipped because it requires Claude.
 
 ## Known Doc Drift
 
@@ -165,7 +179,7 @@ On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store 
 - `docs/plans/2026-05-02-api-surface-implementation-phases.md` has been annotated so its original starting point does not override this live ledger.
 - `apps/api_v2/docs/orchestration/handoff.md` has been annotated so original-rebuild scope language does not override the current auxiliary-surface decisions.
 - `memory/` and `docs/codex-claude-memory-migration.md` are historical context, not the live progress ledger.
-- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 5 are implemented, and Task 6 agent access/MCP is the next planned checkpoint.
+- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 6 are implemented, and Task 7 OpenAPI/developer-facing contracts is the next planned checkpoint.
 
 ## Progress Report Format
 
@@ -175,20 +189,26 @@ Use this shape for future updates:
 Status: [one sentence]
 
 Completed since last checkpoint:
+
 - [phase/subphase, commit, result]
 
 Current work:
+
 - [phase/subphase, owner, scope]
 
 Next move:
+
 - [the next concrete action]
 
 Blockers or decisions:
+
 - [user-owned or technical blockers]
 
 Verification:
+
 - [commands run and result, or exact blocker]
 
 Doc drift:
+
 - [docs updated or stale docs found]
 ```

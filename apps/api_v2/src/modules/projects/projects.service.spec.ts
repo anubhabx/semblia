@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { MemberRole } from "@workspace/database/prisma";
 import { ProjectsService } from "./projects.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
 
 const mockProjectFindUnique = vi.fn();
+const mockProjectFindMany = vi.fn();
+const mockProjectCount = vi.fn();
 const mockProjectUpdate = vi.fn();
 const mockProjectCreate = vi.fn();
 const mockProjectMemberCreate = vi.fn();
 const mockProjectTrustedOriginFindMany = vi.fn();
 const mockPublicSurfaceHostCreateMany = vi.fn();
+const mockTestimonialGroupBy = vi.fn();
 const mockTransaction = vi.fn();
 const mockEnsureOrganizationForActor = vi.fn();
 
@@ -19,8 +22,13 @@ const prismaMock = {
     $transaction: mockTransaction,
     project: {
       findUnique: mockProjectFindUnique,
+      findMany: mockProjectFindMany,
+      count: mockProjectCount,
       update: mockProjectUpdate,
       create: mockProjectCreate,
+    },
+    testimonial: {
+      groupBy: mockTestimonialGroupBy,
     },
     projectMember: {
       create: mockProjectMemberCreate,
@@ -281,4 +289,92 @@ describe("ProjectsService allowed origins", () => {
       }),
     );
   });
+
+  it("restricts credential project lists to the bound project", async () => {
+    mockProjectCount.mockResolvedValue(1);
+    mockProjectFindMany.mockResolvedValue([
+      projectRecord({ id: "project_scoped", slug: "scoped" }),
+    ]);
+    mockTestimonialGroupBy.mockResolvedValue([]);
+
+    const result = await service.list(
+      "user_1",
+      { page: 1, pageSize: 10 },
+      {
+        actorType: "agent_key",
+        userId: "user_1",
+        projectId: "project_scoped",
+        credentialId: "key_1",
+        clerkOrgPermissions: [],
+        scopes: ["project:read"],
+      },
+    );
+
+    expect(mockProjectCount).toHaveBeenCalledWith({
+      where: { id: "project_scoped" },
+    });
+    expect(mockProjectFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "project_scoped" },
+      }),
+    );
+    expect(result.items).toHaveLength(1);
+  });
+
+  it("blocks project creation from scoped API or agent credentials", async () => {
+    await expect(
+      service.create(
+        "user_1",
+        {
+          name: "Acme",
+          slug: "acme",
+          tags: [],
+        },
+        {
+          actorType: "agent_key",
+          userId: "user_1",
+          projectId: "project_1",
+          credentialId: "key_1",
+          clerkOrgPermissions: [],
+          scopes: ["project:read"],
+        },
+      ),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(mockProjectCreate).not.toHaveBeenCalled();
+  });
 });
+
+function projectRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "project_1",
+    userId: "user_1",
+    organizationId: null,
+    name: "Acme",
+    shortDescription: null,
+    description: null,
+    slug: "acme",
+    logoUrl: null,
+    projectType: null,
+    websiteUrl: null,
+    collectionFormUrl: null,
+    brandColorPrimary: null,
+    brandColorSecondary: null,
+    socialLinks: null,
+    tags: [],
+    visibility: "PRIVATE",
+    isActive: true,
+    autoModeration: true,
+    autoApproveVerified: false,
+    profanityFilterLevel: "MODERATE",
+    formConfig: null,
+    createdAt: new Date("2026-05-02T00:00:00.000Z"),
+    updatedAt: new Date("2026-05-02T00:00:00.000Z"),
+    _count: {
+      testimonials: 0,
+      widgets: 0,
+      apiKeys: 0,
+    },
+    ...overrides,
+  };
+}
