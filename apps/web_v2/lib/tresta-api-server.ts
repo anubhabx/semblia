@@ -10,7 +10,11 @@ import {
   fetchProjects,
   ApiError,
 } from "./tresta-api";
-import type { V2ProjectDTO, V2UserDTO, V2PaginatedResponse } from "@workspace/types";
+import type {
+  V2ProjectDTO,
+  V2UserDTO,
+  V2PaginatedResponse,
+} from "@workspace/types";
 
 async function getServerToken(): Promise<string | null> {
   const { getToken } = await auth();
@@ -36,9 +40,10 @@ export async function serverFetchProjectBySlug(
   }
 }
 
-export async function serverFetchProjects(
-  params?: { page?: number; pageSize?: number },
-): Promise<V2PaginatedResponse<V2ProjectDTO>> {
+export async function serverFetchProjects(params?: {
+  page?: number;
+  pageSize?: number;
+}): Promise<V2PaginatedResponse<V2ProjectDTO>> {
   const token = await getServerToken();
   return fetchProjects(token, params);
 }

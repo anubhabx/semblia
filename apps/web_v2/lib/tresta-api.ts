@@ -95,7 +95,10 @@ async function apiRaw<T>(
 
   // 204 No Content
   if (res.status === 204) {
-    return { data: undefined as unknown as T, meta: { timestamp: new Date().toISOString() } };
+    return {
+      data: undefined as unknown as T,
+      meta: { timestamp: new Date().toISOString() },
+    };
   }
 
   const envelope = (await res.json()) as V2ApiEnvelope<T>;
@@ -114,21 +117,33 @@ async function api<T>(
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function post<T>(path: string, token: string | null, body?: unknown): Promise<T> {
+function post<T>(
+  path: string,
+  token: string | null,
+  body?: unknown,
+): Promise<T> {
   return api<T>(path, token, {
     method: "POST",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
 
-function patch<T>(path: string, token: string | null, body?: unknown): Promise<T> {
+function patch<T>(
+  path: string,
+  token: string | null,
+  body?: unknown,
+): Promise<T> {
   return api<T>(path, token, {
     method: "PATCH",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
 
-function put<T>(path: string, token: string | null, body?: unknown): Promise<T> {
+function put<T>(
+  path: string,
+  token: string | null,
+  body?: unknown,
+): Promise<T> {
   return api<T>(path, token, {
     method: "PUT",
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -147,7 +162,11 @@ export function fetchCurrentUser(token: string | null) {
 
 export function updateCurrentUser(
   token: string | null,
-  body: { firstName?: string | null; lastName?: string | null; avatar?: string | null },
+  body: {
+    firstName?: string | null;
+    lastName?: string | null;
+    avatar?: string | null;
+  },
 ) {
   return patch<V2UserDTO>("/me", token, body);
 }
@@ -195,7 +214,11 @@ export function updateProject(
   slug: string,
   body: Record<string, unknown>,
 ) {
-  return patch<V2ProjectDTO>(`/projects/${encodeURIComponent(slug)}`, token, body);
+  return patch<V2ProjectDTO>(
+    `/projects/${encodeURIComponent(slug)}`,
+    token,
+    body,
+  );
 }
 
 export function deleteProject(token: string | null, slug: string) {
@@ -205,7 +228,10 @@ export function deleteProject(token: string | null, slug: string) {
 // ── Project members ─────────────────────────────────────────────────────────
 
 export function fetchProjectMembers(token: string | null, slug: string) {
-  return api<V2ProjectMemberDTO[]>(`/projects/${encodeURIComponent(slug)}/members`, token);
+  return api<V2ProjectMemberDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/members`,
+    token,
+  );
 }
 
 export function addProjectMember(
@@ -310,14 +336,22 @@ export function fetchTestimonial(
   );
 }
 
-export function approveTestimonial(token: string | null, slug: string, testimonialId: string) {
+export function approveTestimonial(
+  token: string | null,
+  slug: string,
+  testimonialId: string,
+) {
   return patch<V2TestimonialDTO>(
     `/projects/${encodeURIComponent(slug)}/testimonials/${encodeURIComponent(testimonialId)}/approve`,
     token,
   );
 }
 
-export function rejectTestimonial(token: string | null, slug: string, testimonialId: string) {
+export function rejectTestimonial(
+  token: string | null,
+  slug: string,
+  testimonialId: string,
+) {
   return patch<V2TestimonialDTO>(
     `/projects/${encodeURIComponent(slug)}/testimonials/${encodeURIComponent(testimonialId)}/reject`,
     token,
@@ -414,7 +448,12 @@ export function createSubmissionAnnotation(
   token: string | null,
   slug: string,
   submissionId: string,
-  body: { note?: string; labels?: string[]; sentiment?: string; metadata?: Record<string, unknown> },
+  body: {
+    note?: string;
+    labels?: string[];
+    sentiment?: string;
+    metadata?: Record<string, unknown>;
+  },
 ) {
   return post<V2SubmissionAnnotationDTO>(
     `/projects/${encodeURIComponent(slug)}/submissions/${encodeURIComponent(submissionId)}/annotations`,
@@ -484,7 +523,11 @@ export function deleteForm(token: string | null, slug: string, formId: string) {
   );
 }
 
-export function fetchFormDraft(token: string | null, slug: string, formId: string) {
+export function fetchFormDraft(
+  token: string | null,
+  slug: string,
+  formId: string,
+) {
   return api<V2StudioDraftDTO>(
     `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft`,
     token,
@@ -513,7 +556,11 @@ export function fetchWidgets(token: string | null, slug: string) {
   );
 }
 
-export function fetchWidget(token: string | null, slug: string, widgetId: string) {
+export function fetchWidget(
+  token: string | null,
+  slug: string,
+  widgetId: string,
+) {
   return api<V2WidgetDTO>(
     `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}`,
     token,
@@ -545,14 +592,22 @@ export function updateWidget(
   );
 }
 
-export function deleteWidget(token: string | null, slug: string, widgetId: string) {
+export function deleteWidget(
+  token: string | null,
+  slug: string,
+  widgetId: string,
+) {
   return del(
     `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}`,
     token,
   );
 }
 
-export function fetchWidgetDraft(token: string | null, slug: string, widgetId: string) {
+export function fetchWidgetDraft(
+  token: string | null,
+  slug: string,
+  widgetId: string,
+) {
   return api<V2StudioDraftDTO>(
     `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}/draft`,
     token,
@@ -593,21 +648,33 @@ export function createApiKey(
   );
 }
 
-export function rotateApiKey(token: string | null, slug: string, keyId: string) {
+export function rotateApiKey(
+  token: string | null,
+  slug: string,
+  keyId: string,
+) {
   return post<V2CreatedApiKeyDTO>(
     `/projects/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(keyId)}/rotate`,
     token,
   );
 }
 
-export function revokeApiKey(token: string | null, slug: string, keyId: string) {
+export function revokeApiKey(
+  token: string | null,
+  slug: string,
+  keyId: string,
+) {
   return post<V2ApiKeyDTO>(
     `/projects/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(keyId)}/revoke`,
     token,
   );
 }
 
-export function fetchApiKeyEvents(token: string | null, slug: string, keyId: string) {
+export function fetchApiKeyEvents(
+  token: string | null,
+  slug: string,
+  keyId: string,
+) {
   return api<V2ApiKeyEventDTO[]>(
     `/projects/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(keyId)}/events`,
     token,
@@ -635,7 +702,11 @@ export function createAgentKey(
   );
 }
 
-export function revokeAgentKey(token: string | null, slug: string, keyId: string) {
+export function revokeAgentKey(
+  token: string | null,
+  slug: string,
+  keyId: string,
+) {
   return post<V2ApiKeyDTO>(
     `/projects/${encodeURIComponent(slug)}/agent-access/keys/${encodeURIComponent(keyId)}/revoke`,
     token,

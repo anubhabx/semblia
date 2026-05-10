@@ -53,8 +53,7 @@ export const queryKeys = {
   },
 
   agentAccess: {
-    overview: (slug: string) =>
-      ["projects", slug, "agent-access"] as const,
+    overview: (slug: string) => ["projects", slug, "agent-access"] as const,
     actions: (slug: string) =>
       ["projects", slug, "agent-access", "actions"] as const,
   },
