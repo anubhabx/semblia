@@ -26,6 +26,9 @@ import { OutboundWebhooksModule } from "./modules/outbound-webhooks/outbound-web
 import { ExportsModule } from "./modules/exports/exports.module.js";
 import { IntegrationsModule } from "./modules/integrations/integrations.module.js";
 import { AnalyticsModule } from "./modules/analytics/analytics.module.js";
+import { NotificationsModule } from "./modules/notifications/notifications.module.js";
+import { ProjectAuditModule } from "./modules/project-audit/project-audit.module.js";
+import { PublicSurfacesModule } from "./modules/public-surfaces/public-surfaces.module.js";
 
 @Module({
   imports: [
@@ -68,6 +71,11 @@ import { AnalyticsModule } from "./modules/analytics/analytics.module.js";
             ttl: seconds(60),
             limit: 120,
           },
+          {
+            name: "analytics-events",
+            ttl: seconds(60),
+            limit: 240,
+          },
         ],
       }),
     }),
@@ -84,6 +92,9 @@ import { AnalyticsModule } from "./modules/analytics/analytics.module.js";
     ExportsModule,
     IntegrationsModule,
     AnalyticsModule,
+    NotificationsModule,
+    ProjectAuditModule,
+    PublicSurfacesModule,
     ProjectsModule,
     WidgetsModule,
     TestimonialsModule,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { MemberRole } from "@workspace/database/prisma";
+import { Capability } from "../../common/authz/capabilities.js";
 import { ProjectsService } from "./projects.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
@@ -11,9 +12,11 @@ const mockProjectCount = vi.fn();
 const mockProjectUpdate = vi.fn();
 const mockProjectCreate = vi.fn();
 const mockProjectMemberCreate = vi.fn();
+const mockProjectMemberFindMany = vi.fn();
 const mockProjectTrustedOriginFindMany = vi.fn();
 const mockPublicSurfaceHostCreateMany = vi.fn();
 const mockTestimonialGroupBy = vi.fn();
+const mockTestimonialCount = vi.fn();
 const mockTransaction = vi.fn();
 const mockEnsureOrganizationForActor = vi.fn();
 
@@ -29,9 +32,11 @@ const prismaMock = {
     },
     testimonial: {
       groupBy: mockTestimonialGroupBy,
+      count: mockTestimonialCount,
     },
     projectMember: {
       create: mockProjectMemberCreate,
+      findMany: mockProjectMemberFindMany,
     },
     projectTrustedOrigin: {
       findMany: mockProjectTrustedOriginFindMany,
@@ -56,6 +61,8 @@ describe("ProjectsService allowed origins", () => {
       async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(prismaMock.client),
     );
+    mockProjectMemberFindMany.mockResolvedValue([]);
+    mockTestimonialCount.mockResolvedValue(0);
   });
 
   it("lists active normalized origins merged with legacy project origins", async () => {
@@ -319,6 +326,69 @@ describe("ProjectsService allowed origins", () => {
       }),
     );
     expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.access).toEqual({
+      role: "AGENT_KEY",
+      capabilities: ["VIEW_PROJECT"],
+    });
+  });
+
+  it("projects legacy membership capabilities in project list responses", async () => {
+    mockProjectCount.mockResolvedValue(1);
+    mockProjectFindMany.mockResolvedValue([
+      projectRecord({ id: "project_1", userId: "other_user" }),
+    ]);
+    mockTestimonialGroupBy.mockResolvedValue([]);
+    mockProjectMemberFindMany.mockResolvedValue([
+      { projectId: "project_1", role: MemberRole.EDITOR },
+    ]);
+
+    const result = await service.list("user_1", { page: 1, pageSize: 10 });
+
+    expect(mockProjectMemberFindMany).toHaveBeenCalledWith({
+      where: {
+        projectId: { in: ["project_1"] },
+        userId: "user_1",
+      },
+      select: {
+        projectId: true,
+        role: true,
+      },
+    });
+    expect(result.items[0]?.access).toEqual({
+      role: MemberRole.EDITOR,
+      capabilities: [
+        "OPERATE_PROJECT",
+        "PUBLISH_TESTIMONIALS",
+        "REVIEW_TESTIMONIALS",
+        "VIEW_PROJECT",
+      ],
+    });
+  });
+
+  it("uses the resolved route access block for project detail responses", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockProjectMemberFindMany.mockResolvedValue([]);
+    mockTestimonialGroupBy.mockResolvedValue([]);
+
+    await expect(
+      service.getBySlug(
+        "user_1",
+        { slug: "acme" },
+        {
+          role: "ORG_ADMIN",
+          capabilities: new Set([
+            Capability.VIEW_PROJECT,
+            Capability.MANAGE_PROJECT,
+          ]),
+        },
+      ),
+    ).resolves.toMatchObject({
+      slug: "acme",
+      access: {
+        role: "ORG_ADMIN",
+        capabilities: ["MANAGE_PROJECT", "VIEW_PROJECT"],
+      },
+    });
   });
 
   it("blocks project creation from scoped API or agent credentials", async () => {

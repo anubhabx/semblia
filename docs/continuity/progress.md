@@ -5,11 +5,11 @@ Last updated: 2026-05-10
 ## Current Snapshot
 
 - Branch at last sync: `revamp/v2`.
-- Git state before the V1 Task 6 implementation checkpoint: `revamp/v2...origin/revamp/v2 [ahead 41]`, clean worktree.
-- Current stage: V1 Task 6 agent access and MCP server implemented, verified, and checkpoint-committed.
-- Current checkpoint: V1 Task 6 agent access and MCP server committed as `adf651f`. V1 Task 5 native thin integrations remain committed as `8e82c74`; security hardening remains committed as `0bc7bd1`.
-- Latest committed implementation checkpoint: V1 Task 6 added the official local stdio MCP adapter, agent-safe analytics summary, and project-scoped credential hardening.
-- Next implementation checkpoint after Task 6: V1 Task 7 OpenAPI and developer-facing contracts.
+- Git state before the V1 API production contract checkpoint: `revamp/v2...origin/revamp/v2 [ahead 43]`, clean worktree.
+- Current stage: V1 API production contract checkpoint implemented and verified.
+- Current checkpoint: V1 Task 7 / API production contracts is ready for the checkpoint commit. V1 Task 6 agent access and MCP server remains committed as `adf651f`; V1 Task 5 native thin integrations remain committed as `8e82c74`; security hardening remains committed as `0bc7bd1`.
+- Previous committed implementation checkpoint: V1 Task 6 added the official local stdio MCP adapter, agent-safe analytics summary, and project-scoped credential hardening.
+- Next implementation checkpoint after the API production contract commit: `web_v2` contract adaptation can begin, with billing UI kept disabled/hidden until the billing source-of-truth decision is made.
 
 Always re-run `git status --short --branch` and `git log --oneline -12` before using this snapshot as current state.
 
@@ -36,7 +36,9 @@ Later on 2026-05-08, V1 Task 4 added the outbound webhook and async CSV export f
 
 On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store Slack, Notion, Linear, and GitHub integration connections, resolve user connected-account OAuth tokens through a Clerk-backed token-provider boundary, queue one-way native export deliveries, and map safe feedback/testimonial payloads into provider-native messages, pages, and issues without bidirectional sync.
 
-Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agent clients, a project analytics summary endpoint for agent-safe read workflows, and project-list credential boundary hardening. The MCP server uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, calls the stable private API routes only, exposes safe tools/resources/prompts, and never connects directly to the database. Analytics event capture and rollups are still future auxiliary work; the new summary endpoint is a read projection over existing daily rows and live submission/impression tables.
+Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agent clients, a project analytics summary endpoint for agent-safe read workflows, and project-list credential boundary hardening. The MCP server uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, calls the stable private API routes only, exposes safe tools/resources/prompts, and never connects directly to the database. At that checkpoint the summary endpoint was a read projection over existing daily rows and live submission/impression tables; the later API production contract checkpoint added event capture.
+
+Later on 2026-05-10, the API production contract checkpoint added OpenAPI serving, developer-facing docs, backend-produced project access blocks, host-aware public surface resolution, public analytics event capture, notifications list/state/preference APIs, and project action audit reads. The remaining backend-visible product blocker is billing read projections, which still need the user-owned source-of-truth decision.
 
 ## Phase Ledger
 
@@ -81,11 +83,12 @@ Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agen
 | V1 Task 4 Outbound webhooks and async CSV exports | Done               | `3742765` | Added encrypted webhook endpoints, signed async deliveries/retries, async DB-backed CSV export deliveries/downloads, shared DTOs, webhook dispatch hardening, Hono override refresh, and audit rows.                                                           |
 | V1 Task 5 Native thin integrations                | Done               | `8e82c74` | Added `IntegrationConnection`, Clerk connected-account token provider boundary, native export queueing, Slack/Notion/Linear/GitHub one-way adapters, shared DTOs, and provider tests.                                                                          |
 | V1 Task 6 Agent access and MCP server             | Done               | `adf651f` | Added `@workspace/tresta-mcp-server`, safe MCP tools/resources/prompts over private API routes, `GET /v2/projects/:slug/analytics/summary`, and project-scoped credential hardening for project list/create.                                                   |
-| 1e Auxiliary product data                         | Partially complete | n/a       | API key, agent key, feedback integrity, outbound webhook, async CSV export, and native thin integration foundations are implemented. Remaining auxiliary slices: billing projections, notifications, analytics capture/rollups.                                |
-| 2 Common API contracts                            | Pending            | n/a       | Access block, shared DTO/client contracts, errors, idempotency, concurrency conventions.                                                                                                                                                                       |
-| 3 Public surface API                              | Pending            | n/a       | Host-aware public rendering/submission and event capture.                                                                                                                                                                                                      |
+| V1 Task 7 API production contracts                | Done               | n/a       | Added OpenAPI serving, docs under `docs/api/`, project access blocks, notifications API, project action audit reads, public surface host resolution, and public analytics event capture.                                                                       |
+| 1e Auxiliary product data                         | Partially complete | n/a       | API key, agent key, feedback integrity, outbound webhook, async CSV export, native thin integration, notification, and analytics capture foundations are implemented. Remaining auxiliary slice: billing projections after source-of-truth confirmation.       |
+| 2 Common API contracts                            | Mostly complete    | n/a       | Project access blocks, shared DTO/client contracts, error envelope, idempotency, concurrency, and OpenAPI/developer docs now exist for the production wiring pass.                                                                                             |
+| 3 Public surface API                              | Mostly complete    | n/a       | Host-aware public resolution, trusted public submission, hosted-page analytics capture, public form/testimonial/widget/wall reads, and idempotent submit handling are now implemented.                                                                         |
 | 4 Studio API                                      | Pending            | n/a       | Form/widget studio persistence and explicit mappings.                                                                                                                                                                                                          |
-| 5 Auxiliary API surfaces                          | Pending            | n/a       | Analytics, notifications, billing read projections, API keys.                                                                                                                                                                                                  |
+| 5 Auxiliary API surfaces                          | Mostly complete    | n/a       | API keys, agent keys, analytics summary/events, notifications, exports, webhooks, integrations, and audit reads exist. Billing read projections remain blocked on source-of-truth choice.                                                                      |
 | 6 `web_v2` adaptation                             | Pending            | n/a       | Replace mocks and adapt UI to backend-canonical contracts.                                                                                                                                                                                                     |
 | 7 Verification and hardening                      | Pending            | n/a       | Security, performance, migration, and end-to-end checks.                                                                                                                                                                                                       |
 
@@ -122,14 +125,29 @@ Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agen
 - Clerk connected OAuth tokens are resolved server-side through `ClerkConnectedAccountTokenProvider`; missing or revoked connected tokens fail as connect-required authorization errors.
 - V1 native integrations are intentionally one-way. They create Slack messages, Notion pages, Linear issues, or GitHub issues from safe export payloads and do not import remote edits, sync provider membership, or depend on provider webhooks for core Tresta state.
 - Project-scoped API keys and agent keys can list only their bound project from `GET /v2/projects` and cannot create projects. Creation remains a user-session action.
-- `GET /v2/projects/:slug/analytics/summary` is a project-scoped read endpoint over existing analytics daily rows and live submission/impression counts. It does not complete the future analytics capture/rollup slice.
+- `GET /v2/projects/:slug/analytics/summary` is a project-scoped read endpoint over analytics daily rows and live submission/impression counts.
+- Public analytics event capture now exists under `POST /v2/analytics/events/*` for form views, widget loads, testimonial impressions, and hosted page views. These routes validate resource relationships, write event rows where a raw table exists, and increment `ProjectAnalyticsDaily`.
+- `GET /v2/public-surfaces/resolve` is the API-owned host resolver for public pages. It normalizes hostnames, requires an active `PublicSurfaceHost`, returns project branding, and exposes the public forms/testimonials/wall endpoints the frontend should render.
+- Project list/detail/update responses now include a backend-produced `access` block with role and capabilities for user, Clerk organization, private API key, and agent key actors.
+- `GET /v2/projects/:slug/action-audit` exposes a project-scoped paginated audit stream for capability-gated project actors.
+- Authenticated notification routes now exist for list, unread count, mark-read, mark-all-read, and preference management under `/v2/notifications`.
+- OpenAPI is served at `GET /v2/openapi.json`, with Swagger UI at `GET /v2/openapi`.
 - `packages/tresta-mcp-server` is the official local stdio MCP adapter for Task 6. It uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, exposes safe feedback/testimonial/export/delivery tools, resources, and prompts, and calls private APIs instead of the database.
 - MCP export triggering uses the actual Task 4/5 API shapes: CSV via `POST /v2/projects/:slug/exports/csv`, native integrations via `POST /v2/projects/:slug/integrations/connections/:connectionId/exports`.
 - Root `pnpm.overrides.hono` is pinned to `4.12.18` so the Prisma tooling path no longer matches the May 2026 Hono advisories.
-- Broad `web_v2` wiring stays deferred until the remaining backend-canonical V1 differentiator surfaces are complete.
+- Broad `web_v2` wiring stays deferred until this API production contract checkpoint is verified and committed. Billing UI must remain disabled/hidden or explicitly read-only until the billing source-of-truth decision is made.
 
 ## Latest Verification
 
+- V1 API production contract checkpoint database verification passed: `pnpm.cmd --filter @workspace/database generate` and `pnpm.cmd --filter @workspace/database exec prisma validate`.
+- V1 API production contract checkpoint shared types verification passed: `pnpm.cmd --filter @workspace/types build`.
+- V1 API production contract checkpoint docs grep passed: `rg -n "Public surface ID|Server submit secret|Agent access|X-Tresta-Signature" docs/api docs/plans docs/continuity`.
+- V1 API production contract checkpoint API typecheck passed: `pnpm.cmd --filter api_v2 typecheck`.
+- V1 API production contract checkpoint API lint passed: `pnpm.cmd --filter api_v2 lint`.
+- V1 API production contract checkpoint full API tests passed: `pnpm.cmd --filter api_v2 test` reported 45 files and 249 tests passing.
+- V1 API production contract checkpoint API build passed: `pnpm.cmd build --filter api_v2`.
+- V1 API production contract checkpoint index refresh passed: `python scripts/update-indexes.py` indexed 26 changed files, skipped 0, and increased the vector store to 1189 chunks while refreshing the AST knowledge graph.
+- V1 API production contract checkpoint graph refresh passed: `python scripts/rebuild-graphify.py`; semantic extraction remains skipped because it requires Claude.
 - `pnpm.cmd audit --prod --json` refreshed: 64 repo-wide advisories (`low:3`, `moderate:34`, `high:26`, `critical:4`), with 0 advisories matching `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`. Affected root paths were legacy/admin/widget/tooling paths: `apps__admin`, `apps__api`, `packages__opencode-mcp-server`, and `packages__widget`.
 - `pnpm.cmd audit --json` refreshed: 99 repo-wide advisories (`low:6`, `moderate:45`, `high:50`, `critical:6`), with 0 advisories matching `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`. Affected root paths were `apps__admin`, `apps__api`, `packages__opencode-mcp-server`, `packages__ui`, and `packages__widget`.
 - `pnpm.cmd --filter @workspace/database generate` passed after adding `PublicSubmitSurface.FORM`.
@@ -175,11 +193,11 @@ Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agen
 
 ## Known Doc Drift
 
-- `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` was current after V1 Task 3, but is now stale for outbound webhooks, exports, native integrations, Prisma models, and shared DTOs after the Task 4 and Task 5 implementations.
+- `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` was current after V1 Task 3, but is now stale for outbound webhooks, exports, native integrations, project access blocks, notifications, analytics event capture, public host resolution, OpenAPI/docs, Prisma models, and shared DTOs after the Task 4 through Task 7 implementations.
 - `docs/plans/2026-05-02-api-surface-implementation-phases.md` has been annotated so its original starting point does not override this live ledger.
 - `apps/api_v2/docs/orchestration/handoff.md` has been annotated so original-rebuild scope language does not override the current auxiliary-surface decisions.
 - `memory/` and `docs/codex-claude-memory-migration.md` are historical context, not the live progress ledger.
-- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 6 are implemented, and Task 7 OpenAPI/developer-facing contracts is the next planned checkpoint.
+- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 7 are implemented and verified, with the API production contract checkpoint ready to commit.
 
 ## Progress Report Format
 

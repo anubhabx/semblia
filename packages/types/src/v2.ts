@@ -56,10 +56,14 @@ export type V2ThemeMode = "LIGHT" | "DARK" | "AUTO";
 export type V2CardStyle = "SHADOW" | "BORDERED" | "FLAT" | "ELEVATED";
 export type V2WidgetDensity = "COMPACT" | "DEFAULT" | "COZY";
 export type V2NotificationType =
+  | "SUBMISSION_CREATED"
+  | "SUBMISSION_MODERATED"
   | "NEW_TESTIMONIAL"
   | "TESTIMONIAL_FLAGGED"
   | "TESTIMONIAL_APPROVED"
   | "TESTIMONIAL_REJECTED"
+  | "EXPORT_DELIVERY_FAILED"
+  | "AGENT_ACTION_CREATED"
   | "SECURITY_ALERT";
 export type V2SubscriptionStatus =
   | "ACTIVE"
@@ -97,6 +101,8 @@ export type V2IntegrationAuthStrategy =
   | "NATIVE_OAUTH"
   | "MANUAL_SECRET";
 export type V2IntegrationConnectionStatus = "ACTIVE" | "DISABLED" | "REVOKED";
+export type V2PublicSurfaceFeature = "COLLECTION" | "WALL";
+export type V2PublicSurfaceResourceType = "PROJECT" | "FORM" | "WIDGET";
 
 export interface V2PaginatedResponse<T> {
   items: T[];
@@ -112,6 +118,37 @@ export interface V2ErrorResponse {
   statusCode: number;
   message: string | string[];
   error?: string;
+}
+
+export type V2ProjectAccessRole =
+  | "OWNER"
+  | "ADMIN"
+  | "EDITOR"
+  | "VIEWER"
+  | "ORG_ADMIN"
+  | "ORG_MEMBER"
+  | "API_KEY"
+  | "AGENT_KEY";
+
+export type V2ProjectCapability =
+  | "VIEW_PROJECT"
+  | "OPERATE_PROJECT"
+  | "REVIEW_TESTIMONIALS"
+  | "PUBLISH_TESTIMONIALS"
+  | "MANAGE_PUBLISH_SURFACES"
+  | "VIEW_CREDENTIALS"
+  | "VIEW_INTEGRATIONS"
+  | "MANAGE_INTEGRATIONS"
+  | "VIEW_AGENT_ACCESS"
+  | "MANAGE_CREDENTIALS"
+  | "MANAGE_AGENT_ACCESS"
+  | "MANAGE_PROJECT"
+  | "MANAGE_MEMBERS"
+  | "MANAGE_BILLING";
+
+export interface V2ProjectAccessDTO {
+  role: V2ProjectAccessRole;
+  capabilities: V2ProjectCapability[];
 }
 
 export interface V2ProjectDTO {
@@ -144,6 +181,7 @@ export interface V2ProjectDTO {
     widgets: number;
     apiKeys: number;
   };
+  access: V2ProjectAccessDTO;
 }
 
 export interface V2OrganizationDTO {
@@ -369,6 +407,76 @@ export interface V2ProjectActionAuditDTO {
   targetId: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+}
+
+export interface V2AnalyticsDailyDTO {
+  day: string;
+  formViews: number;
+  formSubmissions: number;
+  widgetLoads: number;
+  testimonialImpressions: number;
+  hostedPageViews: number;
+  apiRequests: number;
+}
+
+export interface V2AnalyticsSummaryDTO {
+  range: {
+    days: number;
+    since: string;
+    until: string;
+  };
+  totals: {
+    formViews: number;
+    formSubmissions: number;
+    widgetLoads: number;
+    testimonialImpressions: number;
+    hostedPageViews: number;
+    apiRequests: number;
+    publishedTestimonials: number;
+  };
+  daily: V2AnalyticsDailyDTO[];
+}
+
+export interface V2AnalyticsEventAckDTO {
+  accepted: true;
+  type:
+    | "form_view"
+    | "widget_load"
+    | "testimonial_impression"
+    | "hosted_page_view";
+}
+
+export interface V2PublicSurfaceWallResourceDTO {
+  widgetId: string;
+  wallSlug: string;
+  title: string;
+  subhead: string;
+  endpoint: string;
+}
+
+export interface V2PublicSurfaceResolutionDTO {
+  id: string;
+  hostname: string;
+  feature: V2PublicSurfaceFeature;
+  resourceType: V2PublicSurfaceResourceType;
+  resourceId: string | null;
+  isDefault: boolean;
+  canonicalUrl: string;
+  project: {
+    id: string;
+    slug: string;
+    name: string;
+    logoUrl: string | null;
+    brandColorPrimary: string | null;
+    brandColorSecondary: string | null;
+    websiteUrl: string | null;
+  };
+  endpoints: {
+    forms: string | null;
+    testimonials: string | null;
+    wall: string | null;
+  };
+  walls: V2PublicSurfaceWallResourceDTO[];
 }
 
 export type V2ApiKeyType = "SECRET" | "PUBLISHABLE" | "AGENT";
@@ -641,9 +749,23 @@ export interface V2NotificationDTO {
   title: string;
   message: string;
   link: string | null;
-  metadata: Record<string, string> | null;
+  metadata: Record<string, unknown> | null;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface V2NotificationTypePreferenceDTO {
+  email: boolean;
+  inApp: boolean;
+}
+
+export interface V2NotificationPreferencesDTO {
+  userId: string;
+  emailEnabled: boolean;
+  typePreferences: Partial<
+    Record<V2NotificationType, V2NotificationTypePreferenceDTO>
+  >;
+  updatedAt: string | null;
 }
 
 export interface V2SubscriptionDTO {

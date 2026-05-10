@@ -1156,8 +1156,10 @@ Expected: MCP package tests pass with mocked API responses; API build passes; in
 - Create: `docs/api/v1-agent-access.md`
 - Create: `docs/api/v1-webhooks.md`
 - Create: `docs/api/v1-integrations.md`
+- Create: `docs/api/v1-public-surfaces.md`
+- Create: `docs/api/v1-analytics-notifications.md`
 
-- [ ] **Step 1: Document credential model**
+- [x] **Step 1: Document credential model**
 
 Docs must explain:
 
@@ -1178,7 +1180,7 @@ Agent access:
   agent key + MCP server over private API.
 ```
 
-- [ ] **Step 2: Document webhook verification**
+- [x] **Step 2: Document webhook verification**
 
 Include:
 
@@ -1191,7 +1193,7 @@ Retry semantics.
 Event catalogue.
 ```
 
-- [ ] **Step 3: Document agent setup**
+- [x] **Step 3: Document agent setup**
 
 Include a generated MCP config shape:
 
@@ -1210,7 +1212,7 @@ Include a generated MCP config shape:
 }
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -1221,6 +1223,8 @@ python scripts/update-indexes.py
 ```
 
 Expected: build passes; docs contain all credential terms; indexes update.
+
+Implementation note, 2026-05-10: this checkpoint also added `GET /v2/openapi`, `GET /v2/openapi.json`, backend-produced project access blocks, public-surface host resolution, public analytics event capture, notifications APIs, and project action audit reads so the next UI pass can consume production API contracts instead of mocks.
 
 ## Task 8: Web V2 Friendly Control Plane UX
 

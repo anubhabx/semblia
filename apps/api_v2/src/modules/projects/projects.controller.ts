@@ -41,6 +41,7 @@ import {
 } from "./projects.dto.js";
 import { ProjectsService } from "./projects.service.js";
 import { SigningSecretService } from "./signing-secret.service.js";
+import type { ProjectResponseAccess } from "./projects.service.js";
 
 @Controller("projects")
 export class ProjectsController {
@@ -78,8 +79,13 @@ export class ProjectsController {
     @CurrentUserId() userId: string,
     @Param(new ZodValidationPipe(projectSlugParamsSchema))
     params: ProjectSlugParamsDto,
+    @Req() request: { projectAccess?: ProjectResponseAccess },
   ) {
-    return this.projectsService.getBySlug(userId, params);
+    return this.projectsService.getBySlug(
+      userId,
+      params,
+      this.getProjectAccessFromRequest(request),
+    );
   }
 
   @Patch(":slug")
@@ -91,8 +97,14 @@ export class ProjectsController {
     params: ProjectSlugParamsDto,
     @Body(new ZodValidationPipe(updateProjectBodySchema))
     body: UpdateProjectBodyDto,
+    @Req() request: { projectAccess?: ProjectResponseAccess },
   ) {
-    return this.projectsService.update(userId, params, body);
+    return this.projectsService.update(
+      userId,
+      params,
+      body,
+      this.getProjectAccessFromRequest(request),
+    );
   }
 
   @Delete(":slug")
@@ -225,5 +237,18 @@ export class ProjectsController {
     }
 
     return projectId;
+  }
+
+  private getProjectAccessFromRequest(request: {
+    projectAccess?: ProjectResponseAccess;
+  }) {
+    const access = request.projectAccess;
+    if (!access) {
+      throw new InternalServerErrorException(
+        "ProjectsController requires request.projectAccess",
+      );
+    }
+
+    return access;
   }
 }

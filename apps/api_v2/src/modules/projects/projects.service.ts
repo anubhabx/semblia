@@ -12,6 +12,12 @@ import {
   type ProjectMember,
 } from "@workspace/database/prisma";
 import type { ActorContext } from "../../common/authz/actor-context.js";
+import {
+  Capability,
+  clerkOrgRoleCapabilities,
+  credentialScopeCapabilities,
+} from "../../common/authz/capabilities.js";
+import type { ProjectAccessRole } from "../../common/authz/project-access.service.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { OrganizationsService } from "../organizations/organizations.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -83,6 +89,10 @@ type ProjectMemberWithUser = Prisma.ProjectMemberGetPayload<{
 }>;
 
 type ProjectJsonShape = Prisma.JsonValue | null;
+export type ProjectResponseAccess = {
+  role: ProjectAccessRole;
+  capabilities: ReadonlySet<Capability>;
+};
 
 @Injectable()
 export class ProjectsService {
@@ -132,11 +142,18 @@ export class ProjectsService {
       ]),
     );
 
+    const accessByProjectId = await this.buildAccessByProjectId(
+      userId,
+      projects,
+      actor,
+    );
+
     return paginate({
       data: projects.map((project) =>
         this.toProjectResponse(
           project,
           pendingModerationByProjectId.get(project.id) ?? 0,
+          accessByProjectId.get(project.id),
         ),
       ),
       total,
@@ -186,7 +203,11 @@ export class ProjectsService {
         },
       );
 
-      return this.toProjectResponse(project, 0);
+      return this.toProjectResponse(
+        project,
+        0,
+        this.buildNewProjectAccess(actor),
+      );
     } catch (error: unknown) {
       if (this.isPrismaUniqueViolation(error)) {
         throw new ConflictException("Project slug already exists");
@@ -196,7 +217,11 @@ export class ProjectsService {
     }
   }
 
-  async getBySlug(_userId: string, params: ProjectSlugParamsDto) {
+  async getBySlug(
+    _userId: string,
+    params: ProjectSlugParamsDto,
+    access: ProjectResponseAccess,
+  ) {
     const project = await this.prisma.client.project.findUnique({
       where: { slug: params.slug },
       select: PROJECT_SELECT,
@@ -211,13 +236,14 @@ export class ProjectsService {
       },
     });
 
-    return this.toProjectResponse(project, pendingModeration);
+    return this.toProjectResponse(project, pendingModeration, access);
   }
 
   async update(
     _userId: string,
     params: ProjectSlugParamsDto,
     body: UpdateProjectBodyDto,
+    access: ProjectResponseAccess,
   ) {
     const project = await this.getProjectOrThrow(params.slug);
 
@@ -235,7 +261,7 @@ export class ProjectsService {
         },
       });
 
-      return this.toProjectResponse(updatedProject, pendingModeration);
+      return this.toProjectResponse(updatedProject, pendingModeration, access);
     } catch (error: unknown) {
       if (this.isPrismaNotFoundError(error)) {
         throw new NotFoundException("Project not found");
@@ -412,6 +438,104 @@ export class ProjectsService {
     return {
       OR: [{ userId }, { members: { some: { userId } } }],
     };
+  }
+
+  private async buildAccessByProjectId(
+    userId: string,
+    projects: ProjectWithCounts[],
+    actor?: ActorContext | null,
+  ) {
+    const accessByProjectId = new Map<string, ProjectResponseAccess>();
+
+    if (projects.length === 0) {
+      return accessByProjectId;
+    }
+
+    if (actor && actor.actorType !== "user") {
+      const role: ProjectAccessRole =
+        actor.actorType === "agent_key" ? "AGENT_KEY" : "API_KEY";
+      const capabilities = credentialScopeCapabilities(actor.scopes);
+      for (const project of projects) {
+        accessByProjectId.set(project.id, { role, capabilities });
+      }
+      return accessByProjectId;
+    }
+
+    if (actor?.clerkOrgId) {
+      const role: ProjectAccessRole =
+        actor.clerkOrgRole === "admin" ? "ORG_ADMIN" : "ORG_MEMBER";
+      const capabilities = clerkOrgRoleCapabilities(actor.clerkOrgRole);
+      for (const project of projects) {
+        accessByProjectId.set(project.id, { role, capabilities });
+      }
+      return accessByProjectId;
+    }
+
+    const memberships = await this.prisma.client.projectMember.findMany({
+      where: {
+        projectId: { in: projects.map((project) => project.id) },
+        userId,
+      },
+      select: {
+        projectId: true,
+        role: true,
+      },
+    });
+    const roleByProjectId = new Map(
+      memberships.map((membership) => [
+        membership.projectId,
+        membership.role as ProjectAccessRole,
+      ]),
+    );
+
+    for (const project of projects) {
+      const role =
+        roleByProjectId.get(project.id) ??
+        (project.userId === userId ? MemberRole.OWNER : undefined);
+      if (!role) continue;
+      accessByProjectId.set(project.id, {
+        role,
+        capabilities: this.capabilitiesForRole(role),
+      });
+    }
+
+    return accessByProjectId;
+  }
+
+  private buildNewProjectAccess(
+    actor?: ActorContext | null,
+  ): ProjectResponseAccess {
+    if (actor?.clerkOrgId) {
+      const role: ProjectAccessRole =
+        actor.clerkOrgRole === "admin" ? "ORG_ADMIN" : "ORG_MEMBER";
+      return {
+        role,
+        capabilities: clerkOrgRoleCapabilities(actor.clerkOrgRole),
+      };
+    }
+
+    return {
+      role: MemberRole.OWNER,
+      capabilities: this.capabilitiesForRole(MemberRole.OWNER),
+    };
+  }
+
+  private capabilitiesForRole(role: ProjectAccessRole) {
+    switch (role) {
+      case MemberRole.OWNER:
+      case MemberRole.ADMIN:
+        return clerkOrgRoleCapabilities("admin");
+      case MemberRole.EDITOR:
+      case "ORG_MEMBER":
+        return clerkOrgRoleCapabilities("member");
+      case MemberRole.VIEWER:
+        return new Set<Capability>([Capability.VIEW_PROJECT]);
+      case "ORG_ADMIN":
+        return clerkOrgRoleCapabilities("admin");
+      case "API_KEY":
+      case "AGENT_KEY":
+        return new Set<Capability>([Capability.VIEW_PROJECT]);
+    }
   }
 
   private async getProjectOrThrow(slug: string) {
@@ -664,6 +788,7 @@ export class ProjectsService {
   private toProjectResponse(
     project: ProjectWithCounts,
     pendingModeration: number,
+    access?: ProjectResponseAccess,
   ) {
     return {
       id: project.id,
@@ -695,6 +820,14 @@ export class ProjectsService {
         widgets: project._count.widgets,
         apiKeys: project._count.apiKeys,
       },
+      access: this.serializeAccess(access),
+    };
+  }
+
+  private serializeAccess(access?: ProjectResponseAccess) {
+    return {
+      role: access?.role ?? "VIEWER",
+      capabilities: [...(access?.capabilities ?? new Set<Capability>())].sort(),
     };
   }
 

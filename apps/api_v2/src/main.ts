@@ -2,6 +2,8 @@ import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import type { INestApplication } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module.js";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
@@ -42,6 +44,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalPipes(new ZodValidationPipe());
+  setupOpenApi(app, configService);
 
   const port = configService.get<number>("API_V2_PORT") ?? 8100;
 
@@ -51,6 +54,83 @@ async function bootstrap() {
 }
 
 void bootstrap();
+
+function setupOpenApi(app: INestApplication, configService: ConfigService) {
+  const productionUrl =
+    configService.get<string>("API_V2_PUBLIC_BASE_URL") ??
+    "https://api.tresta.app";
+  const localPort = configService.get<number>("API_V2_PORT") ?? 8100;
+
+  const config = new DocumentBuilder()
+    .setTitle("Tresta V2 API")
+    .setDescription(
+      "Project-scoped Tresta API for collection, testimonials, forms, widgets, credentials, integrations, exports, webhooks, and agent access.",
+    )
+    .setVersion("1.0.0")
+    .addServer(`${productionUrl}/v2`, "Production API")
+    .addServer(`http://localhost:${localPort}/v2`, "Local API")
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "Clerk session JWT, private API key, or agent key",
+        description:
+          "Use a Clerk session token for user actions, a tresta_sk_... private API key for scoped private APIs, or a tresta_agent_... key for agent-safe APIs.",
+      },
+      "tresta-bearer",
+    )
+    .addApiKey(
+      {
+        type: "apiKey",
+        in: "header",
+        name: "X-Tresta-Signature",
+        description:
+          "HMAC signature for server-side public submission. Format: v1=<hex_hmac_sha256>.",
+      },
+      "server-submit-signature",
+    )
+    .addApiKey(
+      {
+        type: "apiKey",
+        in: "header",
+        name: "X-Idempotency-Key",
+        description:
+          "Idempotency key for public submissions and other retryable client operations where documented.",
+      },
+      "idempotency-key",
+    )
+    .addTag("Users")
+    .addTag("Organizations")
+    .addTag("Projects")
+    .addTag("Forms")
+    .addTag("Widgets")
+    .addTag("Testimonials")
+    .addTag("Submissions")
+    .addTag("Credentials")
+    .addTag("Agent Access")
+    .addTag("Outbound Webhooks")
+    .addTag("Exports")
+    .addTag("Integrations")
+    .addTag("Analytics")
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config, {
+    deepScanRoutes: true,
+  });
+
+  app
+    .getHttpAdapter()
+    .get("/v2/openapi.json", (_request: Request, response: Response) =>
+      response.json(document),
+    );
+
+  SwaggerModule.setup("v2/openapi", app, document, {
+    customSiteTitle: "Tresta V2 API Docs",
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+}
 
 function createPublicProjectCorsMiddleware(
   prismaService: PrismaService,
