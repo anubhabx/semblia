@@ -1,7 +1,10 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma, UserOnboardingStep } from "@workspace/database/prisma";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
   ClerkUserPayloadDto,
+  OnboardingDataPatchDto,
+  UpdateOnboardingProgressBodyDto,
   UpdateUserProfileBodyDto,
 } from "./users.dto.js";
 
@@ -14,6 +17,8 @@ export class UsersService {
     lastName: true,
     avatar: true,
     plan: true,
+    onboardingStep: true,
+    onboardingData: true,
     onboardingCompletedAt: true,
     createdAt: true,
     updatedAt: true,
@@ -64,7 +69,36 @@ export class UsersService {
 
     return this.prisma.client.user.update({
       where: { id: clerkUserId },
-      data: { onboardingCompletedAt: new Date() },
+      data: {
+        onboardingStep: UserOnboardingStep.COMPLETED,
+        onboardingCompletedAt: new Date(),
+      },
+      select: UsersService.USER_SELECT,
+    });
+  }
+
+  async updateOnboardingProgress(
+    clerkUserId: string,
+    body: UpdateOnboardingProgressBodyDto,
+  ) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: clerkUserId },
+      select: {
+        onboardingData: true,
+      },
+    });
+
+    if (!user) throw new NotFoundException("User not found");
+
+    return this.prisma.client.user.update({
+      where: { id: clerkUserId },
+      data: {
+        onboardingStep: body.step,
+        onboardingData: this.mergeOnboardingData(
+          user.onboardingData,
+          body.data,
+        ),
+      },
       select: UsersService.USER_SELECT,
     });
   }
@@ -97,6 +131,47 @@ export class UsersService {
       error !== null &&
       "code" in error &&
       error.code === "P2025"
+    );
+  }
+
+  private mergeOnboardingData(
+    existing: Prisma.JsonValue | null,
+    patch?: OnboardingDataPatchDto,
+  ) {
+    if (!patch) {
+      return this.asJsonObjectInput(existing);
+    }
+
+    const next: Record<string, unknown> = {
+      ...this.asRecord(existing),
+    };
+
+    for (const [section, value] of Object.entries(patch)) {
+      if (value === undefined) continue;
+      next[section] = {
+        ...this.asRecord(next[section]),
+        ...this.withoutUndefined(value),
+      };
+    }
+
+    return next as Prisma.InputJsonObject;
+  }
+
+  private asJsonObjectInput(value: Prisma.JsonValue | null) {
+    return this.asRecord(value) as Prisma.InputJsonObject;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return {};
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private withoutUndefined(value: Record<string, unknown>) {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== undefined),
     );
   }
 }

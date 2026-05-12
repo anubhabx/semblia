@@ -49,4 +49,19 @@ describe("UsersController", () => {
       ),
     ).toBe(RequestMethod.POST);
   });
+
+  it("declares PATCH /me/onboarding", () => {
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        UsersController.prototype.updateOnboardingProgress,
+      ),
+    ).toBe("onboarding");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        UsersController.prototype.updateOnboardingProgress,
+      ),
+    ).toBe(RequestMethod.PATCH);
+  });
 });

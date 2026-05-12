@@ -1,4 +1,33 @@
 export type V2UserPlan = "FREE" | "PRO";
+export type V2OnboardingStep =
+  | "PROFILE"
+  | "REFERRAL"
+  | "INTENT"
+  | "PROJECT"
+  | "COLLECTION"
+  | "COMPLETED";
+
+export interface V2OnboardingDataDTO {
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    jobTitle?: string;
+  };
+  referral?: {
+    source?: string;
+    other?: string;
+  };
+  intent?: {
+    intents?: string[];
+    other?: string;
+  };
+  project?: {
+    id?: string;
+    name?: string;
+    slug?: string;
+    collectionUrl?: string;
+  };
+}
 
 // ── API envelope ────────────────────────────────────────────────────────────
 
@@ -22,6 +51,8 @@ export interface V2UserDTO {
   lastName: string | null;
   avatar: string | null;
   plan: V2UserPlan;
+  onboardingStep: V2OnboardingStep;
+  onboardingData: V2OnboardingDataDTO | null;
   onboardingCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;

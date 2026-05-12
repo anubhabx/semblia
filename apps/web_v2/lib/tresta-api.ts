@@ -12,6 +12,8 @@ import type {
   V2ApiMeta,
   V2ErrorResponse,
   V2PaginatedResponse,
+  V2OnboardingDataDTO,
+  V2OnboardingStep,
   V2UserDTO,
   V2ProjectDTO,
   V2ProjectMemberDTO,
@@ -173,6 +175,16 @@ export function updateCurrentUser(
 
 export function completeOnboarding(token: string | null) {
   return post<V2UserDTO>("/me/onboarding/complete", token);
+}
+
+export function updateOnboardingProgress(
+  token: string | null,
+  body: {
+    step: Exclude<V2OnboardingStep, "COMPLETED">;
+    data?: V2OnboardingDataDTO;
+  },
+) {
+  return patch<V2UserDTO>("/me/onboarding", token, body);
 }
 
 // ── Organization ────────────────────────────────────────────────────────────

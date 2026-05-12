@@ -41,6 +41,8 @@ model User {
 
   // Admin tracking
   lastLogin             DateTime?
+  onboardingStep        UserOnboardingStep @default(PROFILE)
+  onboardingData        Json?
   onboardingCompletedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -1008,6 +1010,15 @@ enum SubscriptionStatus {
 enum UserPlan {
   FREE
   PRO
+}
+
+enum UserOnboardingStep {
+  PROFILE
+  REFERRAL
+  INTENT
+  PROJECT
+  COLLECTION
+  COMPLETED
 }
 
 enum ProjectType {

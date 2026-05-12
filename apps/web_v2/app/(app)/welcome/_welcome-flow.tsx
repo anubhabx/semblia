@@ -1,14 +1,27 @@
-// TODO: This route is currently dark (new signups go to /projects directly).
-// Re-enable by wiring: User.onboardingCompletedAt (prisma migration),
-// GET /v2/me exposes it, POST /v2/me/onboarding/complete sets it,
-// and (app)/layout.tsx redirects here when onboardingCompletedAt is null.
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { CircleNotch } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import type {
+  V2OnboardingDataDTO,
+  V2OnboardingStep,
+  V2UserDTO,
+} from "@workspace/types";
 import { cn } from "@/lib/utils";
+import {
+  getProjectCollectionUrl,
+  slugifyProjectName,
+} from "@/lib/project-utils";
 import { useAnimatedStep } from "@/hooks/use-animated-step";
+import { useCreateProject } from "@/hooks/api";
+import {
+  useCompleteOnboarding,
+  useCurrentUser,
+  useUpdateCurrentUser,
+  useUpdateOnboardingProgress,
+} from "@/hooks/use-current-user";
 
 import type { OnboardStep } from "./steps/constants";
 import { ProfileStep } from "./steps/profile-step";
@@ -17,54 +30,65 @@ import { IntentStep } from "./steps/intent-step";
 import { ProjectStep } from "./steps/project-step";
 import { CollectionStep } from "./steps/collection-step";
 
-function slugify(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || "my-project"
-  );
+export function WelcomeFlow() {
+  const currentUser = useCurrentUser();
+
+  if (currentUser.isLoading && !currentUser.data) {
+    return <WelcomeLoading />;
+  }
+
+  return <WelcomeFlowInner currentUser={currentUser.data} />;
 }
 
-export function WelcomeFlow() {
-  const { user } = useUser();
+function WelcomeFlowInner({ currentUser }: { currentUser?: V2UserDTO }) {
   const router = useRouter();
+  const updateUser = useUpdateCurrentUser();
+  const updateOnboarding = useUpdateOnboardingProgress();
+  const createProject = useCreateProject();
+  const completeOnboarding = useCompleteOnboarding();
+  const onboardingData = currentUser?.onboardingData ?? null;
+  const initialStep = apiStepToUi(currentUser?.onboardingStep ?? "PROFILE");
   const { activeStep, isLeaving, direction, go, isFirstRender } =
-    useAnimatedStep<OnboardStep>("profile", 200);
+    useAnimatedStep<OnboardStep>(initialStep, 200);
 
   // Profile
-  const [firstName, setFirstName] = React.useState(user?.firstName ?? "");
-  const [lastName, setLastName] = React.useState(user?.lastName ?? "");
-  const [jobTitle, setJobTitle] = React.useState("");
+  const [firstName, setFirstName] = React.useState(
+    currentUser?.firstName ?? onboardingData?.profile?.firstName ?? "",
+  );
+  const [lastName, setLastName] = React.useState(
+    currentUser?.lastName ?? onboardingData?.profile?.lastName ?? "",
+  );
+  const [jobTitle, setJobTitle] = React.useState(
+    onboardingData?.profile?.jobTitle ?? "",
+  );
   const [profileLoading, setProfileLoading] = React.useState(false);
 
   // Referral
-  const [referralSource, setReferralSource] = React.useState("");
-  const [referralOther, setReferralOther] = React.useState("");
+  const [referralSource, setReferralSource] = React.useState(
+    onboardingData?.referral?.source ?? "",
+  );
+  const [referralOther, setReferralOther] = React.useState(
+    onboardingData?.referral?.other ?? "",
+  );
 
   // Intent
-  const [intents, setIntents] = React.useState<string[]>([]);
-  const [intentOther, setIntentOther] = React.useState("");
+  const [intents, setIntents] = React.useState<string[]>(
+    onboardingData?.intent?.intents ?? [],
+  );
+  const [intentOther, setIntentOther] = React.useState(
+    onboardingData?.intent?.other ?? "",
+  );
 
   // Project
-  const [projectName, setProjectName] = React.useState("");
-  const [creating, setCreating] = React.useState(false);
-  const [collectionUrl, setCollectionUrl] = React.useState("");
-
-  React.useEffect(() => {
-    if (user?.firstName && !firstName) setFirstName(user.firstName);
-    if (user?.lastName && !lastName) setLastName(user.lastName);
-  }, [user?.firstName, user?.lastName]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    const done = localStorage.getItem("tresta:onboarding:done");
-    if (done === "true") router.replace("/projects");
-  }, [router]);
-
-  function handleSkip() {
-    localStorage.setItem("tresta:onboarding:done", "true");
-    router.push("/projects");
-  }
+  const [projectName, setProjectName] = React.useState(
+    onboardingData?.project?.name ?? "",
+  );
+  const [projectSlug, setProjectSlug] = React.useState(
+    onboardingData?.project?.slug ?? "",
+  );
+  const [collectionUrl, setCollectionUrl] = React.useState(
+    onboardingData?.project?.collectionUrl ?? "",
+  );
 
   // ── Step handlers ──
 
@@ -72,73 +96,117 @@ export function WelcomeFlow() {
     if (!firstName.trim()) return;
     setProfileLoading(true);
     try {
-      await user?.update({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        unsafeMetadata: {
-          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
-          jobTitle: jobTitle.trim(),
+      await updateUser.mutateAsync({
+        firstName: cleanText(firstName),
+        lastName: cleanText(lastName) ?? null,
+      });
+      await saveProgress("REFERRAL", {
+        profile: {
+          firstName: cleanText(firstName),
+          lastName: cleanText(lastName),
+          jobTitle: cleanText(jobTitle),
         },
       });
+      go("referral", "forward");
     } catch {
-      // Continue — profile can be updated later
+      toast.error("Couldn't save your setup progress.");
+    } finally {
+      setProfileLoading(false);
     }
-    setProfileLoading(false);
-    go("referral", "forward");
   }
 
-  function handleReferralContinue() {
-    // Save referral to metadata (fire-and-forget)
+  async function handleReferralContinue() {
     try {
-      user?.update({
-        unsafeMetadata: {
-          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
-          referralSource,
-          referralOther:
-            referralSource === "other" ? referralOther.trim() : undefined,
+      await saveProgress("INTENT", {
+        referral: {
+          source: cleanText(referralSource),
+          other:
+            referralSource === "other" ? cleanText(referralOther) : undefined,
         },
       });
+      go("intent", "forward");
     } catch {
-      // Non-critical
+      toast.error("Couldn't save your setup progress.");
     }
-    go("intent", "forward");
   }
 
-  function handleIntentContinue() {
-    // Save intents to metadata (fire-and-forget)
+  async function handleIntentContinue() {
     try {
-      user?.update({
-        unsafeMetadata: {
-          ...((user?.unsafeMetadata as Record<string, unknown>) ?? {}),
+      await saveProgress("PROJECT", {
+        intent: {
           intents,
-          intentOther: intents.includes("other")
-            ? intentOther.trim()
-            : undefined,
+          other: intents.includes("other") ? cleanText(intentOther) : undefined,
         },
       });
+      go("project", "forward");
     } catch {
-      // Non-critical
+      toast.error("Couldn't save your setup progress.");
     }
-    go("project", "forward");
   }
 
   async function handleCreateProject() {
-    if (!projectName.trim() || creating) return;
-    setCreating(true);
+    const name = cleanText(projectName);
+    if (!name || createProject.isPending) return;
 
-    // TODO: Replace with actual API call to create project
-    await new Promise((r) => setTimeout(r, 800));
-
-    const slug = slugify(projectName);
-    setCollectionUrl(`https://collect.tresta.app/${slug}`);
-    localStorage.setItem("tresta:onboarding:done", "true");
-    setCreating(false);
-    go("collection", "forward");
+    try {
+      const project = await createProject.mutateAsync({
+        name,
+        slug: slugifyProjectName(name),
+      });
+      const url = getProjectCollectionUrl(project);
+      setProjectName(project.name);
+      setProjectSlug(project.slug);
+      setCollectionUrl(url);
+      await saveProgress("COLLECTION", {
+        project: {
+          id: project.id,
+          name: project.name,
+          slug: project.slug,
+          collectionUrl: url,
+        },
+      });
+      go("collection", "forward");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Couldn't create that project."));
+    }
   }
 
-  function handleGoToProject() {
-    localStorage.setItem("tresta:onboarding:done", "true");
+  async function handleSkipProject() {
+    try {
+      await completeOnboarding.mutateAsync();
+    } catch {
+      toast.error("Couldn't save your setup progress.");
+      return;
+    }
     router.push("/projects");
+  }
+
+  async function handleGoToProject() {
+    try {
+      await completeOnboarding.mutateAsync();
+    } catch {
+      toast.error("Couldn't finish setup.");
+      return;
+    }
+
+    router.push(projectSlug ? `/projects/${projectSlug}` : "/projects");
+  }
+
+  function handleSkipTo(nextStep: OnboardStep) {
+    const apiStep = uiStepToApi(nextStep);
+    saveProgress(apiStep)
+      .catch(() => toast.error("Couldn't save your setup progress."))
+      .finally(() => go(nextStep, "forward"));
+  }
+
+  function saveProgress(
+    step: Exclude<V2OnboardingStep, "COMPLETED">,
+    data?: V2OnboardingDataDTO,
+  ) {
+    return updateOnboarding.mutateAsync({
+      step,
+      data,
+    });
   }
 
   // ── Animation classes ──
@@ -167,7 +235,7 @@ export function WelcomeFlow() {
             setJobTitle={setJobTitle}
             loading={profileLoading}
             onContinue={handleSaveProfile}
-            onSkip={() => go("referral", "forward")}
+            onSkip={() => handleSkipTo("referral")}
           />
         )}
         {activeStep === "referral" && (
@@ -177,7 +245,7 @@ export function WelcomeFlow() {
             setReferralSource={setReferralSource}
             setReferralOther={setReferralOther}
             onContinue={handleReferralContinue}
-            onSkip={() => go("intent", "forward")}
+            onSkip={() => handleSkipTo("intent")}
           />
         )}
         {activeStep === "intent" && (
@@ -187,16 +255,16 @@ export function WelcomeFlow() {
             setIntents={setIntents}
             setIntentOther={setIntentOther}
             onContinue={handleIntentContinue}
-            onSkip={() => go("project", "forward")}
+            onSkip={() => handleSkipTo("project")}
           />
         )}
         {activeStep === "project" && (
           <ProjectStep
             projectName={projectName}
             setProjectName={setProjectName}
-            loading={creating}
+            loading={createProject.isPending}
             onContinue={handleCreateProject}
-            onSkip={handleSkip}
+            onSkip={handleSkipProject}
           />
         )}
         {activeStep === "collection" && (
@@ -209,4 +277,54 @@ export function WelcomeFlow() {
       </div>
     </div>
   );
+}
+
+function WelcomeLoading() {
+  return (
+    <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center px-4 py-12 text-muted-foreground">
+      <CircleNotch className="size-5 animate-spin" aria-label="Loading setup" />
+    </div>
+  );
+}
+
+function apiStepToUi(step: V2OnboardingStep): OnboardStep {
+  switch (step) {
+    case "PROFILE":
+      return "profile";
+    case "REFERRAL":
+      return "referral";
+    case "INTENT":
+      return "intent";
+    case "PROJECT":
+      return "project";
+    case "COLLECTION":
+    case "COMPLETED":
+      return "collection";
+  }
+}
+
+function uiStepToApi(
+  step: OnboardStep,
+): Exclude<V2OnboardingStep, "COMPLETED"> {
+  switch (step) {
+    case "profile":
+      return "PROFILE";
+    case "referral":
+      return "REFERRAL";
+    case "intent":
+      return "INTENT";
+    case "project":
+      return "PROJECT";
+    case "collection":
+      return "COLLECTION";
+  }
+}
+
+function cleanText(value: string) {
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }

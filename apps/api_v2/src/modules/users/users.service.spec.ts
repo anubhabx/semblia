@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NotFoundException } from "@nestjs/common";
 
 // Prevent Prisma from initializing during import
-vi.mock("@workspace/database/prisma", () => ({ prisma: {} }));
+vi.mock("@workspace/database/prisma", () => ({
+  prisma: {},
+  UserOnboardingStep: {
+    COMPLETED: "COMPLETED",
+  },
+}));
 
 import { UsersService } from "./users.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
@@ -28,6 +33,8 @@ const mockUser = {
   lastName: "Smith",
   avatar: null,
   plan: "FREE" as const,
+  onboardingStep: "PROFILE" as const,
+  onboardingData: null,
   onboardingCompletedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -121,6 +128,8 @@ describe("UsersService", () => {
         select: expect.objectContaining({
           id: true,
           email: true,
+          onboardingStep: true,
+          onboardingData: true,
           onboardingCompletedAt: true,
         }),
       });
@@ -156,9 +165,13 @@ describe("UsersService", () => {
       });
       expect(mockUpdate).toHaveBeenCalledWith({
         where: { id: "user_abc" },
-        data: { onboardingCompletedAt: expect.any(Date) },
+        data: {
+          onboardingStep: "COMPLETED",
+          onboardingCompletedAt: expect.any(Date),
+        },
         select: expect.objectContaining({
           id: true,
+          onboardingStep: true,
           onboardingCompletedAt: true,
         }),
       });
@@ -183,6 +196,65 @@ describe("UsersService", () => {
       await expect(service.completeOnboarding("user_missing")).rejects.toThrow(
         NotFoundException,
       );
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updateOnboardingProgress", () => {
+    it("persists the current onboarding step and merges section data", async () => {
+      const existing = {
+        onboardingData: {
+          profile: { firstName: "Alice" },
+        },
+      };
+      const updatedUser = {
+        ...mockUser,
+        onboardingStep: "REFERRAL" as const,
+        onboardingData: {
+          profile: { firstName: "Alice" },
+          referral: { source: "search" },
+        },
+      };
+      mockFindUnique.mockResolvedValueOnce(existing);
+      mockUpdate.mockResolvedValueOnce(updatedUser);
+
+      const result = await service.updateOnboardingProgress("user_abc", {
+        step: "REFERRAL",
+        data: {
+          referral: { source: "search" },
+        },
+      });
+
+      expect(result).toEqual(updatedUser);
+      expect(mockFindUnique).toHaveBeenCalledWith({
+        where: { id: "user_abc" },
+        select: { onboardingData: true },
+      });
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: "user_abc" },
+        data: {
+          onboardingStep: "REFERRAL",
+          onboardingData: {
+            profile: { firstName: "Alice" },
+            referral: { source: "search" },
+          },
+        },
+        select: expect.objectContaining({
+          id: true,
+          onboardingStep: true,
+          onboardingData: true,
+        }),
+      });
+    });
+
+    it("throws NotFoundException when user is missing", async () => {
+      mockFindUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.updateOnboardingProgress("user_missing", {
+          step: "PROJECT",
+        }),
+      ).rejects.toThrow(NotFoundException);
       expect(mockUpdate).not.toHaveBeenCalled();
     });
   });

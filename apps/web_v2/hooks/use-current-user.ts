@@ -1,9 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import type { V2UserDTO } from "@workspace/types";
-import { fetchCurrentUser } from "@/lib/tresta-api";
+import type {
+  V2OnboardingDataDTO,
+  V2OnboardingStep,
+  V2UserDTO,
+} from "@workspace/types";
+import {
+  completeOnboarding,
+  fetchCurrentUser,
+  updateCurrentUser,
+  updateOnboardingProgress,
+} from "@/lib/tresta-api";
 import { queryKeys } from "@/hooks/api";
 
 export function useCurrentUser() {
@@ -17,5 +26,57 @@ export function useCurrentUser() {
     },
     enabled: isSignedIn === true,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdateCurrentUser() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: {
+      firstName?: string | null;
+      lastName?: string | null;
+      avatar?: string | null;
+    }) => {
+      const token = await getToken();
+      return updateCurrentUser(token, body);
+    },
+    onSuccess: (user) => {
+      qc.setQueryData(queryKeys.currentUser, user);
+    },
+  });
+}
+
+export function useUpdateOnboardingProgress() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: {
+      step: Exclude<V2OnboardingStep, "COMPLETED">;
+      data?: V2OnboardingDataDTO;
+    }) => {
+      const token = await getToken();
+      return updateOnboardingProgress(token, body);
+    },
+    onSuccess: (user) => {
+      qc.setQueryData(queryKeys.currentUser, user);
+    },
+  });
+}
+
+export function useCompleteOnboarding() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      return completeOnboarding(token);
+    },
+    onSuccess: (user) => {
+      qc.setQueryData(queryKeys.currentUser, user);
+    },
   });
 }
