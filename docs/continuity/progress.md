@@ -1,15 +1,15 @@
 # Progress Ledger
 
-Last updated: 2026-05-10
+Last updated: 2026-05-13
 
 ## Current Snapshot
 
 - Branch at last sync: `revamp/v2`.
-- Git state before the V1 API production contract checkpoint: `revamp/v2...origin/revamp/v2 [ahead 43]`, clean worktree.
-- Current stage: V1 API production contract checkpoint implemented and verified.
-- Current checkpoint: V1 Task 7 / API production contracts is ready for the checkpoint commit. V1 Task 6 agent access and MCP server remains committed as `adf651f`; V1 Task 5 native thin integrations remain committed as `8e82c74`; security hardening remains committed as `0bc7bd1`.
-- Previous committed implementation checkpoint: V1 Task 6 added the official local stdio MCP adapter, agent-safe analytics summary, and project-scoped credential hardening.
-- Next implementation checkpoint after the API production contract commit: `web_v2` contract adaptation can begin, with billing UI kept disabled/hidden until the billing source-of-truth decision is made.
+- Git state before this docs sync: `revamp/v2...origin/revamp/v2`, with a root `package.json` package-manager hygiene change adding `pnpm.onlyBuiltDependencies`.
+- Current stage: V1 API production contracts are committed and verified; `web_v2` contract adaptation is the active next leg.
+- Current checkpoint: V1 Task 8 / `web_v2` friendly control-plane UX and backend-contract wiring is starting. Billing UI must stay disabled, hidden, or explicitly read-only until the billing source-of-truth decision is made.
+- Previous committed implementation checkpoint: V1 Task 7 API production contracts landed as `f9df398`; the follow-up model-selection fix landed as `67c3bc5`.
+- Next implementation checkpoint: first `web_v2` wiring slice, beginning with the typed API client/current-user/project-shell path before broader settings, credentials, integrations, agent-access, notifications, analytics, forms, widgets, and public-surface wiring.
 
 Always re-run `git status --short --branch` and `git log --oneline -12` before using this snapshot as current state.
 
@@ -22,7 +22,7 @@ The original `api_v2` rebuild has been completed through its cross-cutting valid
 - testimonial private metadata split
 - shared server-side drafts for forms and widgets
 
-The project is not yet at the main `web_v2` wiring pass. The correct path is to finish API-side canonical contracts and auxiliary surfaces first, then adapt `web_v2` to those contracts.
+The project is now entering the main `web_v2` wiring pass. API-side canonical contracts and auxiliary surfaces are far enough along for UI adaptation, except for billing read projections, which remain blocked on the source-of-truth decision.
 
 On 2026-05-03, the v1 product/architecture stance was locked: Clerk remains primary auth, Clerk Organizations become the workspace/account layer, Tresta projects remain the product/security boundary, v1 differentiates through in/out integrations and agent-native access, and original collected feedback remains immutable.
 
@@ -38,7 +38,9 @@ On 2026-05-10, V1 Task 5 added native thin integrations. Projects can now store 
 
 Later on 2026-05-10, V1 Task 6 added the local stdio MCP server package for agent clients, a project analytics summary endpoint for agent-safe read workflows, and project-list credential boundary hardening. The MCP server uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, calls the stable private API routes only, exposes safe tools/resources/prompts, and never connects directly to the database. At that checkpoint the summary endpoint was a read projection over existing daily rows and live submission/impression tables; the later API production contract checkpoint added event capture.
 
-Later on 2026-05-10, the API production contract checkpoint added OpenAPI serving, developer-facing docs, backend-produced project access blocks, host-aware public surface resolution, public analytics event capture, notifications list/state/preference APIs, and project action audit reads. The remaining backend-visible product blocker is billing read projections, which still need the user-owned source-of-truth decision.
+Later on 2026-05-10, the API production contract checkpoint added OpenAPI serving, developer-facing docs, backend-produced project access blocks, host-aware public surface resolution, public analytics event capture, notifications list/state/preference APIs, and project action audit reads. This checkpoint was committed as `f9df398`. The remaining backend-visible product blocker is billing read projections, which still need the user-owned source-of-truth decision.
+
+On 2026-05-13, the continuity ledger was synced to the committed API production-contract state and the next implementation leg was opened for `web_v2` wiring. The first slice should keep scope narrow: use the typed envelope-unwrapping client, fix current-user wiring to `GET /v2/me`, and replace project shell/list/detail mock entrypoints before building wider settings UX.
 
 ## Phase Ledger
 
@@ -83,13 +85,13 @@ Later on 2026-05-10, the API production contract checkpoint added OpenAPI servin
 | V1 Task 4 Outbound webhooks and async CSV exports | Done               | `3742765` | Added encrypted webhook endpoints, signed async deliveries/retries, async DB-backed CSV export deliveries/downloads, shared DTOs, webhook dispatch hardening, Hono override refresh, and audit rows.                                                           |
 | V1 Task 5 Native thin integrations                | Done               | `8e82c74` | Added `IntegrationConnection`, Clerk connected-account token provider boundary, native export queueing, Slack/Notion/Linear/GitHub one-way adapters, shared DTOs, and provider tests.                                                                          |
 | V1 Task 6 Agent access and MCP server             | Done               | `adf651f` | Added `@workspace/tresta-mcp-server`, safe MCP tools/resources/prompts over private API routes, `GET /v2/projects/:slug/analytics/summary`, and project-scoped credential hardening for project list/create.                                                   |
-| V1 Task 7 API production contracts                | Done               | n/a       | Added OpenAPI serving, docs under `docs/api/`, project access blocks, notifications API, project action audit reads, public surface host resolution, and public analytics event capture.                                                                       |
+| V1 Task 7 API production contracts                | Done               | `f9df398` | Added OpenAPI serving, docs under `docs/api/`, project access blocks, notifications API, project action audit reads, public surface host resolution, and public analytics event capture.                                                                       |
 | 1e Auxiliary product data                         | Partially complete | n/a       | API key, agent key, feedback integrity, outbound webhook, async CSV export, native thin integration, notification, and analytics capture foundations are implemented. Remaining auxiliary slice: billing projections after source-of-truth confirmation.       |
 | 2 Common API contracts                            | Mostly complete    | n/a       | Project access blocks, shared DTO/client contracts, error envelope, idempotency, concurrency, and OpenAPI/developer docs now exist for the production wiring pass.                                                                                             |
 | 3 Public surface API                              | Mostly complete    | n/a       | Host-aware public resolution, trusted public submission, hosted-page analytics capture, public form/testimonial/widget/wall reads, and idempotent submit handling are now implemented.                                                                         |
 | 4 Studio API                                      | Pending            | n/a       | Form/widget studio persistence and explicit mappings.                                                                                                                                                                                                          |
 | 5 Auxiliary API surfaces                          | Mostly complete    | n/a       | API keys, agent keys, analytics summary/events, notifications, exports, webhooks, integrations, and audit reads exist. Billing read projections remain blocked on source-of-truth choice.                                                                      |
-| 6 `web_v2` adaptation                             | Pending            | n/a       | Replace mocks and adapt UI to backend-canonical contracts.                                                                                                                                                                                                     |
+| 6 `web_v2` adaptation                             | Starting           | n/a       | Replace mocks and adapt UI to backend-canonical contracts. Start with typed client/current-user/project shell wiring; keep billing disabled/hidden/read-only until its source of truth is confirmed.                                                           |
 | 7 Verification and hardening                      | Pending            | n/a       | Security, performance, migration, and end-to-end checks.                                                                                                                                                                                                       |
 
 ## Operational Notes
@@ -98,7 +100,7 @@ Later on 2026-05-10, the API production contract checkpoint added OpenAPI servin
 - New public testimonial/form writes keep email, IP, and user agent out of `Testimonial`; sensitive raw values move to encrypted private metadata with normalized hashes.
 - Public submit responses omit `authorEmail`; authenticated testimonial reads rehydrate it from private metadata with a legacy row fallback.
 - Draft writes require `expectedVersion`; first save uses `expectedVersion: 0`; stale writes return `409 Conflict`.
-- `web_v2` still has major mock-backed surfaces and should not be treated as wired.
+- `web_v2` still has major mock-backed surfaces and should not be treated as broadly wired.
 - The organization/actor foundation from the 2026-05-03 v1 control-plane plan is checkpoint-committed as `ffae2cf`.
 - Active Clerk organization sessions now resolve project access by `project.organization.clerkOrgId`; mismatches hard-fail instead of falling back to legacy user ownership.
 - Projects created while a Clerk organization is active are attached to the local organization mirror.
@@ -135,7 +137,8 @@ Later on 2026-05-10, the API production contract checkpoint added OpenAPI servin
 - `packages/tresta-mcp-server` is the official local stdio MCP adapter for Task 6. It uses `TRESTA_API_BASE_URL` and `TRESTA_AGENT_KEY`, exposes safe feedback/testimonial/export/delivery tools, resources, and prompts, and calls private APIs instead of the database.
 - MCP export triggering uses the actual Task 4/5 API shapes: CSV via `POST /v2/projects/:slug/exports/csv`, native integrations via `POST /v2/projects/:slug/integrations/connections/:connectionId/exports`.
 - Root `pnpm.overrides.hono` is pinned to `4.12.18` so the Prisma tooling path no longer matches the May 2026 Hono advisories.
-- Broad `web_v2` wiring stays deferred until this API production contract checkpoint is verified and committed. Billing UI must remain disabled/hidden or explicitly read-only until the billing source-of-truth decision is made.
+- Broad `web_v2` wiring can now begin from the API production contract checkpoint. Billing UI must remain disabled/hidden or explicitly read-only until the billing source-of-truth decision is made.
+- `apps/web_v2/lib/tresta-api.ts` is the typed client direction for the wiring pass: it unwraps `{ success, data, meta }`, uses shared DTOs from `@workspace/types`, and already exposes `fetchCurrentUser()` for `GET /v2/me`. Older `apps/web_v2/lib/api-client.ts` and `apps/web_v2/lib/api.ts` references should be retired deliberately as pages are wired.
 
 ## Latest Verification
 
@@ -197,7 +200,7 @@ Later on 2026-05-10, the API production contract checkpoint added OpenAPI servin
 - `docs/plans/2026-05-02-api-surface-implementation-phases.md` has been annotated so its original starting point does not override this live ledger.
 - `apps/api_v2/docs/orchestration/handoff.md` has been annotated so original-rebuild scope language does not override the current auxiliary-surface decisions.
 - `memory/` and `docs/codex-claude-memory-migration.md` are historical context, not the live progress ledger.
-- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 7 are implemented and verified, with the API production contract checkpoint ready to commit.
+- `docs/plans/2026-05-03-v1-auth-integrations-agent-access-implementation-plan.md` expands the earlier Phase 1e auxiliary product scope and remains the current plan; Tasks 1 through 7 are implemented and verified, and Task 8 `web_v2` friendly UX/wiring is now the active implementation leg.
 
 ## Progress Report Format
 
