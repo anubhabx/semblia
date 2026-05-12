@@ -3,13 +3,20 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { List as MenuIcon } from "@phosphor-icons/react";
+import type { V2ProjectDTO } from "@workspace/types";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ProjectSidebarNav } from "@/components/nav/project-sidebar";
 
 // ── Mobile drawer trigger (project context only) ──────────────────────────────
 
-export function MobileNavTrigger({ slug }: { slug: string }) {
+export function MobileNavTrigger({
+  slug,
+  project,
+}: {
+  slug: string;
+  project: V2ProjectDTO;
+}) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -32,7 +39,11 @@ export function MobileNavTrigger({ slug }: { slug: string }) {
       <SheetContent side="left" className="w-64 p-0">
         <SheetTitle className="sr-only">Project navigation</SheetTitle>
         <div className="flex h-full flex-col pt-4">
-          <ProjectSidebarNav slug={slug} onNavigate={() => setOpen(false)} />
+          <ProjectSidebarNav
+            slug={slug}
+            project={project}
+            onNavigate={() => setOpen(false)}
+          />
         </div>
       </SheetContent>
     </Sheet>

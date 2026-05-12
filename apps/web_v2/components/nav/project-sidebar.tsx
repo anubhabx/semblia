@@ -11,8 +11,8 @@ import {
   KeyIcon as KeyRoundIcon,
   SlidersHorizontalIcon as SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
+import type { V2ProjectDTO } from "@workspace/types";
 
-import { getProjectBySlug, type MockProject } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { projectInitials } from "@/lib/format";
 
@@ -27,7 +27,7 @@ interface ProjectNavItem {
   description?: string;
 }
 
-function buildNav(slug: string, project: MockProject): ProjectNavItem[] {
+function buildNav(slug: string, project: V2ProjectDTO): ProjectNavItem[] {
   return [
     {
       label: "Testimonials",
@@ -119,15 +119,14 @@ function NavRow({
 
 export function ProjectSidebarNav({
   slug,
+  project,
   onNavigate,
 }: {
   slug: string;
+  project: V2ProjectDTO;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const project = getProjectBySlug(slug);
-  if (!project) return null;
-
   const nav = buildNav(slug, project);
 
   const isActive = (item: ProjectNavItem) => {
@@ -196,7 +195,13 @@ export function ProjectSidebarNav({
 
 // ── Desktop sidebar (used in project layout) ──────────────────────────────────
 
-export function ProjectSidebar({ slug }: { slug: string }) {
+export function ProjectSidebar({
+  slug,
+  project,
+}: {
+  slug: string;
+  project: V2ProjectDTO;
+}) {
   return (
     <aside
       style={{ top: "3.5rem", height: "calc(100svh - 3.5rem)" }}
@@ -205,7 +210,7 @@ export function ProjectSidebar({ slug }: { slug: string }) {
       )}
       aria-label="Project sidebar"
     >
-      <ProjectSidebarNav slug={slug} />
+      <ProjectSidebarNav slug={slug} project={project} />
     </aside>
   );
 }

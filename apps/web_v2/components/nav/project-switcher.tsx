@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   CaretDown as ChevronDownIcon,
@@ -16,12 +17,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { projectInitials } from "@/lib/format";
-import { MOCK_PROJECTS, type MockProject } from "@/lib/mock-data";
+import { useProjectsList } from "@/hooks/api";
+import type { V2ProjectDTO } from "@workspace/types";
 
 // ── Project switcher (topbar pill) ─────────────────────────────────────────────
 
-export function ProjectSwitcher({ current }: { current: MockProject }) {
+export function ProjectSwitcher({ current }: { current: V2ProjectDTO }) {
   const router = useRouter();
+  const projectsQuery = useProjectsList({ pageSize: 100 });
+  const projects = React.useMemo(() => {
+    const items = projectsQuery.data?.items ?? [];
+    if (items.some((project) => project.id === current.id)) return items;
+    return [current, ...items];
+  }, [current, projectsQuery.data?.items]);
 
   return (
     <DropdownMenu>
@@ -50,7 +58,7 @@ export function ProjectSwitcher({ current }: { current: MockProject }) {
           Switch project
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {MOCK_PROJECTS.map((p) => {
+        {projects.map((p) => {
           const isCurrent = p.id === current.id;
           return (
             <DropdownMenuItem

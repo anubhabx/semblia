@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getProjectBySlug } from "@/lib/mock-data";
+import { useProject } from "@/hooks/api";
 
 import { TrestaMark } from "./tresta-mark";
 import { BreadcrumbSlash } from "./breadcrumb-slash";
@@ -37,6 +37,14 @@ function sectionLabelFor(pathname: string, slug: string): string | null {
   }
 }
 
+function decodeSlug(slug: string): string {
+  try {
+    return decodeURIComponent(slug);
+  } catch {
+    return slug;
+  }
+}
+
 // ── Main topbar ────────────────────────────────────────────────────────────────
 
 export function AppTopbar() {
@@ -44,8 +52,9 @@ export function AppTopbar() {
 
   // Detect project context from URL: /projects/[slug]/...
   const slugMatch = pathname.match(/^\/projects\/([^/]+)/);
-  const currentSlug = slugMatch?.[1] ?? null;
-  const currentProject = currentSlug ? getProjectBySlug(currentSlug) : null;
+  const currentSlug = slugMatch?.[1] ? decodeSlug(slugMatch[1]) : null;
+  const projectQuery = useProject(currentSlug ?? "");
+  const currentProject = currentSlug ? (projectQuery.data ?? null) : null;
   const section = currentProject
     ? sectionLabelFor(pathname, currentSlug!)
     : null;
@@ -54,7 +63,9 @@ export function AppTopbar() {
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 sm:px-5">
       {/* ── Left cluster ── */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        {currentProject && <MobileNavTrigger slug={currentSlug!} />}
+        {currentProject && (
+          <MobileNavTrigger slug={currentSlug!} project={currentProject} />
+        )}
 
         <TrestaMark />
 

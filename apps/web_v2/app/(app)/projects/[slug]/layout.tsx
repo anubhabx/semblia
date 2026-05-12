@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getProjectBySlug } from "@/lib/mock-data";
 import { ProjectSidebar } from "@/components/nav/project-sidebar";
+import { serverFetchProjectBySlug } from "@/lib/tresta-api-server";
 
 interface ProjectLayoutProps {
   children: React.ReactNode;
@@ -12,13 +12,13 @@ export default async function ProjectLayout({
   params,
 }: ProjectLayoutProps) {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await serverFetchProjectBySlug(slug);
 
   if (!project) notFound();
 
   return (
     <>
-      <ProjectSidebar slug={slug} />
+      <ProjectSidebar slug={slug} project={project} />
       <div className="flex flex-1 flex-col lg:pl-56">{children}</div>
     </>
   );
