@@ -9,6 +9,9 @@
 export { PageHeader, HeaderSep, HeaderCaption } from "./page-header";
 export type { PageHeaderProps } from "./page-header";
 
+export { RefreshingDataBadge } from "./refreshing-data-badge";
+export type { RefreshingDataBadgeProps } from "./refreshing-data-badge";
+
 export { PageBody } from "./page-body";
 export type { PageBodyProps, PageBodyPadding } from "./page-body";
 

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageToolbar, SearchField } from "@/components/shared";
+import { RefreshingDataBadge } from "@/components/shared";
 import { type ModerationStatus } from "@/lib/mock-data";
 import type { PaginatedResponse } from "@/lib/api";
 import type { MockTestimonial } from "@/lib/mock-data";
@@ -50,6 +51,7 @@ interface FilterBarProps {
   result: PaginatedResponse<MockTestimonial> | null;
   hasActionable: boolean;
   bulkMode: boolean;
+  refreshing?: boolean;
   onSelectAll: () => void;
 }
 
@@ -63,6 +65,7 @@ export function TestimonialsFilterBar({
   result,
   hasActionable,
   bulkMode,
+  refreshing,
   onSelectAll,
 }: FilterBarProps) {
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
@@ -121,10 +124,15 @@ export function TestimonialsFilterBar({
         </>
       }
       trailing={
-        result ? (
-          <span className="text-[11px] tabular-nums text-muted-foreground">
-            {result.total} {result.total === 1 ? "result" : "results"}
-          </span>
+        result || refreshing ? (
+          <>
+            <RefreshingDataBadge show={refreshing} />
+            {result && (
+              <span className="text-[11px] tabular-nums text-muted-foreground">
+                {result.total} {result.total === 1 ? "result" : "results"}
+              </span>
+            )}
+          </>
         ) : undefined
       }
     />

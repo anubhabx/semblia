@@ -83,52 +83,52 @@ export function StepRail({ current, onStepClick }: StepRailProps) {
                       "-mx-2 cursor-pointer rounded-md px-2 transition-colors duration-150 hover:bg-foreground/5",
                   )}
                 >
-                {/* Node */}
-                <span
-                  className={cn(
-                    "relative z-10 mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border transition-all duration-200",
-                    isActive &&
-                      "border-brand bg-brand text-[oklch(0.12_0.01_60)]",
-                    isDone &&
-                      "border-foreground/25 bg-[oklch(0.185_0.01_60)] text-foreground/50",
-                    !isActive &&
-                      !isDone &&
-                      "border-foreground/10 bg-transparent text-foreground/15",
-                  )}
-                  aria-hidden
-                >
-                  {isDone ? (
-                    <CheckIcon className="size-2.5" weight="bold" />
-                  ) : (
-                    <span className="font-mono text-[8.5px] font-semibold tabular-nums">
-                      {step.ordinal}
-                    </span>
-                  )}
-                </span>
+                  {/* Node */}
+                  <span
+                    className={cn(
+                      "relative z-10 mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border transition-all duration-200",
+                      isActive &&
+                        "border-brand bg-brand text-[oklch(0.12_0.01_60)]",
+                      isDone &&
+                        "border-foreground/25 bg-[oklch(0.185_0.01_60)] text-foreground/50",
+                      !isActive &&
+                        !isDone &&
+                        "border-foreground/10 bg-transparent text-foreground/15",
+                    )}
+                    aria-hidden
+                  >
+                    {isDone ? (
+                      <CheckIcon className="size-2.5" weight="bold" />
+                    ) : (
+                      <span className="font-mono text-[8.5px] font-semibold tabular-nums">
+                        {step.ordinal}
+                      </span>
+                    )}
+                  </span>
 
-                {/* Text */}
-                <div className="min-w-0 flex-1">
-                  <span
-                    className={cn(
-                      "block text-[12.5px] font-medium leading-tight tracking-[-0.005em] transition-colors duration-200",
-                      isActive
-                        ? "text-foreground"
-                        : isDone
-                          ? "text-foreground/40"
-                          : "text-foreground/18",
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-0.5 block text-[11px] leading-relaxed transition-[colors,opacity] duration-200",
-                      isActive ? "text-muted-foreground" : "text-transparent",
-                    )}
-                  >
-                    {step.caption}
-                  </span>
-                </div>
+                  {/* Text */}
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        "block text-[12.5px] font-medium leading-tight tracking-[-0.005em] transition-colors duration-200",
+                        isActive
+                          ? "text-foreground"
+                          : isDone
+                            ? "text-foreground/40"
+                            : "text-foreground/18",
+                      )}
+                    >
+                      {step.title}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-0.5 block text-[11px] leading-relaxed transition-[colors,opacity] duration-200",
+                        isActive ? "text-muted-foreground" : "text-transparent",
+                      )}
+                    >
+                      {step.caption}
+                    </span>
+                  </div>
                 </div>
               </li>
             );

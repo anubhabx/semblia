@@ -7,7 +7,7 @@ Last updated: 2026-05-13
 - Branch at last sync: `revamp/v2`.
 - Git state before this docs sync: `revamp/v2...origin/revamp/v2` ahead 7, with uncommitted `web_v2` Phase 1b onboarding/empty-state work.
 - Current stage: V1 API production contracts are committed and verified; `web_v2` contract adaptation is the active next leg.
-- Current checkpoint: `web_v2` Phase 1b empty-state and new-user onboarding trigger implemented locally; awaiting user review/checkpoint. Billing UI must stay disabled, hidden, or explicitly read-only until the billing source-of-truth decision is made.
+- Current checkpoint: `web_v2` Phase 1b empty-state and new-user onboarding trigger is committed; a local hydration/refresh-stability pass now waits for fresh current-user/project data on route-critical surfaces and shows local "Refreshing data" badges on list-style refreshes. Billing UI must stay disabled, hidden, or explicitly read-only until the billing source-of-truth decision is made.
 - Previous committed implementation checkpoint: `web_v2` Phase 1a shell navigation wiring landed as `4246ac8`; the approved execution plan landed as `f280b64`.
 - Next implementation checkpoint: user review/refinement of the onboarding flow and project empty states, then capability-aware nav visibility and remaining live project metadata before moving to Phase 2a.
 
@@ -45,6 +45,8 @@ On 2026-05-13, the continuity ledger was synced to the committed API production-
 Later on 2026-05-13, Phase 1b started by making onboarding durable and project-empty-state driven. `User` now records `onboardingStep` and `onboardingData`, `PATCH /v2/me/onboarding` persists step progress, `POST /v2/me/onboarding/complete` marks the flow complete, and `web_v2` redirects incomplete users into `/welcome`. The welcome flow now resumes from the stored step, saves each completed step through `api_v2`, creates the first project through `POST /v2/projects`, and shows the generated hosted collection URL. `/projects` now has a more useful first-use empty state and `/projects/new` is a real project creation route instead of a dead link.
 
 Later on 2026-05-13, the inbound Clerk webhook parser was corrected to accept Clerk's real snake_case `user.created`/`user.updated` payload shape after Svix signature verification. `POST /v2/webhooks/clerk` remains public at the Nest guard layer, valid signed Clerk payloads now map into the internal user DTO, schema failures return `400` instead of being mislabeled as webhook auth failures, and missing server-side webhook secrets now surface as server configuration errors instead of public-auth failures.
+
+Later on 2026-05-13, a `web_v2` hydration/refresh-stability pass added a shared live-query state helper and local refreshing badge. Welcome/onboarding and project topbar identity now require a fresh API response before rendering route-critical user/project state, while project and testimonial list surfaces keep existing rows visible and show a restrained "Refreshing data" badge during background refreshes.
 
 ## Phase Ledger
 
@@ -145,6 +147,7 @@ Later on 2026-05-13, the inbound Clerk webhook parser was corrected to accept Cl
 - `apps/web_v2/lib/tresta-api.ts` is the typed client direction for the wiring pass: it unwraps `{ success, data, meta }`, uses shared DTOs from `@workspace/types`, and already exposes `fetchCurrentUser()` for `GET /v2/me`. Older `apps/web_v2/lib/api-client.ts` and `apps/web_v2/lib/api.ts` references should be retired deliberately as pages are wired.
 - `apps/web_v2/hooks/use-current-user.ts` now uses `fetchCurrentUser()` from the typed client. `apps/web_v2/hooks/use-projects.ts` now uses `useProjectsList({ pageSize: 100 })` instead of `apiGetProjects()`. Project layout/sidebar/mobile nav/topbar/switcher now use typed project detail/list data, but many project subpages still use `getProjectBySlug()` from mock data.
 - New-user onboarding state is backend-owned, not localStorage-owned: `User.onboardingStep`, `User.onboardingData`, `User.onboardingCompletedAt`, `PATCH /v2/me/onboarding`, and `POST /v2/me/onboarding/complete` are the current resume/complete contract. `/welcome` should remain the guided setup route; `/projects/new` is the direct post-onboarding project creation route.
+- Route-critical `web_v2` user/project consumers can opt into `freshOnMount` plus `useLiveQueryState({ requireFreshOnMount: true })` to suppress stale cached data until the live response returns. Less disruptive list-style surfaces should keep cached rows mounted and show `RefreshingDataBadge` during background refresh.
 
 ## Latest Verification
 
@@ -166,6 +169,8 @@ Later on 2026-05-13, the inbound Clerk webhook parser was corrected to accept Cl
 - Clerk inbound webhook fix verification passed: `pnpm.cmd --filter api_v2 test -- --run modules/webhooks modules/users` passed with 45 files and 256 tests, `pnpm.cmd --filter api_v2 typecheck` passed, `pnpm.cmd --filter api_v2 lint` passed, and `pnpm.cmd build --filter api_v2` passed.
 - `pnpm.cmd audit --prod --json` refreshed: 64 repo-wide advisories (`low:3`, `moderate:34`, `high:26`, `critical:4`), with 0 advisories matching `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`. Affected root paths were legacy/admin/widget/tooling paths: `apps__admin`, `apps__api`, `packages__opencode-mcp-server`, and `packages__widget`.
 - `pnpm.cmd audit --json` refreshed: 99 repo-wide advisories (`low:6`, `moderate:45`, `high:50`, `critical:6`), with 0 advisories matching `apps/api_v2`, `apps/web_v2`, `packages/database`, or `packages/types`. Affected root paths were `apps__admin`, `apps__api`, `packages__opencode-mcp-server`, `packages__ui`, and `packages__widget`.
+- `web_v2` hydration/refresh-stability pass verification passed: `pnpm.cmd --filter web_v2 format`, `cd apps/web_v2 && pnpm.cmd exec tsc --noEmit`, `cd apps/web_v2 && pnpm.cmd exec eslint . --ext .ts,.tsx`, full `cd apps/web_v2 && pnpm.cmd test` with 9 files and 36 tests passing, and `pnpm.cmd build --filter web_v2`.
+- `web_v2` hydration/refresh-stability index refresh passed: `python scripts/update-indexes.py` indexed 29 changed files, skipped 0, and raised the vector store to 1230 chunks while refreshing the AST graph. `python scripts/rebuild-graphify.py` passed and left the merged graph at 4376 nodes and 7154 edges; semantic extraction remains skipped because it requires Claude.
 - `pnpm.cmd --filter @workspace/database generate` passed after adding `PublicSubmitSurface.FORM`.
 - `pnpm.cmd --filter @workspace/database exec prisma validate` passed.
 - `pnpm.cmd --filter api_v2 lint` passed after removing one stale unused import warning in `projects.service.ts`.

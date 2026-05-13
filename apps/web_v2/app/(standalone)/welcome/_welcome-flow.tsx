@@ -16,6 +16,7 @@ import {
 } from "@/lib/project-utils";
 import { useAnimatedStep } from "@/hooks/use-animated-step";
 import { useCreateProject } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import {
   useCompleteOnboarding,
   useCurrentUser,
@@ -45,7 +46,10 @@ import { CollectionStep } from "./steps/collection-step";
  */
 export function WelcomeFlow() {
   const router = useRouter();
-  const currentUser = useCurrentUser();
+  const currentUser = useCurrentUser({ freshOnMount: true });
+  const liveState = useLiveQueryState(currentUser, {
+    requireFreshOnMount: true,
+  });
 
   // Already-completed users shouldn't see this page.
   React.useEffect(() => {
@@ -54,7 +58,7 @@ export function WelcomeFlow() {
     }
   }, [currentUser.data?.onboardingCompletedAt, router]);
 
-  if (currentUser.isLoading && !currentUser.data) {
+  if (liveState.isWaitingForLiveData) {
     return <WelcomeLoading />;
   }
 

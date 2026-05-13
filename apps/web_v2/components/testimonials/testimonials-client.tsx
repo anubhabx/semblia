@@ -57,8 +57,10 @@ export function TestimonialsClient({
   const [page, setPage] = React.useState(1);
 
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [result, setResult] =
     React.useState<PaginatedResponse<MockTestimonial> | null>(null);
+  const hasLoadedOnce = React.useRef(false);
 
   const [bulkSelected, setBulkSelected] = React.useState<Set<string>>(
     new Set(),
@@ -73,7 +75,9 @@ export function TestimonialsClient({
 
   React.useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const showSkeleton = !hasLoadedOnce.current;
+    setLoading(showSkeleton);
+    setRefreshing(!showSkeleton);
 
     apiGetTestimonials(projectId, {
       status,
@@ -83,13 +87,16 @@ export function TestimonialsClient({
       pageSize: 8,
     }).then((data) => {
       if (!cancelled) {
+        hasLoadedOnce.current = true;
         setResult(data);
         setLoading(false);
+        setRefreshing(false);
       }
     });
 
     return () => {
       cancelled = true;
+      setRefreshing(false);
     };
   }, [projectId, status, sort, debouncedSearch, page]);
 
@@ -155,6 +162,7 @@ export function TestimonialsClient({
         result={result}
         hasActionable={hasActionable}
         bulkMode={bulkMode}
+        refreshing={refreshing}
         onSelectAll={handleSelectAll}
       />
 

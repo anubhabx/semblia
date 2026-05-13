@@ -18,13 +18,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { projectInitials } from "@/lib/format";
 import { useProjectsList } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
+import { RefreshingDataBadge } from "@/components/shared";
 import type { V2ProjectDTO } from "@workspace/types";
 
 // ── Project switcher (topbar pill) ─────────────────────────────────────────────
 
 export function ProjectSwitcher({ current }: { current: V2ProjectDTO }) {
   const router = useRouter();
-  const projectsQuery = useProjectsList({ pageSize: 100 });
+  const projectsQuery = useProjectsList(
+    { pageSize: 100 },
+    { freshOnMount: true },
+  );
+  const liveState = useLiveQueryState(projectsQuery);
   const projects = React.useMemo(() => {
     const items = projectsQuery.data?.items ?? [];
     if (items.some((project) => project.id === current.id)) return items;
@@ -54,8 +60,12 @@ export function ProjectSwitcher({ current }: { current: V2ProjectDTO }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={8} className="w-60">
-        <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Switch project
+        <DropdownMenuLabel className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span>Switch project</span>
+          <RefreshingDataBadge
+            show={liveState.isBackgroundRefreshing}
+            className="h-5 px-2 normal-case tracking-normal"
+          />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {projects.map((p) => {

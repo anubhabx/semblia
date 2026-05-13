@@ -8,6 +8,7 @@ import {
   HeaderSep,
   PageBody,
   FilterPills,
+  RefreshingDataBadge,
   SearchField,
   ViewToggle,
 } from "@/components/shared";
@@ -26,6 +27,7 @@ export function ProjectsClient() {
     projects,
     filtered,
     loading,
+    refreshing,
     view,
     setView,
     search,
@@ -96,6 +98,7 @@ export function ProjectsClient() {
                 onChange={setTypeFilter}
               />
               <div className="ml-auto flex items-center gap-3">
+                <RefreshingDataBadge show={refreshing} />
                 <SearchField
                   value={search}
                   onChange={setSearch}

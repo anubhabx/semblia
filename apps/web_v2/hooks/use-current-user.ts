@@ -15,7 +15,11 @@ import {
 } from "@/lib/tresta-api";
 import { queryKeys } from "@/hooks/api";
 
-export function useCurrentUser() {
+interface CurrentUserQueryOptions {
+  freshOnMount?: boolean;
+}
+
+export function useCurrentUser(options?: CurrentUserQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery<V2UserDTO>({
@@ -25,7 +29,8 @@ export function useCurrentUser() {
       return fetchCurrentUser(token);
     },
     enabled: isSignedIn === true,
-    staleTime: 5 * 60 * 1000,
+    staleTime: options?.freshOnMount ? 0 : 5 * 60 * 1000,
+    refetchOnMount: options?.freshOnMount ? "always" : undefined,
   });
 }
 

@@ -16,7 +16,20 @@ import {
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
 
-export function useProjectsList(params?: { page?: number; pageSize?: number }) {
+interface ApiQueryOptions {
+  freshOnMount?: boolean;
+}
+
+function freshOnMountOptions(options?: ApiQueryOptions) {
+  return options?.freshOnMount
+    ? ({ staleTime: 0, refetchOnMount: "always" } as const)
+    : {};
+}
+
+export function useProjectsList(
+  params?: { page?: number; pageSize?: number },
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -26,10 +39,11 @@ export function useProjectsList(params?: { page?: number; pageSize?: number }) {
       return fetchProjects(token, params);
     },
     enabled: isSignedIn === true,
+    ...freshOnMountOptions(options),
   });
 }
 
-export function useProject(slug: string) {
+export function useProject(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -39,6 +53,7 @@ export function useProject(slug: string) {
       return fetchProjectBySlug(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...freshOnMountOptions(options),
   });
 }
 

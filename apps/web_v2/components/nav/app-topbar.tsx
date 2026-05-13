@@ -2,7 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useProject } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 
 import { TrestaMark } from "./tresta-mark";
 import { BreadcrumbSlash } from "./breadcrumb-slash";
@@ -53,8 +55,14 @@ export function AppTopbar() {
   // Detect project context from URL: /projects/[slug]/...
   const slugMatch = pathname.match(/^\/projects\/([^/]+)/);
   const currentSlug = slugMatch?.[1] ? decodeSlug(slugMatch[1]) : null;
-  const projectQuery = useProject(currentSlug ?? "");
-  const currentProject = currentSlug ? (projectQuery.data ?? null) : null;
+  const projectQuery = useProject(currentSlug ?? "", { freshOnMount: true });
+  const projectLiveState = useLiveQueryState(projectQuery, {
+    requireFreshOnMount: true,
+  });
+  const currentProject =
+    currentSlug && !projectLiveState.isWaitingForLiveData
+      ? (projectQuery.data ?? null)
+      : null;
   const section = currentProject
     ? sectionLabelFor(pathname, currentSlug!)
     : null;
@@ -68,6 +76,13 @@ export function AppTopbar() {
         )}
 
         <TrestaMark />
+
+        {currentSlug && projectLiveState.isWaitingForLiveData && (
+          <>
+            <BreadcrumbSlash />
+            <TopbarProjectSkeleton />
+          </>
+        )}
 
         {currentProject && (
           <>
@@ -95,5 +110,14 @@ export function AppTopbar() {
         <UserMenu />
       </div>
     </header>
+  );
+}
+
+function TopbarProjectSkeleton() {
+  return (
+    <div className="flex h-7 items-center gap-1.5 rounded-full border border-border/70 bg-background pl-1 pr-3">
+      <Skeleton className="size-5 rounded-full" />
+      <Skeleton className="h-3 w-24" />
+    </div>
   );
 }

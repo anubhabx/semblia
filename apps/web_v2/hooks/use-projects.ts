@@ -3,13 +3,18 @@
 import * as React from "react";
 import type { V2ProjectDTO, V2ProjectType } from "@workspace/types";
 import { useProjectsList } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { useViewMode } from "@/hooks/use-view-mode";
 
 export type ProjectFilter = "all" | V2ProjectType;
 
 /** Fetches projects and exposes loading / search / view state. */
 export function useProjects() {
-  const projectsQuery = useProjectsList({ pageSize: 100 });
+  const projectsQuery = useProjectsList(
+    { pageSize: 100 },
+    { freshOnMount: true },
+  );
+  const liveState = useLiveQueryState(projectsQuery);
   const projects = React.useMemo<V2ProjectDTO[]>(
     () => projectsQuery.data?.items ?? [],
     [projectsQuery.data?.items],
@@ -58,7 +63,8 @@ export function useProjects() {
   return {
     projects,
     filtered,
-    loading: projectsQuery.isLoading,
+    loading: projectsQuery.isLoading && !liveState.hasData,
+    refreshing: liveState.isBackgroundRefreshing,
     error: projectsQuery.error,
     view,
     setView,
