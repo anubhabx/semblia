@@ -9,6 +9,7 @@ import {
   moderateSubmission,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
 export function useSubmissionsList(
   slug: string,
@@ -18,6 +19,7 @@ export function useSubmissionsList(
     moderationStatus?: string;
     formId?: string;
   },
+  options?: ApiQueryOptions,
 ) {
   const { getToken, isSignedIn } = useAuth();
 
@@ -28,10 +30,15 @@ export function useSubmissionsList(
       return fetchSubmissions(token, slug, params);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
-export function useSubmission(slug: string, submissionId: string) {
+export function useSubmission(
+  slug: string,
+  submissionId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -41,6 +48,7 @@ export function useSubmission(slug: string, submissionId: string) {
       return fetchSubmission(token, slug, submissionId);
     },
     enabled: isSignedIn === true && !!slug && !!submissionId,
+    ...liveQueryOptions(options),
   });
 }
 

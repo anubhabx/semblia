@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { apiGetSubscription, apiSwitchPlan } from "@/lib/api";
+import { apiSwitchPlan } from "@/lib/api";
+import { billingQueryKeys, useSubscription } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { CheckIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
@@ -70,24 +72,25 @@ const PLANS: PlanDef[] = [
 export function PlanSwitcher() {
   const qc = useQueryClient();
 
-  const { data: sub, isLoading } = useQuery({
-    queryKey: ["subscription"],
-    queryFn: apiGetSubscription,
+  const subscriptionQuery = useSubscription({ freshOnMount: true });
+  const liveState = useLiveQueryState(subscriptionQuery, {
+    requireFreshOnMount: true,
   });
+  const sub = subscriptionQuery.data;
 
   const [confirmPlan, setConfirmPlan] = React.useState<PlanDef | null>(null);
 
   const { mutate: switchPlan, isPending: switching } = useMutation({
     mutationFn: (planId: string) => apiSwitchPlan(planId),
     onSuccess: (updated) => {
-      qc.setQueryData(["subscription"], updated);
+      qc.setQueryData(billingQueryKeys.subscription, updated);
       toast.success(`Switched to ${updated.userPlan} plan.`);
       setConfirmPlan(null);
     },
     onError: () => toast.error("Failed to switch plan."),
   });
 
-  if (isLoading || !sub) {
+  if (liveState.isWaitingForLiveData || !sub) {
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (

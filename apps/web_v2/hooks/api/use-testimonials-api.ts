@@ -13,6 +13,7 @@ import {
   rejectDisplaySuggestion,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
 export function useTestimonialsList(
   slug: string,
@@ -24,6 +25,7 @@ export function useTestimonialsList(
     search?: string;
     sort?: string;
   },
+  options?: ApiQueryOptions,
 ) {
   const { getToken, isSignedIn } = useAuth();
 
@@ -34,10 +36,15 @@ export function useTestimonialsList(
       return fetchTestimonials(token, slug, params);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
-export function useTestimonial(slug: string, testimonialId: string) {
+export function useTestimonial(
+  slug: string,
+  testimonialId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -47,6 +54,7 @@ export function useTestimonial(slug: string, testimonialId: string) {
       return fetchTestimonial(token, slug, testimonialId);
     },
     enabled: isSignedIn === true && !!slug && !!testimonialId,
+    ...liveQueryOptions(options),
   });
 }
 

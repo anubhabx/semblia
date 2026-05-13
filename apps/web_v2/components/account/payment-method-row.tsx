@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,11 +21,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  apiGetPaymentMethods,
   apiDeletePaymentMethod,
   apiSetDefaultPaymentMethod,
   type PaymentMethod,
 } from "@/lib/api";
+import { RefreshingDataBadge } from "@/components/shared";
+import { billingQueryKeys, usePaymentMethods } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { DotsThreeIcon, PlusIcon } from "@phosphor-icons/react";
 
 // ── Brand label ────────────────────────────────────────────────────────────────
@@ -105,10 +107,9 @@ function PaymentRow({
 export function PaymentMethodsSection() {
   const qc = useQueryClient();
 
-  const { data: methods, isLoading } = useQuery({
-    queryKey: ["payment-methods"],
-    queryFn: apiGetPaymentMethods,
-  });
+  const methodsQuery = usePaymentMethods({ freshOnMount: true });
+  const liveState = useLiveQueryState(methodsQuery);
+  const methods = methodsQuery.data;
 
   const [deleteTarget, setDeleteTarget] = React.useState<PaymentMethod | null>(
     null,
@@ -117,7 +118,7 @@ export function PaymentMethodsSection() {
   const { mutate: deleteMethod, isPending: deleting } = useMutation({
     mutationFn: (id: string) => apiDeletePaymentMethod(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["payment-methods"] });
+      qc.invalidateQueries({ queryKey: billingQueryKeys.paymentMethods });
       toast.success("Payment method removed.");
       setDeleteTarget(null);
     },
@@ -127,7 +128,7 @@ export function PaymentMethodsSection() {
   const { mutate: makeDefault } = useMutation({
     mutationFn: (id: string) => apiSetDefaultPaymentMethod(id),
     onSuccess: (updated) => {
-      qc.setQueryData(["payment-methods"], updated);
+      qc.setQueryData(billingQueryKeys.paymentMethods, updated);
       toast.success("Default payment method updated.");
     },
     onError: () => toast.error("Failed to update default payment method."),
@@ -135,8 +136,10 @@ export function PaymentMethodsSection() {
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between">
-        <span />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-h-6">
+          <RefreshingDataBadge show={liveState.isBackgroundRefreshing} />
+        </div>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -154,7 +157,7 @@ export function PaymentMethodsSection() {
 
       <div className="overflow-hidden rounded-lg border border-border">
         <div className="divide-y divide-border">
-          {isLoading
+          {methodsQuery.isPending && !liveState.hasData
             ? Array.from({ length: 2 }, (_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
                   <Skeleton className="size-9 rounded-md" />
@@ -173,7 +176,7 @@ export function PaymentMethodsSection() {
                 />
               ))}
 
-          {!isLoading && (!methods || methods.length === 0) && (
+          {!methodsQuery.isPending && (!methods || methods.length === 0) && (
             <div className="px-4 py-4 text-sm text-muted-foreground text-center">
               No saved payment methods.
             </div>

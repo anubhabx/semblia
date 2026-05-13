@@ -1,10 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { PageHeader, PageBody, SettingsSection } from "@/components/shared";
+import {
+  PageHeader,
+  PageBody,
+  SettingsSection,
+  RefreshingDataBadge,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -17,12 +22,9 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import {
-  apiGetSubscription,
-  apiCancelSubscription,
-  apiGetInvoices,
-  type Invoice,
-} from "@/lib/api";
+import { apiCancelSubscription, type Invoice } from "@/lib/api";
+import { billingQueryKeys, useInvoices, useSubscription } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { PlanSwitcher } from "@/components/account/plan-switcher";
 import { PaymentMethodsSection } from "@/components/account/payment-method-row";
@@ -53,15 +55,16 @@ function statusVariant(
 function PlanCard() {
   const qc = useQueryClient();
 
-  const { data: sub, isLoading } = useQuery({
-    queryKey: ["subscription"],
-    queryFn: apiGetSubscription,
+  const subscriptionQuery = useSubscription({ freshOnMount: true });
+  const liveState = useLiveQueryState(subscriptionQuery, {
+    requireFreshOnMount: true,
   });
+  const sub = subscriptionQuery.data;
 
   const { mutate: toggleCancel, isPending: cancelling } = useMutation({
     mutationFn: apiCancelSubscription,
     onSuccess: (updated) => {
-      qc.setQueryData(["subscription"], updated);
+      qc.setQueryData(billingQueryKeys.subscription, updated);
       toast.success(
         updated.cancelAtPeriodEnd
           ? "Subscription will cancel at period end."
@@ -71,7 +74,7 @@ function PlanCard() {
     onError: () => toast.error("Failed to update subscription."),
   });
 
-  if (isLoading || !sub) {
+  if (liveState.isWaitingForLiveData || !sub) {
     return (
       <div className="overflow-hidden rounded-lg border border-border px-4 py-4 space-y-2">
         <Skeleton className="h-5 w-32" />
@@ -180,12 +183,11 @@ function UsageMeter() {
 // ── Invoice table ──────────────────────────────────────────────────────────────
 
 function InvoiceTable() {
-  const { data: invoices, isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: apiGetInvoices,
-  });
+  const invoicesQuery = useInvoices({ freshOnMount: true });
+  const liveState = useLiveQueryState(invoicesQuery);
+  const invoices = invoicesQuery.data;
 
-  if (isLoading) {
+  if (invoicesQuery.isPending && !liveState.hasData) {
     return (
       <div className="overflow-hidden rounded-lg border border-border px-4 py-4 space-y-3">
         {Array.from({ length: 4 }, (_, i) => (
@@ -197,62 +199,74 @@ function InvoiceTable() {
 
   if (!invoices || invoices.length === 0) {
     return (
-      <div className="overflow-hidden rounded-lg border border-border py-8 px-4 text-center">
-        <p className="text-sm text-muted-foreground">No invoices yet.</p>
+      <div className="space-y-2">
+        <div className="flex justify-end">
+          <RefreshingDataBadge show={liveState.isBackgroundRefreshing} />
+        </div>
+        <div className="overflow-hidden rounded-lg border border-border py-8 px-4 text-center">
+          <p className="text-sm text-muted-foreground">No invoices yet.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Invoice</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Plan</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-8" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.map((inv) => (
-            <TableRow key={inv.id}>
-              <TableCell className="font-mono text-xs">{inv.number}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {format(new Date(inv.date), "MMM d, yyyy")}
-              </TableCell>
-              <TableCell className="text-xs">{inv.planName}</TableCell>
-              <TableCell className="text-right text-xs tabular-nums">
-                {formatINR(inv.amount)}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant={statusVariant(inv.status)}
-                  className="text-[10px] capitalize"
-                >
-                  {inv.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  disabled
-                  title="Download (mock)"
-                  onClick={() =>
-                    toast.info("Download not available in mock mode.")
-                  }
-                >
-                  <DownloadSimpleIcon className="size-3.5" />
-                </Button>
-              </TableCell>
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <RefreshingDataBadge show={liveState.isBackgroundRefreshing} />
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Invoice</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-8" />
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {invoices.map((inv) => (
+              <TableRow key={inv.id}>
+                <TableCell className="font-mono text-xs">
+                  {inv.number}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {format(new Date(inv.date), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell className="text-xs">{inv.planName}</TableCell>
+                <TableCell className="text-right text-xs tabular-nums">
+                  {formatINR(inv.amount)}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={statusVariant(inv.status)}
+                    className="text-[10px] capitalize"
+                  >
+                    {inv.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    disabled
+                    title="Download (mock)"
+                    onClick={() =>
+                      toast.info("Download not available in mock mode.")
+                    }
+                  >
+                    <DownloadSimpleIcon className="size-3.5" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

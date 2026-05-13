@@ -15,16 +15,7 @@ import {
   clearSigningSecret,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
-
-interface ApiQueryOptions {
-  freshOnMount?: boolean;
-}
-
-function freshOnMountOptions(options?: ApiQueryOptions) {
-  return options?.freshOnMount
-    ? ({ staleTime: 0, refetchOnMount: "always" } as const)
-    : {};
-}
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
 export function useProjectsList(
   params?: { page?: number; pageSize?: number },
@@ -39,7 +30,7 @@ export function useProjectsList(
       return fetchProjects(token, params);
     },
     enabled: isSignedIn === true,
-    ...freshOnMountOptions(options),
+    ...liveQueryOptions(options),
   });
 }
 
@@ -53,7 +44,7 @@ export function useProject(slug: string, options?: ApiQueryOptions) {
       return fetchProjectBySlug(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
-    ...freshOnMountOptions(options),
+    ...liveQueryOptions(options),
   });
 }
 
@@ -110,7 +101,7 @@ export function useDeleteProject(slug: string) {
   });
 }
 
-export function useProjectMembers(slug: string) {
+export function useProjectMembers(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -120,10 +111,11 @@ export function useProjectMembers(slug: string) {
       return fetchProjectMembers(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
-export function useAllowedOrigins(slug: string) {
+export function useAllowedOrigins(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -134,6 +126,7 @@ export function useAllowedOrigins(slug: string) {
       return result.origins;
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 

@@ -14,10 +14,11 @@ import {
   fetchAgentActions,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
 // ── Private API keys ────────────────────────────────────────────────────────
 
-export function useApiKeysList(slug: string) {
+export function useApiKeysList(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -27,6 +28,7 @@ export function useApiKeysList(slug: string) {
       return fetchApiKeys(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
@@ -79,7 +81,11 @@ export function useRevokeApiKey(slug: string) {
   });
 }
 
-export function useApiKeyEvents(slug: string, keyId: string) {
+export function useApiKeyEvents(
+  slug: string,
+  keyId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -89,12 +95,16 @@ export function useApiKeyEvents(slug: string, keyId: string) {
       return fetchApiKeyEvents(token, slug, keyId);
     },
     enabled: isSignedIn === true && !!slug && !!keyId,
+    ...liveQueryOptions(options),
   });
 }
 
 // ── Agent access ────────────────────────────────────────────────────────────
 
-export function useAgentAccessOverview(slug: string) {
+export function useAgentAccessOverview(
+  slug: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -104,6 +114,7 @@ export function useAgentAccessOverview(slug: string) {
       return fetchAgentAccessOverview(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
@@ -141,7 +152,7 @@ export function useRevokeAgentKey(slug: string) {
   });
 }
 
-export function useAgentActions(slug: string) {
+export function useAgentActions(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -151,5 +162,6 @@ export function useAgentActions(slug: string) {
       return fetchAgentActions(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }

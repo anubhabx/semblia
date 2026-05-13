@@ -1,4 +1,5 @@
 export { queryKeys } from "./keys";
+export { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 export { useAuthToken } from "./use-auth-token";
 
 export {
@@ -63,3 +64,11 @@ export {
   useRevokeAgentKey,
   useAgentActions,
 } from "./use-credentials-api";
+
+export {
+  billingQueryKeys,
+  useSubscription,
+  useInvoices,
+  usePaymentMethods,
+  useBillingProfile,
+} from "./use-billing-api";

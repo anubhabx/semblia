@@ -12,8 +12,9 @@ import {
   saveWidgetDraft,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
-export function useWidgetsList(slug: string) {
+export function useWidgetsList(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -23,10 +24,15 @@ export function useWidgetsList(slug: string) {
       return fetchWidgets(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
-export function useWidget(slug: string, widgetId: string) {
+export function useWidget(
+  slug: string,
+  widgetId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -36,6 +42,7 @@ export function useWidget(slug: string, widgetId: string) {
       return fetchWidget(token, slug, widgetId);
     },
     enabled: isSignedIn === true && !!slug && !!widgetId,
+    ...liveQueryOptions(options),
   });
 }
 
@@ -88,7 +95,11 @@ export function useDeleteWidget(slug: string) {
   });
 }
 
-export function useWidgetDraft(slug: string, widgetId: string) {
+export function useWidgetDraft(
+  slug: string,
+  widgetId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -98,6 +109,7 @@ export function useWidgetDraft(slug: string, widgetId: string) {
       return fetchWidgetDraft(token, slug, widgetId);
     },
     enabled: isSignedIn === true && !!slug && !!widgetId,
+    ...liveQueryOptions(options),
   });
 }
 

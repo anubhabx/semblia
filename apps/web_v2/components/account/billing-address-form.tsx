@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import {
-  apiGetBillingProfile,
-  apiUpdateBillingProfile,
-  type BillingProfile,
-} from "@/lib/api";
+import { apiUpdateBillingProfile, type BillingProfile } from "@/lib/api";
+import { billingQueryKeys, useBillingProfile } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 
 // ── Country list (abbreviated) ─────────────────────────────────────────────────
 
@@ -40,10 +38,11 @@ const COUNTRIES = [
 export function BillingAddressForm() {
   const qc = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["billing-profile"],
-    queryFn: apiGetBillingProfile,
+  const profileQuery = useBillingProfile({ freshOnMount: true });
+  const liveState = useLiveQueryState(profileQuery, {
+    requireFreshOnMount: true,
   });
+  const profile = profileQuery.data;
 
   const [form, setForm] = React.useState<BillingProfile>({
     name: "",
@@ -57,6 +56,15 @@ export function BillingAddressForm() {
   });
 
   const [initialForm, setInitialForm] = React.useState<BillingProfile>(form);
+  const initialFormRef = React.useRef(initialForm);
+  const dirty = React.useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm],
+  );
+
+  React.useEffect(() => {
+    initialFormRef.current = initialForm;
+  }, [initialForm]);
 
   React.useEffect(() => {
     if (profile) {
@@ -70,17 +78,19 @@ export function BillingAddressForm() {
         country: profile.country ?? "IN",
         gstin: profile.gstin ?? "",
       };
-      setForm(seeded);
+      setForm((current) =>
+        JSON.stringify(current) !== JSON.stringify(initialFormRef.current)
+          ? current
+          : seeded,
+      );
       setInitialForm(seeded);
     }
   }, [profile]);
 
-  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
-
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: () => apiUpdateBillingProfile(form),
     onSuccess: (updated) => {
-      qc.setQueryData(["billing-profile"], updated);
+      qc.setQueryData(billingQueryKeys.profile, updated);
       setInitialForm(form);
       toast.success("Billing address saved.");
     },
@@ -99,7 +109,7 @@ export function BillingAddressForm() {
     };
   }
 
-  if (isLoading) {
+  if (liveState.isWaitingForLiveData) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {Array.from({ length: 6 }, (_, i) => (

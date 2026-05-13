@@ -12,8 +12,9 @@ import {
   saveFormDraft,
 } from "@/lib/tresta-api";
 import { queryKeys } from "./keys";
+import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
-export function useFormsList(slug: string) {
+export function useFormsList(slug: string, options?: ApiQueryOptions) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -23,10 +24,15 @@ export function useFormsList(slug: string) {
       return fetchForms(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
-export function useForm(slug: string, formId: string) {
+export function useForm(
+  slug: string,
+  formId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -36,6 +42,7 @@ export function useForm(slug: string, formId: string) {
       return fetchForm(token, slug, formId);
     },
     enabled: isSignedIn === true && !!slug && !!formId,
+    ...liveQueryOptions(options),
   });
 }
 
@@ -90,7 +97,11 @@ export function useDeleteForm(slug: string) {
   });
 }
 
-export function useFormDraft(slug: string, formId: string) {
+export function useFormDraft(
+  slug: string,
+  formId: string,
+  options?: ApiQueryOptions,
+) {
   const { getToken, isSignedIn } = useAuth();
 
   return useQuery({
@@ -100,6 +111,7 @@ export function useFormDraft(slug: string, formId: string) {
       return fetchFormDraft(token, slug, formId);
     },
     enabled: isSignedIn === true && !!slug && !!formId,
+    ...liveQueryOptions(options),
   });
 }
 
