@@ -12,7 +12,10 @@ import { apiGetTestimonial } from "@/lib/api";
 import type { MockTestimonial } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
+import { useProject } from "@/hooks/api";
+import { getProjectCollectionUrl } from "@/lib/project-utils";
 import { PageHeader, HeaderSep, PageTabs } from "@/components/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   STATUS_TABS,
   type StatusFilter,
@@ -21,25 +24,21 @@ import {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface TestimonialsInboxProps {
-  projectId: string;
-  projectSlug: string;
-  totalCount: number;
-  pendingCount: number;
-  /** Public hosted collection URL — used by the empty-state hero. */
-  collectionUrl: string;
+  slug: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function TestimonialsInbox({
-  projectId,
-  projectSlug,
-  totalCount,
-  pendingCount,
-  collectionUrl,
-}: TestimonialsInboxProps) {
+export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
+  const { data: project } = useProject(slug);
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+
+  // Derive project data — guard rendering until project is available
+  const projectId = project?.id ?? null;
+  const totalCount = project?._count.testimonials ?? 0;
+  const pendingCount = project?._count.pendingModeration ?? 0;
+  const collectionUrl = project ? getProjectCollectionUrl(project) : undefined;
 
   // Status filter — lifted here so tabs render in PageHeader toolbar
   const [status, setStatus] = React.useState<StatusFilter>("ALL");
@@ -73,7 +72,7 @@ export function TestimonialsInbox({
 
   // ── Fetch detail when selection changes ──
   React.useEffect(() => {
-    if (!selectedId) {
+    if (!selectedId || !projectId) {
       return;
     }
 
@@ -108,10 +107,10 @@ export function TestimonialsInbox({
       if (isDesktop) {
         setSelectedId((prev) => (prev === id ? prev : id));
       } else {
-        router.push(`/projects/${projectSlug}/testimonials/${id}`);
+        router.push(`/projects/${slug}/testimonials/${id}`);
       }
     },
-    [isDesktop, projectSlug, router],
+    [isDesktop, slug, router],
   );
 
   const handleCloseDetail = React.useCallback(() => {
@@ -218,6 +217,30 @@ export function TestimonialsInbox({
     },
   ]);
 
+  // Guard: wait until project is loaded before rendering list/detail
+  if (!projectId) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <PageHeader
+          density="compact"
+          title="Testimonials"
+          description={<Skeleton className="h-3 w-32 animate-shimmer" />}
+        />
+        <div className="flex-1 divide-y divide-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-3 px-5 py-3.5">
+              <Skeleton className="size-7 shrink-0 rounded-full animate-shimmer" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-32 animate-shimmer" />
+                <Skeleton className="h-3 w-full animate-shimmer" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <KbdShortcutsDialog open={kbdOpen} onOpenChange={setKbdOpen} />
@@ -255,7 +278,7 @@ export function TestimonialsInbox({
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
           <TestimonialsClient
             projectId={projectId}
-            projectSlug={projectSlug}
+            projectSlug={slug}
             collectionUrl={collectionUrl}
             status={status}
             selectedId={selectedId}
