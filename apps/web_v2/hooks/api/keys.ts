@@ -57,4 +57,61 @@ export const queryKeys = {
     actions: (slug: string) =>
       ["projects", slug, "agent-access", "actions"] as const,
   },
+
+  notifications: {
+    all: ["notifications"] as const,
+    list: (params?: Record<string, unknown>) =>
+      ["notifications", "list", params ?? {}] as const,
+    unreadCount: ["notifications", "unread-count"] as const,
+    preferences: ["notifications", "preferences"] as const,
+  },
+
+  analytics: {
+    summary: (slug: string, params?: Record<string, unknown>) =>
+      ["projects", slug, "analytics", "summary", params ?? {}] as const,
+  },
+
+  publicSurfaces: {
+    resolve: (params: Record<string, unknown>) =>
+      ["public-surfaces", "resolve", params] as const,
+  },
+
+  projectAudit: {
+    list: (slug: string, params?: Record<string, unknown>) =>
+      ["projects", slug, "action-audit", params ?? {}] as const,
+  },
+
+  outboundWebhooks: {
+    all: (slug: string) => ["projects", slug, "outbound-webhooks"] as const,
+    detail: (slug: string, endpointId: string) =>
+      ["projects", slug, "outbound-webhooks", endpointId] as const,
+    deliveries: (slug: string, params?: Record<string, unknown>) =>
+      [
+        "projects",
+        slug,
+        "outbound-webhooks",
+        "deliveries",
+        params ?? {},
+      ] as const,
+    delivery: (slug: string, deliveryId: string) =>
+      [
+        "projects",
+        slug,
+        "outbound-webhooks",
+        "deliveries",
+        deliveryId,
+      ] as const,
+  },
+
+  exports: {
+    deliveries: (slug: string, params?: Record<string, unknown>) =>
+      ["projects", slug, "exports", "deliveries", params ?? {}] as const,
+    delivery: (slug: string, deliveryId: string) =>
+      ["projects", slug, "exports", "deliveries", deliveryId] as const,
+  },
+
+  integrations: {
+    connections: (slug: string) =>
+      ["projects", slug, "integrations", "connections"] as const,
+  },
 } as const;

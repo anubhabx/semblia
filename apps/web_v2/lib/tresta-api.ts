@@ -30,6 +30,28 @@ import type {
   V2ApiKeyEventDTO,
   V2AgentAccessOverviewDTO,
   V2CurrentOrganizationDTO,
+  V2NotificationDTO,
+  V2NotificationPreferencesDTO,
+  V2NotificationType,
+  V2AnalyticsSummaryDTO,
+  V2AnalyticsEventAckDTO,
+  V2PublicSurfaceFeature,
+  V2PublicSurfaceResolutionDTO,
+  V2ProjectActionAuditDTO,
+  V2ActorType,
+  V2OutboundWebhookEndpointDTO,
+  V2CreatedOutboundWebhookEndpointDTO,
+  V2OutboundWebhookDeliveryDTO,
+  V2CreateOutboundWebhookEndpointBody,
+  V2UpdateOutboundWebhookEndpointBody,
+  V2OutboundWebhookEventType,
+  V2DeliveryStatus,
+  V2CreateCsvExportBody,
+  V2ExportDeliveryDTO,
+  V2IntegrationConnectionDTO,
+  V2CreateIntegrationConnectionBody,
+  V2UpdateIntegrationConnectionBody,
+  V2CreateNativeIntegrationExportBody,
 } from "@workspace/types";
 
 // ── Config ──────────────────────────────────────────────────────────────────
@@ -193,6 +215,60 @@ export function fetchCurrentOrganization(token: string | null) {
   return api<V2CurrentOrganizationDTO>("/organizations/current", token);
 }
 
+// ── Notifications ──────────────────────────────────────────────────────────
+
+export type NotificationListParams = {
+  page?: number;
+  pageSize?: number;
+  isRead?: boolean;
+  type?: V2NotificationType;
+};
+
+export function fetchNotifications(
+  token: string | null,
+  params?: NotificationListParams,
+) {
+  return api<V2PaginatedResponse<V2NotificationDTO>>("/notifications", token, {
+    params: params as Record<string, string | number | boolean>,
+  });
+}
+
+export function fetchUnreadNotificationCount(token: string | null) {
+  return api<{ count: number }>("/notifications/unread-count", token);
+}
+
+export function markNotificationRead(
+  token: string | null,
+  notificationId: string,
+) {
+  return post<V2NotificationDTO>(
+    `/notifications/${encodeURIComponent(notificationId)}/read`,
+    token,
+  );
+}
+
+export function markAllNotificationsRead(token: string | null) {
+  return post<{ updatedCount: number }>("/notifications/read-all", token);
+}
+
+export function fetchNotificationPreferences(token: string | null) {
+  return api<V2NotificationPreferencesDTO>("/notifications/preferences", token);
+}
+
+export function updateNotificationPreferences(
+  token: string | null,
+  body: {
+    emailEnabled?: boolean;
+    typePreferences?: V2NotificationPreferencesDTO["typePreferences"];
+  },
+) {
+  return put<V2NotificationPreferencesDTO>(
+    "/notifications/preferences",
+    token,
+    body,
+  );
+}
+
 // ── Projects ────────────────────────────────────────────────────────────────
 
 export function fetchProjects(
@@ -314,6 +390,119 @@ export function generateSigningSecret(token: string | null, slug: string) {
 
 export function clearSigningSecret(token: string | null, slug: string) {
   return del(`/projects/${encodeURIComponent(slug)}/signing-secret`, token);
+}
+
+// ── Project analytics and public analytics events ──────────────────────────
+
+export type AnalyticsSummaryParams = {
+  days?: number;
+};
+
+export function fetchAnalyticsSummary(
+  token: string | null,
+  slug: string,
+  params?: AnalyticsSummaryParams,
+) {
+  return api<V2AnalyticsSummaryDTO>(
+    `/projects/${encodeURIComponent(slug)}/analytics/summary`,
+    token,
+    { params: params as Record<string, string | number> },
+  );
+}
+
+export type FormViewEventBody = {
+  projectSlug: string;
+  formId?: string;
+};
+
+export type WidgetLoadEventBody = {
+  widgetId: string;
+  loadTimeMs?: number;
+  browser?: string;
+  device?: string;
+  country?: string;
+  errorCode?: string;
+  version?: string;
+};
+
+export type TestimonialImpressionEventBody = {
+  testimonialId: string;
+  widgetId: string;
+  device?: string;
+  country?: string;
+};
+
+export type HostedPageViewEventBody =
+  | { hostname: string; projectSlug?: string }
+  | { hostname?: string; projectSlug: string };
+
+export function recordFormViewEvent(body: FormViewEventBody) {
+  return post<V2AnalyticsEventAckDTO>(
+    "/analytics/events/form-view",
+    null,
+    body,
+  );
+}
+
+export function recordWidgetLoadEvent(body: WidgetLoadEventBody) {
+  return post<V2AnalyticsEventAckDTO>(
+    "/analytics/events/widget-load",
+    null,
+    body,
+  );
+}
+
+export function recordTestimonialImpressionEvent(
+  body: TestimonialImpressionEventBody,
+) {
+  return post<V2AnalyticsEventAckDTO>(
+    "/analytics/events/testimonial-impression",
+    null,
+    body,
+  );
+}
+
+export function recordHostedPageViewEvent(body: HostedPageViewEventBody) {
+  return post<V2AnalyticsEventAckDTO>(
+    "/analytics/events/hosted-page-view",
+    null,
+    body,
+  );
+}
+
+// ── Public surface resolution ──────────────────────────────────────────────
+
+export type PublicSurfaceResolutionParams = {
+  hostname: string;
+  feature?: V2PublicSurfaceFeature;
+};
+
+export function resolvePublicSurface(params: PublicSurfaceResolutionParams) {
+  return api<V2PublicSurfaceResolutionDTO>("/public-surfaces/resolve", null, {
+    params,
+  });
+}
+
+// ── Project action audit ───────────────────────────────────────────────────
+
+export type ProjectActionAuditParams = {
+  page?: number;
+  pageSize?: number;
+  actorType?: V2ActorType;
+  action?: string;
+  targetType?: string;
+};
+
+export function fetchProjectActionAudit(
+  token: string | null,
+  slug: string,
+  params?: ProjectActionAuditParams,
+) {
+  return api<V2PaginatedResponse<V2ProjectActionAuditDTO>>(
+    `/projects/${encodeURIComponent(slug)}/action-audit`,
+    token,
+    { params: params as Record<string, string | number> },
+  );
 }
 
 // ── Testimonials ────────────────────────────────────────────────────────────
@@ -634,6 +823,233 @@ export function saveWidgetDraft(
 ) {
   return put<V2StudioDraftDTO>(
     `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}/draft`,
+    token,
+    body,
+  );
+}
+
+// ── Outbound webhooks ───────────────────────────────────────────────────────
+
+export type OutboundWebhookDeliveriesParams = {
+  page?: number;
+  pageSize?: number;
+  endpointId?: string;
+  status?: V2DeliveryStatus | "ALL";
+  eventType?: V2OutboundWebhookEventType;
+};
+
+export function fetchOutboundWebhookEndpoints(
+  token: string | null,
+  slug: string,
+) {
+  return api<V2OutboundWebhookEndpointDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks`,
+    token,
+  );
+}
+
+export function fetchOutboundWebhookEndpoint(
+  token: string | null,
+  slug: string,
+  endpointId: string,
+) {
+  return api<V2OutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/${encodeURIComponent(endpointId)}`,
+    token,
+  );
+}
+
+export function createOutboundWebhookEndpoint(
+  token: string | null,
+  slug: string,
+  body: V2CreateOutboundWebhookEndpointBody,
+) {
+  return post<V2CreatedOutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks`,
+    token,
+    body,
+  );
+}
+
+export function updateOutboundWebhookEndpoint(
+  token: string | null,
+  slug: string,
+  endpointId: string,
+  body: V2UpdateOutboundWebhookEndpointBody,
+) {
+  return patch<V2OutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/${encodeURIComponent(endpointId)}`,
+    token,
+    body,
+  );
+}
+
+export function disableOutboundWebhookEndpoint(
+  token: string | null,
+  slug: string,
+  endpointId: string,
+) {
+  return post<V2OutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/${encodeURIComponent(endpointId)}/disable`,
+    token,
+  );
+}
+
+export function revokeOutboundWebhookEndpoint(
+  token: string | null,
+  slug: string,
+  endpointId: string,
+) {
+  return post<V2OutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/${encodeURIComponent(endpointId)}/revoke`,
+    token,
+  );
+}
+
+export function rotateOutboundWebhookSecret(
+  token: string | null,
+  slug: string,
+  endpointId: string,
+) {
+  return post<V2CreatedOutboundWebhookEndpointDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/${encodeURIComponent(endpointId)}/rotate-secret`,
+    token,
+  );
+}
+
+export function fetchOutboundWebhookDeliveries(
+  token: string | null,
+  slug: string,
+  params?: OutboundWebhookDeliveriesParams,
+) {
+  return api<V2PaginatedResponse<V2OutboundWebhookDeliveryDTO>>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/deliveries`,
+    token,
+    { params: params as Record<string, string | number> },
+  );
+}
+
+export function fetchOutboundWebhookDelivery(
+  token: string | null,
+  slug: string,
+  deliveryId: string,
+) {
+  return api<V2OutboundWebhookDeliveryDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/deliveries/${encodeURIComponent(deliveryId)}`,
+    token,
+  );
+}
+
+export function retryOutboundWebhookDelivery(
+  token: string | null,
+  slug: string,
+  deliveryId: string,
+) {
+  return post<V2OutboundWebhookDeliveryDTO>(
+    `/projects/${encodeURIComponent(slug)}/outbound-webhooks/deliveries/${encodeURIComponent(deliveryId)}/retry`,
+    token,
+  );
+}
+
+// ── Exports ────────────────────────────────────────────────────────────────
+
+export type ExportDeliveriesParams = {
+  page?: number;
+  pageSize?: number;
+  status?: V2DeliveryStatus | "ALL";
+};
+
+export function createCsvExport(
+  token: string | null,
+  slug: string,
+  body?: V2CreateCsvExportBody,
+) {
+  return post<V2ExportDeliveryDTO>(
+    `/projects/${encodeURIComponent(slug)}/exports/csv`,
+    token,
+    body,
+  );
+}
+
+export function fetchExportDeliveries(
+  token: string | null,
+  slug: string,
+  params?: ExportDeliveriesParams,
+) {
+  return api<V2PaginatedResponse<V2ExportDeliveryDTO>>(
+    `/projects/${encodeURIComponent(slug)}/exports/deliveries`,
+    token,
+    { params: params as Record<string, string | number> },
+  );
+}
+
+export function fetchExportDelivery(
+  token: string | null,
+  slug: string,
+  deliveryId: string,
+) {
+  return api<V2ExportDeliveryDTO>(
+    `/projects/${encodeURIComponent(slug)}/exports/deliveries/${encodeURIComponent(deliveryId)}`,
+    token,
+  );
+}
+
+// ── Native integrations ────────────────────────────────────────────────────
+
+export function fetchIntegrationConnections(
+  token: string | null,
+  slug: string,
+) {
+  return api<V2IntegrationConnectionDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/integrations`,
+    token,
+  );
+}
+
+export function createIntegrationConnection(
+  token: string | null,
+  slug: string,
+  body: V2CreateIntegrationConnectionBody,
+) {
+  return post<V2IntegrationConnectionDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections`,
+    token,
+    body,
+  );
+}
+
+export function updateIntegrationConnection(
+  token: string | null,
+  slug: string,
+  connectionId: string,
+  body: V2UpdateIntegrationConnectionBody,
+) {
+  return patch<V2IntegrationConnectionDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}`,
+    token,
+    body,
+  );
+}
+
+export function disableIntegrationConnection(
+  token: string | null,
+  slug: string,
+  connectionId: string,
+) {
+  return post<V2IntegrationConnectionDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}/disable`,
+    token,
+  );
+}
+
+export function createNativeIntegrationExport(
+  token: string | null,
+  slug: string,
+  connectionId: string,
+  body: V2CreateNativeIntegrationExportBody,
+) {
+  return post<V2ExportDeliveryDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}/exports`,
     token,
     body,
   );

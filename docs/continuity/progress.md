@@ -1,13 +1,13 @@
 # Progress Ledger
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Current Snapshot
 
 - Branch at last sync: `revamp/v2`.
 - Git state before this docs sync: `revamp/v2...origin/revamp/v2` ahead 7, with uncommitted `web_v2` Phase 1b onboarding/empty-state work.
 - Current stage: V1 API production contracts are committed and verified; `web_v2` contract adaptation is the active next leg.
-- Current checkpoint: `web_v2` Phase 1b empty-state and new-user onboarding trigger is committed; hydration/refresh-stability now has a shared API-hook policy. Route-critical current-user/project/account state waits for a fresh response, list/table-style refreshes keep mounted data visible with local "Refreshing data" badges, and a policy test prevents app/page components from reintroducing direct `useQuery` calls outside the live-query hook layer. Billing UI must stay disabled, hidden, or explicitly read-only until the billing source-of-truth decision is made.
+- Current checkpoint: `web_v2` Phase 1b empty-state and new-user onboarding trigger is committed; hydration/refresh-stability now has a shared API-hook policy. Route-critical current-user/project/account state waits for a fresh response, list/table-style refreshes keep mounted data visible with local "Refreshing data" badges, and a policy test prevents app/page components from reintroducing direct `useQuery` calls outside the live-query hook layer. The 2026-05-14 API-only wiring pass added typed client/hook seams for current organization, notifications, analytics/events, public surface resolve, action audit, outbound webhooks, exports, and native integrations without modifying UI pages/components. UI rework needed for mock-backed pages is documented in `docs/plans/2026-05-14-api-only-wiring-ui-deferrals.md`. Billing UI must stay disabled, hidden, or explicitly read-only until the billing source-of-truth decision is made.
 - Previous committed implementation checkpoint: `web_v2` Phase 1a shell navigation wiring landed as `4246ac8`; the approved execution plan landed as `f280b64`.
 - Next implementation checkpoint: user review/refinement of the onboarding flow and project empty states, then capability-aware nav visibility and remaining live project metadata before moving to Phase 2a.
 
@@ -47,6 +47,8 @@ Later on 2026-05-13, Phase 1b started by making onboarding durable and project-e
 Later on 2026-05-13, the inbound Clerk webhook parser was corrected to accept Clerk's real snake_case `user.created`/`user.updated` payload shape after Svix signature verification. `POST /v2/webhooks/clerk` remains public at the Nest guard layer, valid signed Clerk payloads now map into the internal user DTO, schema failures return `400` instead of being mislabeled as webhook auth failures, and missing server-side webhook secrets now surface as server configuration errors instead of public-auth failures.
 
 Later on 2026-05-13, a `web_v2` hydration/refresh-stability pass added a shared live-query state helper and local refreshing badge. Welcome/onboarding and project topbar identity now require a fresh API response before rendering route-critical user/project state, while project and testimonial list surfaces keep existing rows visible and show a restrained "Refreshing data" badge during background refreshes. A follow-up pass centralized `freshOnMount` across `hooks/api`, moved account billing queries behind hook-level live options, made subscription/billing-profile surfaces wait for fresh data, added refresh badges to invoice/payment-method list refreshes, and added a policy test so future app/page components cannot import `useQuery` directly.
+
+On 2026-05-14, an API-only `web_v2` wiring pass filled out typed client and hook coverage for already-landed backend contracts: current organization, notifications, analytics summary/public event capture, public-surface resolve, project action audit, outbound webhooks, CSV export deliveries, and native integration connections/exports. This pass deliberately avoided UI component/page edits. The skipped mock-backed UI areas are recorded in `docs/plans/2026-05-14-api-only-wiring-ui-deferrals.md`.
 
 ## Phase Ledger
 
@@ -173,6 +175,8 @@ Later on 2026-05-13, a `web_v2` hydration/refresh-stability pass added a shared 
 - `web_v2` hydration/refresh-stability index refresh passed: `python scripts/update-indexes.py` indexed 29 changed files, skipped 0, and raised the vector store to 1230 chunks while refreshing the AST graph. `python scripts/rebuild-graphify.py` passed and left the merged graph at 4376 nodes and 7154 edges; semantic extraction remains skipped because it requires Claude.
 - `web_v2` hydration policy follow-up verification passed: `pnpm.cmd --filter web_v2 format`, `cd apps/web_v2 && pnpm.cmd exec tsc --noEmit`, `cd apps/web_v2 && pnpm.cmd exec eslint . --ext .ts,.tsx`, full `cd apps/web_v2 && pnpm.cmd test` with 10 files and 38 tests passing, and `pnpm.cmd build --filter web_v2`.
 - `web_v2` hydration policy follow-up index refresh passed: `python scripts/update-indexes.py` indexed 14 changed files, skipped 0, and raised the vector store to 1234 chunks while refreshing the AST graph. `python scripts/rebuild-graphify.py` passed and left the merged graph at 4386 nodes and 7173 edges; semantic extraction remains skipped because it requires Claude.
+- `web_v2` API-only control-plane wiring verification passed: targeted tests (`pnpm.cmd --filter web_v2 test -- tests/tresta-api-control-plane.test.ts tests/hooks/use-api-control-plane.test.tsx`) passed with 12 files and 47 tests, then the organization-hook targeted rerun passed with 12 files and 48 tests; `cd apps/web_v2 && pnpm.cmd exec tsc --noEmit` passed; `cd apps/web_v2 && pnpm.cmd exec prettier --check .\app\ .\components\ .\hooks\ .\lib\ .\tests\` passed; `cd apps/web_v2 && pnpm.cmd exec eslint . --ext .ts,.tsx` passed; full `cd apps/web_v2 && pnpm.cmd test` passed with 12 files and 48 tests; and `pnpm.cmd build --filter web_v2` passed. The build formatter reported existing dirty UI files as unchanged.
+- `web_v2` API-only control-plane wiring index refresh passed: `python scripts/update-indexes.py` indexed 3 changed files, skipped 0, and raised the vector store to 1259 chunks while refreshing the AST graph. `python scripts/rebuild-graphify.py` passed and left the merged graph at 4461 nodes and 7288 edges; semantic extraction remains skipped because it requires Claude.
 - `pnpm.cmd --filter @workspace/database generate` passed after adding `PublicSubmitSurface.FORM`.
 - `pnpm.cmd --filter @workspace/database exec prisma validate` passed.
 - `pnpm.cmd --filter api_v2 lint` passed after removing one stale unused import warning in `projects.service.ts`.
