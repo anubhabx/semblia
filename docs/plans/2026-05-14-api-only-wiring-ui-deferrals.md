@@ -19,6 +19,12 @@ This pass continues the `web_v2` API wiring without changing UI pages, layout, v
   - native integration connections and one-way export delivery creation
 - `apps/web_v2/hooks/api/*` now exposes hook-level seams for those same domains using the shared live-query options and centralized query keys.
 
+## Live Hook Usage Added
+
+- 2026-05-15 follow-up: `apps/web_v2/components/nav/notification-bell.tsx` and `apps/web_v2/app/(account-shell)/account/notifications/page.tsx` now use the live notification hooks instead of `MOCK_NOTIFICATIONS`/`getUnreadNotificationCount`.
+- The bell reads `useNotificationsList({ pageSize: 5 })` plus `useUnreadNotificationCount()` and marks unread linked notifications through `useMarkNotificationRead()`.
+- The account notifications page renders a live notification inbox with `useNotificationsList({ pageSize: 20 })`, unread count, notification preferences read status, `useMarkNotificationRead()`, and `useMarkAllNotificationsRead()`.
+
 ## UI Rework Skipped
 
 The following surfaces still depend on mock-data or mock-shaped component props. They should be adapted in a dedicated UI pass, not as part of this API-only wiring slice.
@@ -32,6 +38,10 @@ The following surfaces still depend on mock-data or mock-shaped component props.
 | Widgets and widget studio | `apps/web_v2/app/(app)/projects/[slug]/widgets/**`, `apps/web_v2/components/widgets/**` | Widget previews and studio state use `MockProject`/`MockTestimonial` and local draft assumptions. Typed widget and draft hooks already exist, but the store and preview props need a separate pass. |
 | Project settings | `apps/web_v2/app/(app)/projects/[slug]/settings/page.tsx`, `apps/web_v2/components/settings/settings-client.tsx` | The settings client still accepts `MockProject`; converting it requires form-state and permission-display changes. |
 
+Surfaces with no existing first-class page yet:
+
+- Action audit, outbound webhook deliveries, CSV export deliveries, and native integration delivery streams have typed hooks, but `web_v2` does not currently expose dedicated pages/components for them. Adding those views is product/UI work, so this follow-up does not invent new screens.
+
 ## Deferred API/UI Boundary Questions
 
 - Authenticated CSV download currently returns `text/csv` from `GET /v2/projects/:slug/exports/deliveries/:deliveryId/download`. A future UI pass should decide whether to fetch the file directly with a Clerk token, proxy through a Next route handler, or expose a short-lived download URL from `api_v2`.
@@ -39,4 +49,4 @@ The following surfaces still depend on mock-data or mock-shaped component props.
 
 ## Next Safe Step
 
-Use the new typed hooks to replace one UI area at a time, starting with read-only list surfaces that need the least visual redesign: notifications, action audit, export deliveries, outbound webhook deliveries, or integration connections.
+Use the new typed hooks to replace one UI area at a time. Notifications are now live. The next safest existing surfaces are API keys or analytics only after their mock-shaped props are adapted deliberately; action audit/export/webhook/integration delivery views need product-owned UI surfaces before they can be wired.

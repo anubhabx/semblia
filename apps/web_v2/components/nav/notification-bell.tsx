@@ -2,12 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  Bell as BellIcon,
-  ChatText as MessageSquareTextIcon,
-  ShieldWarning as ShieldAlertIcon,
-  CheckCircle as CircleCheckIcon,
-} from "@phosphor-icons/react";
+import { Bell as BellIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,49 +11,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  useMarkNotificationRead,
+  useNotificationsList,
+  useUnreadNotificationCount,
+} from "@/hooks/api";
 import { cn } from "@/lib/utils";
 import {
-  MOCK_NOTIFICATIONS,
-  getUnreadNotificationCount,
-  timeAgo,
-  type NotificationType,
-} from "@/lib/mock-data";
-
-// ── Notification icon mapping ─────────────────────────────────────────────────
-
-const notifIcon: Record<
-  NotificationType,
-  { Icon: React.ComponentType<{ className?: string }>; tone: string }
-> = {
-  NEW_TESTIMONIAL: {
-    Icon: MessageSquareTextIcon,
-    tone: "text-brand bg-brand/12",
-  },
-  TESTIMONIAL_FLAGGED: {
-    Icon: ShieldAlertIcon,
-    tone: "text-warning bg-warning/15",
-  },
-  TESTIMONIAL_APPROVED: {
-    Icon: CircleCheckIcon,
-    tone: "text-success bg-success/12",
-  },
-  TESTIMONIAL_REJECTED: {
-    Icon: ShieldAlertIcon,
-    tone: "text-destructive bg-destructive/10",
-  },
-  SECURITY_ALERT: {
-    Icon: ShieldAlertIcon,
-    tone: "text-destructive bg-destructive/10",
-  },
-};
+  formatNotificationTime,
+  notificationIcon,
+  unreadNotificationLabel,
+} from "@/components/notifications/notification-utils";
 
 // ── Notification bell ──────────────────────────────────────────────────────────
 
 export function NotificationBell() {
-  const unread = getUnreadNotificationCount();
-  const recent = [...MOCK_NOTIFICATIONS]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, 5);
+  const notificationsQuery = useNotificationsList({ pageSize: 5 });
+  const unreadQuery = useUnreadNotificationCount();
+  const markRead = useMarkNotificationRead();
+  const unread = unreadQuery.data?.count ?? 0;
+  const recent = notificationsQuery.data?.items ?? [];
 
   return (
     <DropdownMenu>
@@ -67,9 +39,7 @@ export function NotificationBell() {
           variant="ghost"
           size="icon-sm"
           className="relative text-muted-foreground hover:text-foreground"
-          aria-label={
-            unread > 0 ? `${unread} unread notifications` : "Notifications"
-          }
+          aria-label={unreadNotificationLabel(unread)}
         >
           <BellIcon className="size-4" />
           {unread > 0 && (
@@ -99,11 +69,14 @@ export function NotificationBell() {
         ) : (
           <ul className="max-h-[360px] divide-y divide-border/60 overflow-y-auto">
             {recent.map((n) => {
-              const cfg = notifIcon[n.type];
+              const cfg = notificationIcon[n.type];
               return (
                 <li key={n.id}>
                   <Link
                     href={n.link ?? "#"}
+                    onClick={() => {
+                      if (!n.isRead) markRead.mutate(n.id);
+                    }}
                     className="flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-muted/50"
                   >
                     <span
@@ -130,7 +103,7 @@ export function NotificationBell() {
                         {n.message}
                       </p>
                       <p className="mt-1 text-[10px] tabular-nums text-muted-foreground/70">
-                        {timeAgo(n.createdAt)}
+                        {formatNotificationTime(n.createdAt)}
                       </p>
                     </div>
                   </Link>
@@ -142,7 +115,7 @@ export function NotificationBell() {
         <DropdownMenuSeparator className="m-0" />
         <div className="p-1.5">
           <DropdownMenuItem asChild className="justify-center text-xs">
-            <Link href="/notifications">View all notifications</Link>
+            <Link href="/account/notifications">View all notifications</Link>
           </DropdownMenuItem>
         </div>
       </DropdownMenuContent>
