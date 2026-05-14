@@ -33,16 +33,21 @@ The following items from the original "UI Rework Skipped" list have been complet
 - **Page-level identity**: All 10 `[slug]` server pages now use `serverFetchProjectBySlug` instead of `getProjectBySlug`. No server component imports `mock-data.ts`.
 - **Shared utilities**: `timeAgo`, `PROJECT_TYPE_LABELS`, `MODERATION_STATUS_LABELS` centralized in `lib/format.ts`. All `components/` consumers updated.
 
-## UI Rework Still Needed (Phase 2)
+## Phase 2 Completion (2026-05-15)
 
-The following surfaces still depend on mock-data or mock-shaped component props at the **component** level. Server pages pass `V2ProjectDTO` via `as unknown as MockProject` casts.
+- **TestimonialsInbox**: Refactored to slug-only boundary per Codex guidance. Accepts only `slug`, derives `projectId`, `_count.testimonials`, `_count.pendingModeration`, and `collectionUrl` via `useProject(slug)` internally. Guards rendering until `project.id` exists. Note: `TestimonialsClient` list/detail components still use `MockTestimonial` and legacy `apiGetTestimonials` — full field-level migration is follow-up work.
+- **SettingsClient**: Adapted to `V2ProjectDTO` directly. Added `normalizeProject()` helper for stable nullable field normalization (`description ?? ""`, `websiteUrl ?? ""`, `socialLinks ?? {}`, `tags ?? []`, `profanityFilterLevel ?? "OFF"`). Added `recordToSocialLinks`/`socialLinksToRecord` converters between flat API record and rich UI `SocialLinks` type. Wired `useUpdateProject` and `useDeleteProject` mutations.
+
+## Remaining Follow-Up Work
+
+The following surfaces still depend on mock-data or mock-shaped component props at the **component** level.
 
 | Area | Current mock dependency | Why deferred |
 | --- | --- | --- |
-| Testimonials inbox/list/detail | `apps/web_v2/components/testimonials/*`, `apps/web_v2/hooks/use-testimonial-moderation.ts` | Components depend on `MockTestimonial` and older status/action helpers. Moving to `V2TestimonialDTO` needs component-level prop and moderation-flow changes. Awaiting Codex consultation on field mapping. |
-| Analytics dashboard | `apps/web_v2/components/analytics/analytics-dashboard.tsx` | Dashboard computes mock time series locally. The new `useAnalyticsSummary` hook is ready, but chart/data mapping is UI work. |
-| Widget studio internals | `apps/web_v2/components/widgets/studio/*`, `apps/web_v2/components/widgets/preview-renderers/*` | Widget previews use `MockProject`/`MockTestimonial` in local draft assumptions. Typed widget/draft hooks exist, but store and preview props need a separate pass. |
-| Project settings form | `apps/web_v2/components/settings/settings-client.tsx` | The settings client deeply uses `MockProject`, `SocialLinks`, `ProjectVisibility` types. Converting requires form-state and permission-display changes. |
+| Testimonials list/detail components | `apps/web_v2/components/testimonials/testimonials-client.tsx`, `testimonial-row.tsx`, `testimonial-detail.tsx`, `use-testimonial-moderation.ts` | Use `MockTestimonial`, `apiGetTestimonials`, `apiApproveTestimonial`, `apiRejectTestimonial`. Needs component-level prop changes to use V2 testimonial hooks. |
+| Analytics dashboard | `apps/web_v2/components/analytics/analytics-dashboard.tsx` | Dashboard computes mock time series locally. The `useAnalyticsSummary` hook is ready, but chart/data mapping is UI work. |
+| Widget studio internals | `apps/web_v2/components/widgets/studio/*`, `apps/web_v2/components/widgets/preview-renderers/*` | Widget previews use `MockProject`/`MockTestimonial` in local draft assumptions. Page-level identity is wired; full studio persistence is out of scope per Codex. |
+| Billing | All billing surfaces | Blocked on source-of-truth decision (DB/Razorpay/provider-sync). Do not touch. |
 
 Surfaces with no existing first-class page yet:
 
@@ -55,4 +60,4 @@ Surfaces with no existing first-class page yet:
 
 ## Next Safe Step
 
-API keys and notifications are now fully live. The next safest surface to wire is **analytics** (the `useAnalyticsSummary` hook exists, and chart mapping is bounded). After that, the **testimonials** components can be migrated once Codex confirms the `MockTestimonial` → `V2TestimonialDTO` field mapping. Settings should be last due to the deep form-state coupling.
+Testimonials inbox and settings are now live-wired. The next safest surface is **analytics dashboard** (`useAnalyticsSummary` hook is ready, chart mapping is bounded). After that, the **testimonial list/detail** components can be migrated to V2 hooks. Widget studio internals and billing remain deliberately out of scope.
