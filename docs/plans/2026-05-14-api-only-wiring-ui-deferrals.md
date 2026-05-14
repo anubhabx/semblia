@@ -25,18 +25,24 @@ This pass continues the `web_v2` API wiring without changing UI pages, layout, v
 - The bell reads `useNotificationsList({ pageSize: 5 })` plus `useUnreadNotificationCount()` and marks unread linked notifications through `useMarkNotificationRead()`.
 - The account notifications page renders a live notification inbox with `useNotificationsList({ pageSize: 20 })`, unread count, notification preferences read status, `useMarkNotificationRead()`, and `useMarkAllNotificationsRead()`.
 
-## UI Rework Skipped
+## Phase 1 Completion (2026-05-14)
 
-The following surfaces still depend on mock-data or mock-shaped component props. They should be adapted in a dedicated UI pass, not as part of this API-only wiring slice.
+The following items from the original "UI Rework Skipped" list have been completed:
 
-| Area | Current mock dependency | Why skipped |
+- **API keys**: All 4 components (`api-keys-client.tsx`, `api-key-list-item.tsx`, `api-key-detail-client.tsx`, `create-key-dialog.tsx`) fully rewritten to use `V2ApiKeyDTO`, `useApiKeysList`, `useRevokeApiKey`, `useRotateApiKey`, `useCreateApiKey`, and `useApiKeyEvents`. Legacy `use-api-keys.ts` has no remaining consumers.
+- **Page-level identity**: All 10 `[slug]` server pages now use `serverFetchProjectBySlug` instead of `getProjectBySlug`. No server component imports `mock-data.ts`.
+- **Shared utilities**: `timeAgo`, `PROJECT_TYPE_LABELS`, `MODERATION_STATUS_LABELS` centralized in `lib/format.ts`. All `components/` consumers updated.
+
+## UI Rework Still Needed (Phase 2)
+
+The following surfaces still depend on mock-data or mock-shaped component props at the **component** level. Server pages pass `V2ProjectDTO` via `as unknown as MockProject` casts.
+
+| Area | Current mock dependency | Why deferred |
 | --- | --- | --- |
-| API keys | `apps/web_v2/hooks/use-api-keys.ts`, `apps/web_v2/components/api-keys/*`, `apps/web_v2/app/(app)/projects/[slug]/api-keys/**` | Existing UI expects `MockApiKey`, local lifecycle events, and plaintext handling that need a UX-safe one-time-secret adaptation. Typed credential hooks now exist under `hooks/api/use-credentials-api.ts`. |
-| Testimonials inbox/list/detail | `apps/web_v2/components/testimonials/*`, `apps/web_v2/app/(app)/projects/[slug]/testimonials/**`, `apps/web_v2/hooks/use-testimonial-moderation.ts` | Components depend on `MockTestimonial` and older status/action helpers. Moving to `V2TestimonialDTO` needs component-level prop and moderation-flow changes. |
-| Analytics dashboard | `apps/web_v2/components/analytics/analytics-dashboard.tsx`, `apps/web_v2/app/(app)/projects/[slug]/analytics/page.tsx` | Dashboard computes mock time series and project stats locally. The new `useAnalyticsSummary` hook is ready, but chart/data mapping is UI work. |
-| Forms/collection pages | `apps/web_v2/app/(app)/projects/[slug]/collect/**` | Pages still resolve project identity from `getProjectBySlug`. Wiring forms/drafts requires page and studio-state adaptation. |
-| Widgets and widget studio | `apps/web_v2/app/(app)/projects/[slug]/widgets/**`, `apps/web_v2/components/widgets/**` | Widget previews and studio state use `MockProject`/`MockTestimonial` and local draft assumptions. Typed widget and draft hooks already exist, but the store and preview props need a separate pass. |
-| Project settings | `apps/web_v2/app/(app)/projects/[slug]/settings/page.tsx`, `apps/web_v2/components/settings/settings-client.tsx` | The settings client still accepts `MockProject`; converting it requires form-state and permission-display changes. |
+| Testimonials inbox/list/detail | `apps/web_v2/components/testimonials/*`, `apps/web_v2/hooks/use-testimonial-moderation.ts` | Components depend on `MockTestimonial` and older status/action helpers. Moving to `V2TestimonialDTO` needs component-level prop and moderation-flow changes. Awaiting Codex consultation on field mapping. |
+| Analytics dashboard | `apps/web_v2/components/analytics/analytics-dashboard.tsx` | Dashboard computes mock time series locally. The new `useAnalyticsSummary` hook is ready, but chart/data mapping is UI work. |
+| Widget studio internals | `apps/web_v2/components/widgets/studio/*`, `apps/web_v2/components/widgets/preview-renderers/*` | Widget previews use `MockProject`/`MockTestimonial` in local draft assumptions. Typed widget/draft hooks exist, but store and preview props need a separate pass. |
+| Project settings form | `apps/web_v2/components/settings/settings-client.tsx` | The settings client deeply uses `MockProject`, `SocialLinks`, `ProjectVisibility` types. Converting requires form-state and permission-display changes. |
 
 Surfaces with no existing first-class page yet:
 
@@ -49,4 +55,4 @@ Surfaces with no existing first-class page yet:
 
 ## Next Safe Step
 
-Use the new typed hooks to replace one UI area at a time. Notifications are now live. The next safest existing surfaces are API keys or analytics only after their mock-shaped props are adapted deliberately; action audit/export/webhook/integration delivery views need product-owned UI surfaces before they can be wired.
+API keys and notifications are now fully live. The next safest surface to wire is **analytics** (the `useAnalyticsSummary` hook exists, and chart mapping is bounded). After that, the **testimonials** components can be migrated once Codex confirms the `MockTestimonial` → `V2TestimonialDTO` field mapping. Settings should be last due to the deep form-state coupling.

@@ -115,7 +115,7 @@ export function StepRail({ current, onStepClick }: StepRailProps) {
                           ? "text-foreground"
                           : isDone
                             ? "text-foreground/40"
-                            : "text-foreground/18",
+                            : "text-foreground/18", 
                       )}
                     >
                       {step.title}
