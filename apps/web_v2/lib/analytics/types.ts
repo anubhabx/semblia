@@ -143,7 +143,7 @@ export interface ApiKeyUsageData {
   lastUsedAt: Date | null;
   isActive: boolean;
   series: number[]; // daily usage series for sparkline
-  keyType: import("@/lib/mock-data").ApiKeyType;
+  keyType: string;
 }
 
 export interface DeviceSplit {

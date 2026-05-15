@@ -27,20 +27,17 @@ import { ApiUsageCard } from "./api-usage-card";
 import { AlertsRail } from "./alerts-rail";
 import { SubmissionHeatmap } from "./submission-heatmap";
 import { DeviceSplitCard } from "./device-split-card";
-import { buildDashboardData } from "@/lib/analytics/aggregate";
-import { resolveRange } from "@/lib/analytics/range";
-import {
-  getProjectBySlug,
-  getTestimonialsByProject,
-  getWidgetsByProject,
-  getApiKeysByProject,
-} from "@/lib/mock-data";
+import { dtoToDashboardData } from "@/lib/analytics/dto-adapter";
+import { resolveRange, getRangeDays } from "@/lib/analytics/range";
 import type {
   AnalyticsRange,
   AnalyticsTab,
   AnalyticsMetric,
   AnalyticsCompare,
+  DashboardData,
 } from "@/lib/analytics/types";
+import { useAnalyticsDashboard, useProject } from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -50,6 +47,7 @@ import {
   type FilterPillOption,
   PageTabs,
   type PageTabOption,
+  RefreshingDataBadge,
 } from "@/components/shared";
 
 // ── Tab config ─────────────────────────────────────────────────────────────────
@@ -123,17 +121,27 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
     [range, customFrom, customTo],
   );
 
-  const data = useMemo(() => {
-    const project = getProjectBySlug(projectSlug);
-    if (!project) return null;
-    const testimonials = getTestimonialsByProject(project.id);
-    const widgets = getWidgetsByProject(project.id);
-    const apiKeys = getApiKeysByProject(project.id);
-    return {
-      project,
-      ...buildDashboardData(project, testimonials, widgets, apiKeys, dateRange),
-    };
-  }, [projectSlug, dateRange]);
+  const days = useMemo(
+    () => Math.min(Math.max(getRangeDays(dateRange), 1), 365),
+    [dateRange],
+  );
+
+  const projectQuery = useProject(projectSlug);
+  const dashboardQuery = useAnalyticsDashboard(projectSlug, {
+    days,
+    compare,
+  });
+
+  const dashboardState = useLiveQueryState(dashboardQuery);
+
+  const data: (DashboardData & { project: { name: string } }) | null =
+    useMemo(() => {
+      if (!dashboardQuery.data || !projectQuery.data) return null;
+      return {
+        project: { name: projectQuery.data.name },
+        ...dtoToDashboardData(dashboardQuery.data),
+      };
+    }, [dashboardQuery.data, projectQuery.data]);
 
   function setTab(t: AnalyticsTab) {
     startTransition(() => push({ tab: t }));
@@ -180,7 +188,12 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Analytics"
-        description={data.project.name}
+        description={
+          <span className="inline-flex items-center gap-2">
+            {data.project.name}
+            <RefreshingDataBadge show={dashboardState.isBackgroundRefreshing} />
+          </span>
+        }
         actions={
           <>
             <Button
@@ -300,7 +313,7 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
 // ── Tab components ─────────────────────────────────────────────────────────────
 
 interface TabProps {
-  data: ReturnType<typeof buildDashboardData>;
+  data: DashboardData;
   projectSlug: string;
   showComparison?: boolean;
 }

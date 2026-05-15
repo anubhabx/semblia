@@ -34,6 +34,7 @@ import type {
   V2NotificationPreferencesDTO,
   V2NotificationType,
   V2AnalyticsSummaryDTO,
+  V2AnalyticsDashboardDTO,
   V2AnalyticsEventAckDTO,
   V2PublicSurfaceFeature,
   V2PublicSurfaceResolutionDTO,
@@ -405,6 +406,23 @@ export function fetchAnalyticsSummary(
 ) {
   return api<V2AnalyticsSummaryDTO>(
     `/projects/${encodeURIComponent(slug)}/analytics/summary`,
+    token,
+    { params: params as Record<string, string | number> },
+  );
+}
+
+export type AnalyticsDashboardParams = {
+  days?: number;
+  compare?: "prev" | "none";
+};
+
+export function fetchAnalyticsDashboard(
+  token: string | null,
+  slug: string,
+  params?: AnalyticsDashboardParams,
+) {
+  return api<V2AnalyticsDashboardDTO>(
+    `/projects/${encodeURIComponent(slug)}/analytics/dashboard`,
     token,
     { params: params as Record<string, string | number> },
   );

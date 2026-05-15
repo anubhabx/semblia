@@ -85,6 +85,7 @@ export {
 
 export {
   useAnalyticsSummary,
+  useAnalyticsDashboard,
   useRecordFormViewEvent,
   useRecordWidgetLoadEvent,
   useRecordTestimonialImpressionEvent,
