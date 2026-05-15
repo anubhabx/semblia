@@ -20,13 +20,5 @@ export default async function TestimonialDetailPageRoute(props: {
   const project = await serverFetchProjectBySlug(slug);
   if (!project) notFound();
 
-  // _detail-page.tsx expects { testimonial: MockTestimonial; projectSlug }
-  // The testimonial is loaded client-side via the mock api layer.
-  // Full migration to V2 hooks is deferred to Phase 2.
-  // For now, we fetch it via the legacy api.ts layer inline.
-  const { apiGetTestimonial } = await import("@/lib/api");
-  const testimonial = await apiGetTestimonial(project.id, id);
-  if (!testimonial) notFound();
-
-  return <TestimonialDetailPage testimonial={testimonial} projectSlug={slug} />;
+  return <TestimonialDetailPage slug={slug} testimonialId={id} />;
 }

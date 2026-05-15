@@ -1,56 +1,41 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { TestimonialDetail } from "@/components/testimonials/testimonial-detail";
-import {
-  apiApproveTestimonial,
-  apiRejectTestimonial,
-  apiPublishTestimonial,
-} from "@/lib/api";
-import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
+import { useTestimonial } from "@/hooks/api";
+import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
+import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 
 interface Props {
-  testimonial: MockTestimonial;
-  projectSlug: string;
+  slug: string;
+  testimonialId: string;
 }
 
-export function TestimonialDetailPage({ testimonial, projectSlug }: Props) {
+export function TestimonialDetailPage({ slug, testimonialId }: Props) {
   const router = useRouter();
-  const [t, setT] = React.useState(testimonial);
+  const detailQuery = useTestimonial(slug, testimonialId);
 
-  const handleApprove = React.useCallback((id: string) => {
-    apiApproveTestimonial(id);
-    setT((prev) => ({
-      ...prev,
-      moderationStatus: "APPROVED" as ModerationStatus,
-      isApproved: true,
-    }));
-  }, []);
-
-  const handleReject = React.useCallback((id: string) => {
-    apiRejectTestimonial(id);
-    setT((prev) => ({
-      ...prev,
-      moderationStatus: "REJECTED" as ModerationStatus,
-    }));
-  }, []);
-
-  const handleTogglePublish = React.useCallback(
-    (id: string, published: boolean) => {
-      apiPublishTestimonial(id, published);
-      setT((prev) => ({ ...prev, isPublished: published }));
-    },
-    [],
+  const testimonial = React.useMemo(
+    () => (detailQuery.data ? dtoToMockTestimonial(detailQuery.data) : null),
+    [detailQuery.data],
   );
+
+  const { handleApprove, handleReject, handleTogglePublish } =
+    useTestimonialModeration(slug);
+
+  if (detailQuery.isError) {
+    notFound();
+  }
 
   return (
     <div className="flex flex-1 flex-col">
       <TestimonialDetail
-        testimonial={t}
+        testimonial={testimonial}
+        loading={detailQuery.isPending}
         variant="page"
         showBack
-        onBack={() => router.push(`/projects/${projectSlug}/testimonials`)}
+        onBack={() => router.push(`/projects/${slug}/testimonials`)}
         onApprove={handleApprove}
         onReject={handleReject}
         onTogglePublish={handleTogglePublish}

@@ -8,11 +8,10 @@ import { TestimonialDetail } from "@/components/testimonials/testimonial-detail"
 import { KbdShortcutsDialog } from "@/components/kbd-shortcuts-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { apiGetTestimonial } from "@/lib/api";
-import type { MockTestimonial } from "@/lib/mock-data";
+import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 import { cn } from "@/lib/utils";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
-import { useProject } from "@/hooks/api";
+import { useProject, useTestimonial } from "@/hooks/api";
 import { getProjectCollectionUrl } from "@/lib/project-utils";
 import { PageHeader, HeaderSep, PageTabs } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,22 +43,28 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
   const [status, setStatus] = React.useState<StatusFilter>("ALL");
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [detail, setDetail] = React.useState<MockTestimonial | null>(null);
-  const [detailLoading, setDetailLoading] = React.useState(false);
 
   // Track closing state for exit animation
   const [panelClosing, setPanelClosing] = React.useState(false);
   // Track whether panel should render (stays true during exit animation)
   const [panelVisible, setPanelVisible] = React.useState(false);
 
-  // Moderation actions (optimistic)
+  // Detail query — only fetches when a row is selected
+  const detailQuery = useTestimonial(slug, selectedId ?? "");
+  const detail = React.useMemo(
+    () => (detailQuery.data ? dtoToMockTestimonial(detailQuery.data) : null),
+    [detailQuery.data],
+  );
+  const detailLoading = !!selectedId && detailQuery.isPending;
+
+  // Moderation actions — invalidate cache on success
   const {
     handleApprove,
     handleReject,
     handleTogglePublish,
     handleInlineApprove,
     handleInlineReject,
-  } = useTestimonialModeration(detail, setDetail);
+  } = useTestimonialModeration(slug);
 
   // Keyboard shortcut dialog
   const [kbdOpen, setKbdOpen] = React.useState(false);
@@ -69,29 +74,6 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
   const handleItemsChange = React.useCallback((ids: string[]) => {
     setVisibleIds(ids);
   }, []);
-
-  // ── Fetch detail when selection changes ──
-  React.useEffect(() => {
-    if (!selectedId || !projectId) {
-      return;
-    }
-
-    let cancelled = false;
-    // Clear stale detail immediately so user sees loading skeleton
-    setDetail(null);
-    setDetailLoading(true);
-
-    apiGetTestimonial(projectId, selectedId).then((data) => {
-      if (!cancelled) {
-        setDetail(data);
-        setDetailLoading(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, selectedId]);
 
   // Sync panel visibility with selectedId
   React.useEffect(() => {
@@ -118,7 +100,6 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
     // Wait for exit animation to complete before unmounting
     setTimeout(() => {
       setSelectedId(null);
-      setDetail(null);
       setPanelClosing(false);
       setPanelVisible(false);
     }, 200);
@@ -128,7 +109,6 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
   React.useEffect(() => {
     if (!isDesktop) {
       setSelectedId(null);
-      setDetail(null);
       setPanelVisible(false);
     }
   }, [isDesktop]);
@@ -277,8 +257,7 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
         {/* List column — independently scrollable */}
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
           <TestimonialsClient
-            projectId={projectId}
-            projectSlug={slug}
+            slug={slug}
             collectionUrl={collectionUrl}
             status={status}
             selectedId={selectedId}

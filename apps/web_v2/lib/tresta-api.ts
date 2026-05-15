@@ -531,7 +531,7 @@ export function fetchTestimonials(
   params?: {
     page?: number;
     pageSize?: number;
-    moderationStatus?: string;
+    status?: string;
     type?: string;
     search?: string;
     sort?: string;
@@ -581,7 +581,7 @@ export function publishTestimonial(
   token: string | null,
   slug: string,
   testimonialId: string,
-  body: { isPublished: boolean },
+  body: { published: boolean },
 ) {
   return patch<V2TestimonialDTO>(
     `/projects/${encodeURIComponent(slug)}/testimonials/${encodeURIComponent(testimonialId)}/publish`,

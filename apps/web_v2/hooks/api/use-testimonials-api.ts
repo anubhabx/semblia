@@ -20,7 +20,7 @@ export function useTestimonialsList(
   params?: {
     page?: number;
     pageSize?: number;
-    moderationStatus?: string;
+    status?: string;
     type?: string;
     search?: string;
     sort?: string;
@@ -101,13 +101,13 @@ export function usePublishTestimonial(slug: string) {
   return useMutation({
     mutationFn: async ({
       testimonialId,
-      isPublished,
+      published,
     }: {
       testimonialId: string;
-      isPublished: boolean;
+      published: boolean;
     }) => {
       const token = await getToken();
-      return publishTestimonial(token, slug, testimonialId, { isPublished });
+      return publishTestimonial(token, slug, testimonialId, { published });
     },
     onSuccess: (_data, { testimonialId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.testimonials.list(slug) });

@@ -1,92 +1,47 @@
 import * as React from "react";
 import {
-  apiApproveTestimonial,
-  apiRejectTestimonial,
-  apiPublishTestimonial,
-} from "@/lib/api";
-import type { MockTestimonial, ModerationStatus } from "@/lib/mock-data";
+  useApproveTestimonial,
+  useRejectTestimonial,
+  usePublishTestimonial,
+} from "@/hooks/api";
 
 /**
- * Encapsulates optimistic moderation updates for a testimonial detail view.
- * Returns stable callbacks for approve, reject, toggle-publish, and
- * inline list actions — all performing optimistic local state updates.
+ * Encapsulates moderation actions for a testimonial detail view. Mutations
+ * invalidate the list and detail queries on success, so the UI reflects the
+ * new server state on the next refetch. Inline list actions reuse the same
+ * mutations so the cache stays consistent across surfaces.
  */
-export function useTestimonialModeration(
-  detail: MockTestimonial | null,
-  setDetail: React.Dispatch<React.SetStateAction<MockTestimonial | null>>,
-) {
+export function useTestimonialModeration(slug: string) {
+  const approveMutation = useApproveTestimonial(slug);
+  const rejectMutation = useRejectTestimonial(slug);
+  const publishMutation = usePublishTestimonial(slug);
+
   const handleApprove = React.useCallback(
     (id: string) => {
-      apiApproveTestimonial(id);
-      setDetail((prev) =>
-        prev && prev.id === id
-          ? {
-              ...prev,
-              moderationStatus: "APPROVED" as ModerationStatus,
-              isApproved: true,
-            }
-          : prev,
-      );
+      approveMutation.mutate(id);
     },
-    [setDetail],
+    [approveMutation],
   );
 
   const handleReject = React.useCallback(
     (id: string) => {
-      apiRejectTestimonial(id);
-      setDetail((prev) =>
-        prev && prev.id === id
-          ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-          : prev,
-      );
+      rejectMutation.mutate(id);
     },
-    [setDetail],
+    [rejectMutation],
   );
 
   const handleTogglePublish = React.useCallback(
     (id: string, published: boolean) => {
-      apiPublishTestimonial(id, published);
-      setDetail((prev) =>
-        prev && prev.id === id ? { ...prev, isPublished: published } : prev,
-      );
+      publishMutation.mutate({ testimonialId: id, published });
     },
-    [setDetail],
-  );
-
-  // Inline actions from list (optimistic) — same logic, reused
-  const handleInlineApprove = React.useCallback(
-    (id: string) => {
-      apiApproveTestimonial(id);
-      setDetail((prev) =>
-        prev && prev.id === id
-          ? {
-              ...prev,
-              moderationStatus: "APPROVED" as ModerationStatus,
-              isApproved: true,
-            }
-          : prev,
-      );
-    },
-    [setDetail],
-  );
-
-  const handleInlineReject = React.useCallback(
-    (id: string) => {
-      apiRejectTestimonial(id);
-      setDetail((prev) =>
-        prev && prev.id === id
-          ? { ...prev, moderationStatus: "REJECTED" as ModerationStatus }
-          : prev,
-      );
-    },
-    [setDetail],
+    [publishMutation],
   );
 
   return {
     handleApprove,
     handleReject,
     handleTogglePublish,
-    handleInlineApprove,
-    handleInlineReject,
+    handleInlineApprove: handleApprove,
+    handleInlineReject: handleReject,
   };
 }

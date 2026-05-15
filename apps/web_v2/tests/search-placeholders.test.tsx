@@ -2,8 +2,12 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { V2PaginatedResponse, V2ProjectDTO } from "@workspace/types";
-import { fetchProjects } from "@/lib/tresta-api";
+import type {
+  V2PaginatedResponse,
+  V2ProjectDTO,
+  V2TestimonialDTO,
+} from "@workspace/types";
+import { fetchProjects, fetchTestimonials } from "@/lib/tresta-api";
 import { ProjectsClient } from "@/components/projects/projects-client";
 import { TestimonialsClient } from "@/components/testimonials/testimonials-client";
 
@@ -16,26 +20,8 @@ vi.mock("@clerk/nextjs", () => ({
 
 vi.mock("@/lib/tresta-api", () => ({
   fetchProjects: vi.fn(),
+  fetchTestimonials: vi.fn(),
 }));
-
-vi.mock("@/lib/api", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-
-  return {
-    ...actual,
-    apiGetTestimonials: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 8,
-      totalPages: 1,
-      hasNext: false,
-      hasPrev: false,
-    }),
-    apiApproveTestimonial: vi.fn().mockResolvedValue(undefined),
-    apiRejectTestimonial: vi.fn().mockResolvedValue(undefined),
-  };
-});
 
 function makeApiProject(overrides: Partial<V2ProjectDTO> = {}): V2ProjectDTO {
   return {
@@ -114,7 +100,18 @@ describe("search placeholders", () => {
   });
 
   it("renders the testimonials search placeholder with an ellipsis glyph", async () => {
-    render(<TestimonialsClient projectId="launchpad" status="ALL" />);
+    const response: V2PaginatedResponse<V2TestimonialDTO> = {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 8,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false,
+    };
+    vi.mocked(fetchTestimonials).mockResolvedValue(response);
+
+    renderWithQuery(<TestimonialsClient slug="launchpad" status="ALL" />);
 
     // Empty-state copy without a collection URL — used here as a sync point
     // for the async "no items" branch.

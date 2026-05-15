@@ -8,12 +8,12 @@ import {
 import { Button } from "@/components/ui/button";
 
 import {
-  apiGetTestimonials,
-  apiApproveTestimonial,
-  apiRejectTestimonial,
-  type PaginatedResponse,
-} from "@/lib/api";
-import { type MockTestimonial } from "@/lib/mock-data";
+  useTestimonialsList,
+  useApproveTestimonial,
+  useRejectTestimonial,
+} from "@/hooks/api";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
+import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 import { PageBody } from "@/components/shared";
 import { useDebounce } from "@/hooks/use-debounce";
 import { TestimonialRow } from "./testimonial-row";
@@ -30,8 +30,7 @@ import { cn } from "@/lib/utils";
 // ── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
-  projectId: string;
-  projectSlug?: string;
+  slug: string;
   /** Public hosted collection URL — used by the empty-state hero. */
   collectionUrl?: string;
   status: StatusFilter;
@@ -43,8 +42,7 @@ interface Props {
 }
 
 export function TestimonialsClient({
-  projectId,
-  projectSlug,
+  slug,
   collectionUrl,
   status,
   selectedId,
@@ -57,12 +55,6 @@ export function TestimonialsClient({
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
 
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [result, setResult] =
-    React.useState<PaginatedResponse<MockTestimonial> | null>(null);
-  const hasLoadedOnce = React.useRef(false);
-
   const [bulkSelected, setBulkSelected] = React.useState<Set<string>>(
     new Set(),
   );
@@ -74,38 +66,41 @@ export function TestimonialsClient({
     setPage(1);
   }, [status, sort, debouncedSearch]);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    const showSkeleton = !hasLoadedOnce.current;
-    setLoading(showSkeleton);
-    setRefreshing(!showSkeleton);
+  const listQuery = useTestimonialsList(slug, {
+    page,
+    pageSize: 8,
+    status,
+    sort,
+    search: debouncedSearch || undefined,
+  });
 
-    apiGetTestimonials(projectId, {
-      status,
-      sort,
-      search: debouncedSearch,
-      page,
-      pageSize: 8,
-    }).then((data) => {
-      if (!cancelled) {
-        hasLoadedOnce.current = true;
-        setResult(data);
-        setLoading(false);
-        setRefreshing(false);
+  const { isWaitingForLiveData, isBackgroundRefreshing } =
+    useLiveQueryState(listQuery);
+
+  const items = React.useMemo(
+    () => (listQuery.data?.items ?? []).map(dtoToMockTestimonial),
+    [listQuery.data],
+  );
+
+  const result = listQuery.data
+    ? {
+        total: listQuery.data.total,
+        page: listQuery.data.page,
+        totalPages: listQuery.data.totalPages,
+        hasNext: listQuery.data.hasNext,
+        hasPrev: listQuery.data.hasPrev,
       }
-    });
+    : null;
 
-    return () => {
-      cancelled = true;
-      setRefreshing(false);
-    };
-  }, [projectId, status, sort, debouncedSearch, page]);
-
-  const items = React.useMemo(() => result?.items ?? [], [result]);
+  const loading = isWaitingForLiveData;
+  const refreshing = isBackgroundRefreshing;
 
   React.useEffect(() => {
     onItemsChange?.(items.map((t) => t.id));
   }, [items, onItemsChange]);
+
+  const approveMutation = useApproveTestimonial(slug);
+  const rejectMutation = useRejectTestimonial(slug);
 
   const handleBulkToggle = React.useCallback((id: string) => {
     setBulkSelected((prev) => {
@@ -118,19 +113,19 @@ export function TestimonialsClient({
 
   const handleBulkApprove = React.useCallback(() => {
     bulkSelected.forEach((id) => {
-      apiApproveTestimonial(id);
+      approveMutation.mutate(id);
       onInlineApprove?.(id);
     });
     setBulkSelected(new Set());
-  }, [bulkSelected, onInlineApprove]);
+  }, [bulkSelected, approveMutation, onInlineApprove]);
 
   const handleBulkReject = React.useCallback(() => {
     bulkSelected.forEach((id) => {
-      apiRejectTestimonial(id);
+      rejectMutation.mutate(id);
       onInlineReject?.(id);
     });
     setBulkSelected(new Set());
-  }, [bulkSelected, onInlineReject]);
+  }, [bulkSelected, rejectMutation, onInlineReject]);
 
   const handleBulkCancel = React.useCallback(() => {
     setBulkSelected(new Set());
@@ -176,7 +171,13 @@ export function TestimonialsClient({
         />
       )}
 
-      <PageBody padding="bare" className={cn("flex-1", items.length === 0 && !loading && "flex flex-col")}>
+      <PageBody
+        padding="bare"
+        className={cn(
+          "flex-1",
+          items.length === 0 && !loading && "flex flex-col",
+        )}
+      >
         {loading ? (
           <div className="divide-y divide-border">
             {[0, 1, 2, 3, 4].map((i) => (
@@ -187,7 +188,7 @@ export function TestimonialsClient({
           <TestimonialEmptyState
             filter={status}
             collectionUrl={collectionUrl}
-            projectSlug={projectSlug}
+            projectSlug={slug}
           />
         ) : (
           <div className="divide-y divide-border list-content-enter">

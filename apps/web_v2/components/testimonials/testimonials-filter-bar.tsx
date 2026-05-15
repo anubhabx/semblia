@@ -19,8 +19,11 @@ import {
   SearchField,
 } from "@/components/shared";
 import { type ModerationStatus } from "@/lib/mock-data";
-import type { PaginatedResponse } from "@/lib/api";
-import type { MockTestimonial } from "@/lib/mock-data";
+
+// ── Compact result summary the filter bar needs from its consumer ─────────────
+export interface FilterBarResultSummary {
+  total: number;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +54,7 @@ interface FilterBarProps {
   setSort: (s: SortOption) => void;
   search: string;
   setSearch: (s: string) => void;
-  result: PaginatedResponse<MockTestimonial> | null;
+  result: FilterBarResultSummary | null;
   hasActionable: boolean;
   bulkMode: boolean;
   refreshing?: boolean;
