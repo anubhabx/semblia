@@ -25,6 +25,7 @@ import {
   type StatusFilter,
   type SortOption,
 } from "./testimonials-filter-bar";
+import { cn } from "@/lib/utils";
 
 // ── Main component ───────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ export function TestimonialsClient({
         />
       )}
 
-      <PageBody padding="bare" className="flex-1">
+      <PageBody padding="bare" className={cn("flex-1", items.length === 0 && !loading && "flex flex-col")}>
         {loading ? (
           <div className="divide-y divide-border">
             {[0, 1, 2, 3, 4].map((i) => (
