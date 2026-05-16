@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FormConfigEntry } from "@/lib/collect/studio-types";
+import { dtoToFormConfigEntry } from "@/lib/collect/dto-adapter";
 import { Button } from "@/components/ui/button";
 import {
   Browsers as BrowsersIcon,
@@ -13,11 +15,21 @@ import {
 import {
   PageBody,
   PageHeader,
+  RefreshingDataBadge,
   ViewToggle,
   EmptyKindPicker,
   type EmptyKindOption,
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
+import {
+  useFormsList,
+  useCreateForm,
+  useDeleteForm,
+  useDuplicateForm,
+} from "@/hooks/api";
+import { queryKeys } from "@/hooks/api/keys";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
+import { updateForm } from "@/lib/tresta-api";
 
 import { FormItem, FormItemSkeleton } from "./form-item";
 import { FormItemCard, FormItemCardSkeleton } from "./form-item-card";
@@ -38,8 +50,6 @@ function normalizeEntryMetrics(entry: FormConfigEntry): FormConfigEntry {
         : null,
   };
 }
-
-const EMPTY_FORMS: FormConfigEntry[] = [];
 
 type CollectKind = "single" | "stepped";
 
@@ -74,34 +84,61 @@ const EMPTY_KINDS: EmptyKindOption<CollectKind>[] = [
 
 /* ─── Main form config list ───────────────────────────────────────────────── */
 
+interface UpdateInput {
+  formId: string;
+  body: {
+    name?: string;
+    description?: string;
+    isActive?: boolean;
+    abWeight?: number;
+    config?: unknown;
+  };
+}
+
+function useUpdateFormById(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ formId, body }: UpdateInput) => {
+      const token = await getToken();
+      return updateForm(token, slug, formId, body as Record<string, unknown>);
+    },
+    onSuccess: (data, { formId }) => {
+      qc.setQueryData(queryKeys.forms.detail(slug, formId), data);
+      qc.invalidateQueries({ queryKey: queryKeys.forms.list(slug) });
+    },
+  });
+}
+
 export function FormConfigList({ slug }: { slug: string }) {
   const router = useRouter();
-  const forms = useStudioStore((s) => s.formsByProject[slug]) ?? EMPTY_FORMS;
-  const snapshots = useStudioStore((s) => s.snapshots);
-  const ensureProject = useStudioStore((s) => s.ensureProject);
-  const createForm = useStudioStore((s) => s.createForm);
-  const deleteForm = useStudioStore((s) => s.deleteForm);
-  const duplicateForm = useStudioStore((s) => s.duplicateForm);
-  const updateFormEntry = useStudioStore((s) => s.updateFormEntry);
-
-  const [hydrated, setHydrated] = React.useState(false);
   const [viewMode, setViewMode] = useViewMode("collect:view", "list");
-  const normalizedForms = React.useMemo(
-    () => forms.map(normalizeEntryMetrics),
-    [forms],
-  );
 
-  React.useEffect(() => {
-    if (forms.length === 0) {
-      ensureProject(slug);
-    }
-    setHydrated(true);
-  }, [slug, forms.length, ensureProject]);
+  const listQuery = useFormsList(slug);
+  const { isWaitingForLiveData, isBackgroundRefreshing } =
+    useLiveQueryState(listQuery);
 
-  const handleCreate = React.useCallback(() => {
-    const formId = createForm(slug);
-    router.push(`/projects/${slug}/collect/${formId}`);
-  }, [slug, createForm, router]);
+  const createMutation = useCreateForm(slug);
+  const duplicateMutation = useDuplicateForm(slug);
+  const deleteMutation = useDeleteForm(slug);
+  const updateMutation = useUpdateFormById(slug);
+
+  const normalizedForms = React.useMemo(() => {
+    const items = listQuery.data ?? [];
+    return items.map((dto) =>
+      normalizeEntryMetrics(dtoToFormConfigEntry(dto.entry)),
+    );
+  }, [listQuery.data]);
+
+  const handleCreate = React.useCallback(async () => {
+    const result = await createMutation.mutateAsync({
+      name: "Default Form",
+      description: "",
+      config: {},
+    });
+    router.push(`/projects/${slug}/collect/${result.id}`);
+  }, [slug, createMutation, router]);
 
   const handleEdit = React.useCallback(
     (formId: string) => {
@@ -112,28 +149,37 @@ export function FormConfigList({ slug }: { slug: string }) {
 
   const handleDuplicate = React.useCallback(
     (formId: string) => {
-      duplicateForm(slug, formId);
+      duplicateMutation.mutate(formId);
     },
-    [slug, duplicateForm],
+    [duplicateMutation],
   );
 
   const handleDelete = React.useCallback(
     (formId: string) => {
-      deleteForm(slug, formId);
+      deleteMutation.mutate(formId);
     },
-    [slug, deleteForm],
+    [deleteMutation],
   );
 
   const handleToggleActive = React.useCallback(
     (formId: string, isActive: boolean) => {
-      updateFormEntry(slug, formId, { isActive: !isActive });
+      updateMutation.mutate({ formId, body: { isActive: !isActive } });
     },
-    [slug, updateFormEntry],
+    [updateMutation],
+  );
+
+  const handleRename = React.useCallback(
+    (formId: string, name: string) => {
+      updateMutation.mutate({ formId, body: { name } });
+    },
+    [updateMutation],
   );
 
   const totalActiveWeight = normalizedForms
     .filter((f) => f.isActive)
     .reduce((sum, f) => sum + f.abWeight, 0);
+
+  const loading = isWaitingForLiveData;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -142,14 +188,18 @@ export function FormConfigList({ slug }: { slug: string }) {
         description="Collect testimonials and feedback from your customers."
         actions={
           normalizedForms.length > 0 ? (
-            <Button
-              size="sm"
-              className="shrink-0 gap-1.5 text-xs"
-              onClick={handleCreate}
-            >
-              <PlusIcon className="size-3.5" aria-hidden="true" />
-              Create new
-            </Button>
+            <div className="flex items-center gap-2">
+              <RefreshingDataBadge show={isBackgroundRefreshing} />
+              <Button
+                size="sm"
+                className="shrink-0 gap-1.5 text-xs"
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                <PlusIcon className="size-3.5" aria-hidden="true" />
+                Create new
+              </Button>
+            </div>
           ) : undefined
         }
         toolbar={
@@ -160,7 +210,7 @@ export function FormConfigList({ slug }: { slug: string }) {
       />
 
       <PageBody padding="bare" className="overflow-y-auto">
-        {hydrated &&
+        {!loading &&
           normalizedForms.length > 1 &&
           totalActiveWeight !== 100 &&
           totalActiveWeight > 0 && (
@@ -176,7 +226,7 @@ export function FormConfigList({ slug }: { slug: string }) {
             </div>
           )}
 
-        {!hydrated ? (
+        {loading ? (
           viewMode === "list" ? (
             <div className="divide-y divide-border">
               <FormItemSkeleton />
@@ -207,14 +257,14 @@ export function FormConfigList({ slug }: { slug: string }) {
               <FormItem
                 key={entry.id}
                 entry={entry}
-                hasDirtyDraft={isStudioDirty(snapshots[entry.id])}
+                hasDirtyDraft={false}
                 onEdit={() => handleEdit(entry.id)}
                 onDuplicate={() => handleDuplicate(entry.id)}
                 onDelete={() => handleDelete(entry.id)}
                 onToggleActive={() =>
                   handleToggleActive(entry.id, entry.isActive)
                 }
-                onRename={(name) => updateFormEntry(slug, entry.id, { name })}
+                onRename={(name) => handleRename(entry.id, name)}
               />
             ))}
           </div>
@@ -228,15 +278,15 @@ export function FormConfigList({ slug }: { slug: string }) {
               <div key={entry.id} role="listitem" className="h-full">
                 <FormItemCard
                   entry={entry}
-                  layout={snapshots[entry.id]?.draft.layout ?? null}
-                  hasDirtyDraft={isStudioDirty(snapshots[entry.id])}
+                  layout={null}
+                  hasDirtyDraft={false}
                   onEdit={() => handleEdit(entry.id)}
                   onDuplicate={() => handleDuplicate(entry.id)}
                   onDelete={() => handleDelete(entry.id)}
                   onToggleActive={() =>
                     handleToggleActive(entry.id, entry.isActive)
                   }
-                  onRename={(name) => updateFormEntry(slug, entry.id, { name })}
+                  onRename={(name) => handleRename(entry.id, name)}
                 />
               </div>
             ))}
