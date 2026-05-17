@@ -30,10 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import { timeAgo } from "@/lib/format";
-import type {
-  WidgetListEntry,
-  WidgetStudioConfig,
-} from "@/lib/widgets/widget-types";
+import type { WidgetListEntry } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { InlineName } from "@/components/collect/inline-name";
 import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
@@ -42,7 +39,7 @@ import { WidgetLayoutPreview } from "./widget-layout-preview";
 interface WidgetCardProps {
   slug: string;
   entry: WidgetListEntry;
-  config: WidgetStudioConfig;
+  wallSlug: string | null;
   hasDirtyDraft: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -73,7 +70,7 @@ function ThemeIcon({
 export const WidgetCard = React.memo(function WidgetCard({
   slug,
   entry,
-  config,
+  wallSlug,
   hasDirtyDraft,
   onDuplicate,
   onDelete,
@@ -83,9 +80,13 @@ export const WidgetCard = React.memo(function WidgetCard({
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const isWall = entry.kind === "wall";
   const editHref = `/projects/${slug}/widgets/${entry.id}`;
-  const wallUrl = isWall ? `tresta.io/wall/${config.wall.slug}` : null;
+  const wallUrl = isWall && wallSlug ? `tresta.io/wall/${wallSlug}` : null;
 
   const handleCopyShare = React.useCallback(async () => {
+    if (isWall && !wallUrl) {
+      toast.info("Open this wall in the studio to set its URL.");
+      return;
+    }
     try {
       const text = isWall
         ? `https://${wallUrl}`

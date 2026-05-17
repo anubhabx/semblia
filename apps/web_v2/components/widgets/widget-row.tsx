@@ -18,10 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import { timeAgo } from "@/lib/format";
-import type {
-  WidgetListEntry,
-  WidgetStudioConfig,
-} from "@/lib/widgets/widget-types";
+import type { WidgetListEntry } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { InlineName } from "@/components/collect/inline-name";
@@ -38,7 +35,7 @@ const LAYOUT_LABEL: Record<WidgetListEntry["layout"], string> = {
 interface WidgetRowProps {
   slug: string;
   entry: WidgetListEntry;
-  config: WidgetStudioConfig;
+  wallSlug: string | null;
   hasDirtyDraft: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -49,7 +46,7 @@ interface WidgetRowProps {
 export const WidgetRow = React.memo(function WidgetRow({
   slug,
   entry,
-  config,
+  wallSlug,
   hasDirtyDraft,
   onDuplicate,
   onDelete,
@@ -59,9 +56,13 @@ export const WidgetRow = React.memo(function WidgetRow({
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const isWall = entry.kind === "wall";
   const editHref = `/projects/${slug}/widgets/${entry.id}`;
-  const wallUrl = isWall ? `tresta.io/wall/${config.wall.slug}` : null;
+  const wallUrl = isWall && wallSlug ? `tresta.io/wall/${wallSlug}` : null;
 
   const handleCopyShare = React.useCallback(async () => {
+    if (isWall && !wallUrl) {
+      toast.info("Open this wall in the studio to set its URL.");
+      return;
+    }
     try {
       const text = isWall
         ? `https://${wallUrl}`

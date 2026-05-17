@@ -1,14 +1,9 @@
 "use client";
 
-/**
- * WidgetList — gallery page client component.
- *
- * Pulls widgets + snapshots from the studio store, ensures the project is
- * seeded, and renders the gallery grid + filter strip + empty state.
- */
-
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 // Phosphor icons now expects Icon suffixed imports. Pure "Plus" is deprecated.
 import { PlusIcon, GlobeIcon, CodeIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -19,16 +14,23 @@ import {
   HeaderSep,
   HeaderCaption,
   FilterPills as SharedFilterPills,
+  RefreshingDataBadge,
   ViewToggle,
   PageBody,
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
+import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import type { MockProject } from "@/lib/mock-data";
 import {
-  useWidgetStudioStore,
-  isWidgetDirty,
-} from "@/lib/widgets/widget-studio-store";
-import type { WidgetKind } from "@/lib/widgets/widget-types";
+  useWidgetsList,
+  useCreateWidget,
+  useDeleteWidget,
+  useDuplicateWidget,
+} from "@/hooks/api";
+import { queryKeys } from "@/hooks/api/keys";
+import { updateWidget } from "@/lib/tresta-api";
+import { dtoToWidgetListEntry } from "@/lib/widgets/dto-adapter";
+import type { WidgetKind, WidgetLayout } from "@/lib/widgets/widget-types";
 import { WidgetCard } from "./widget-card";
 import { WidgetRow } from "./widget-row";
 import { WidgetEmptyState } from "./widget-empty-state";
@@ -62,18 +64,51 @@ function GalleryGridSkeleton() {
   );
 }
 
+function buildCreatePayload(
+  kind: WidgetKind,
+  layout: WidgetLayout | undefined,
+  brandColor: string,
+): Record<string, unknown> {
+  const isWall = kind === "wall";
+  return {
+    name: isWall ? "Wall of Love" : "Untitled embed",
+    kind,
+    layout: isWall ? "wall" : (layout ?? "carousel"),
+    accent: brandColor,
+  };
+}
+
+interface UpdateInput {
+  widgetId: string;
+  body: Record<string, unknown>;
+}
+
+function useUpdateWidgetById(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ widgetId, body }: UpdateInput) => {
+      const token = await getToken();
+      return updateWidget(token, slug, widgetId, body);
+    },
+    onSuccess: (data, { widgetId }) => {
+      qc.setQueryData(queryKeys.widgets.detail(slug, widgetId), data);
+      qc.invalidateQueries({ queryKey: queryKeys.widgets.list(slug) });
+    },
+  });
+}
+
 export function WidgetList({ project }: WidgetListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Filter state — URL synced.
   const filterParam = (searchParams.get("type") ?? "all") as Filter;
   const filter: Filter = ["all", "embed", "wall"].includes(filterParam)
     ? filterParam
     : "all";
 
-  // Kind picker state — URL synced.
   const newParam = searchParams.get("new");
   const pickerOpen =
     newParam === "1" || newParam === "embed" || newParam === "wall";
@@ -93,24 +128,24 @@ export function WidgetList({ project }: WidgetListProps) {
     [router, pathname, searchParams],
   );
 
-  // Store selectors.
-  const widgets = useWidgetStudioStore((s) => s.widgetsByProject[project.slug]);
-  const snapshots = useWidgetStudioStore((s) => s.snapshots);
-  const ensureProject = useWidgetStudioStore((s) => s.ensureProject);
-  const createWidget = useWidgetStudioStore((s) => s.createWidget);
-  const deleteWidget = useWidgetStudioStore((s) => s.deleteWidget);
-  const duplicateWidget = useWidgetStudioStore((s) => s.duplicateWidget);
-  const updateWidgetEntry = useWidgetStudioStore((s) => s.updateWidgetEntry);
+  const listQuery = useWidgetsList(project.slug);
+  const { isWaitingForLiveData, isBackgroundRefreshing } =
+    useLiveQueryState(listQuery);
 
-  const [hydrated, setHydrated] = React.useState(false);
+  const createMutation = useCreateWidget(project.slug);
+  const duplicateMutation = useDuplicateWidget(project.slug);
+  const deleteMutation = useDeleteWidget(project.slug);
+  const updateMutation = useUpdateWidgetById(project.slug);
+
   const [viewMode, setViewMode] = useViewMode("widgets:view", "grid");
 
-  React.useEffect(() => {
-    ensureProject(project.slug, { brandColor: project.brandColorPrimary });
-    setHydrated(true);
-  }, [project.slug, project.brandColorPrimary, ensureProject]);
+  const brandAccent = project.brandColorPrimary ?? "#6366f1";
 
-  const list = widgets ?? [];
+  const list = React.useMemo(() => {
+    const rows = listQuery.data ?? [];
+    return rows.map((dto) => dtoToWidgetListEntry(dto, brandAccent));
+  }, [listQuery.data, brandAccent]);
+
   const counts: Record<Filter, number> = {
     all: list.length,
     embed: list.filter((w) => w.kind === "embed").length,
@@ -121,32 +156,53 @@ export function WidgetList({ project }: WidgetListProps) {
     filter === "all" ? list : list.filter((w) => w.kind === filter);
 
   const handleCreate = React.useCallback(
-    ({
-      kind,
-      layout,
-    }: {
-      kind: WidgetKind;
-      layout?: import("@/lib/widgets/widget-types").WidgetLayout;
-    }) => {
-      const id = createWidget(project.slug, {
-        kind,
-        layout,
-        brandColor: project.brandColorPrimary,
-      });
+    async ({ kind, layout }: { kind: WidgetKind; layout?: WidgetLayout }) => {
+      const result = await createMutation.mutateAsync(
+        buildCreatePayload(kind, layout, brandAccent),
+      );
       setQuery({ new: null });
-      router.push(`/projects/${project.slug}/widgets/${id}?firstRun=1`);
+      router.push(`/projects/${project.slug}/widgets/${result.id}?firstRun=1`);
     },
-    [createWidget, project.slug, project.brandColorPrimary, setQuery, router],
+    [createMutation, project.slug, brandAccent, setQuery, router],
   );
 
-  const showToolbar = hydrated && list.length > 0;
+  const handleDuplicate = React.useCallback(
+    (widgetId: string) => {
+      duplicateMutation.mutate(widgetId);
+    },
+    [duplicateMutation],
+  );
+
+  const handleDelete = React.useCallback(
+    (widgetId: string) => {
+      deleteMutation.mutate(widgetId);
+    },
+    [deleteMutation],
+  );
+
+  const handleToggleActive = React.useCallback(
+    (widgetId: string, isActive: boolean) =>
+      updateMutation.mutate({ widgetId, body: { isActive: !isActive } }),
+    [updateMutation],
+  );
+
+  const handleRename = React.useCallback(
+    (widgetId: string, name: string) =>
+      updateMutation.mutate({ widgetId, body: { name } }),
+    [updateMutation],
+  );
+
+  const loading = isWaitingForLiveData;
+  const showToolbar = !loading && list.length > 0;
 
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Widgets"
         description={
-          hydrated ? (
+          loading ? (
+            project.name
+          ) : (
             <>
               <span>
                 {list.length} widget{list.length === 1 ? "" : "s"}
@@ -154,13 +210,12 @@ export function WidgetList({ project }: WidgetListProps) {
               <HeaderSep />
               <span>{project.name}</span>
             </>
-          ) : (
-            project.name
           )
         }
         actions={
           showToolbar ? (
-            <>
+            <div className="flex items-center gap-2">
+              <RefreshingDataBadge show={isBackgroundRefreshing} />
               <Button
                 variant="outline"
                 size="sm"
@@ -174,11 +229,12 @@ export function WidgetList({ project }: WidgetListProps) {
                 size="sm"
                 className="gap-1.5 text-xs"
                 onClick={() => setQuery({ new: "embed" })}
+                disabled={createMutation.isPending}
               >
                 <PlusIcon className="size-3.5" weight="bold" aria-hidden />
                 New embed
               </Button>
-            </>
+            </div>
           ) : undefined
         }
         toolbar={
@@ -205,9 +261,8 @@ export function WidgetList({ project }: WidgetListProps) {
         }
       />
 
-      {/* Body */}
       <PageBody padding="bare" className="overflow-y-auto">
-        {!hydrated ? (
+        {loading ? (
           <GalleryGridSkeleton />
         ) : list.length === 0 ? (
           <WidgetEmptyState onPick={(kind) => setQuery({ new: kind })} />
@@ -222,29 +277,21 @@ export function WidgetList({ project }: WidgetListProps) {
             role="list"
             aria-label="Widgets"
           >
-            {filtered.map((entry) => {
-              const snap = snapshots[entry.id];
-              if (!snap) return null;
-              return (
-                <WidgetRow
-                  key={entry.id}
-                  slug={project.slug}
-                  entry={entry}
-                  config={snap.draft}
-                  hasDirtyDraft={isWidgetDirty(snap)}
-                  onDuplicate={() => duplicateWidget(project.slug, entry.id)}
-                  onDelete={() => deleteWidget(project.slug, entry.id)}
-                  onToggleActive={() =>
-                    updateWidgetEntry(project.slug, entry.id, {
-                      isActive: !entry.isActive,
-                    })
-                  }
-                  onRename={(name) =>
-                    updateWidgetEntry(project.slug, entry.id, { name })
-                  }
-                />
-              );
-            })}
+            {filtered.map((entry) => (
+              <WidgetRow
+                key={entry.id}
+                slug={project.slug}
+                entry={entry}
+                wallSlug={null}
+                hasDirtyDraft={false}
+                onDuplicate={() => handleDuplicate(entry.id)}
+                onDelete={() => handleDelete(entry.id)}
+                onToggleActive={() =>
+                  handleToggleActive(entry.id, entry.isActive)
+                }
+                onRename={(name) => handleRename(entry.id, name)}
+              />
+            ))}
           </div>
         ) : (
           <div className="px-4 py-5 sm:px-6">
@@ -253,32 +300,22 @@ export function WidgetList({ project }: WidgetListProps) {
               role="list"
               aria-label="Widgets"
             >
-              {filtered.map((entry) => {
-                const snap = snapshots[entry.id];
-                if (!snap) return null;
-                return (
-                  <div key={entry.id} role="listitem" className="h-full">
-                    <WidgetCard
-                      slug={project.slug}
-                      entry={entry}
-                      config={snap.draft}
-                      hasDirtyDraft={isWidgetDirty(snap)}
-                      onDuplicate={() =>
-                        duplicateWidget(project.slug, entry.id)
-                      }
-                      onDelete={() => deleteWidget(project.slug, entry.id)}
-                      onToggleActive={() =>
-                        updateWidgetEntry(project.slug, entry.id, {
-                          isActive: !entry.isActive,
-                        })
-                      }
-                      onRename={(name) =>
-                        updateWidgetEntry(project.slug, entry.id, { name })
-                      }
-                    />
-                  </div>
-                );
-              })}
+              {filtered.map((entry) => (
+                <div key={entry.id} role="listitem" className="h-full">
+                  <WidgetCard
+                    slug={project.slug}
+                    entry={entry}
+                    wallSlug={null}
+                    hasDirtyDraft={false}
+                    onDuplicate={() => handleDuplicate(entry.id)}
+                    onDelete={() => handleDelete(entry.id)}
+                    onToggleActive={() =>
+                      handleToggleActive(entry.id, entry.isActive)
+                    }
+                    onRename={(name) => handleRename(entry.id, name)}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}
