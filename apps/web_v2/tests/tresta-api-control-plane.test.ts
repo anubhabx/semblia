@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOutboundWebhookEndpoint,
   duplicateForm,
+  duplicateWidget,
   fetchAnalyticsSummary,
   fetchNotifications,
   recordHostedPageViewEvent,
@@ -132,6 +133,22 @@ describe("tresta-api control-plane contracts", () => {
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:8100/v2/projects/launchpad/forms/form_123/duplicate",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer session-token",
+        }),
+      }),
+    );
+    expect(init?.body).toBeUndefined();
+  });
+
+  it("duplicates widgets through the project-scoped duplicate route", async () => {
+    await duplicateWidget("session-token", "launchpad", "widget_123");
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8100/v2/projects/launchpad/widgets/widget_123/duplicate",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({

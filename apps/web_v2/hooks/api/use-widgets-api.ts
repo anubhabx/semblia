@@ -6,6 +6,7 @@ import {
   fetchWidgets,
   fetchWidget,
   createWidget,
+  duplicateWidget,
   updateWidget,
   deleteWidget,
   fetchWidgetDraft,
@@ -54,6 +55,21 @@ export function useCreateWidget(slug: string) {
     mutationFn: async (body: Record<string, unknown>) => {
       const token = await getToken();
       return createWidget(token, slug, body);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.widgets.list(slug) });
+    },
+  });
+}
+
+export function useDuplicateWidget(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (widgetId: string) => {
+      const token = await getToken();
+      return duplicateWidget(token, slug, widgetId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.widgets.list(slug) });

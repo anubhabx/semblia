@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   useAnalyticsSummary,
   useDuplicateForm,
+  useDuplicateWidget,
   useExportDeliveries,
   useCurrentOrganization,
   useIntegrationConnections,
@@ -14,6 +15,7 @@ import {
 } from "@/hooks/api";
 import {
   duplicateForm,
+  duplicateWidget,
   fetchAnalyticsSummary,
   fetchExportDeliveries,
   fetchCurrentOrganization,
@@ -33,6 +35,7 @@ vi.mock("@clerk/nextjs", () => ({
 
 vi.mock("@/lib/tresta-api", () => ({
   duplicateForm: vi.fn(),
+  duplicateWidget: vi.fn(),
   fetchAnalyticsSummary: vi.fn(),
   fetchExportDeliveries: vi.fn(),
   fetchCurrentOrganization: vi.fn(),
@@ -255,6 +258,75 @@ describe("control-plane API hooks", () => {
     );
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.forms.list("launchpad"),
+    });
+    invalidateSpy.mockRestore();
+  });
+
+  it("duplicates widgets through the typed project hook and refreshes the widget list", async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    vi.mocked(duplicateWidget).mockResolvedValue({
+      id: "widget_copy",
+      projectId: "project_1",
+      entry: {
+        id: "widget_copy",
+        name: "Proof Widget (copy)",
+        widgetType: "EMBED",
+        layoutType: "CAROUSEL",
+        themeMode: "LIGHT",
+        preset: "clean",
+        createdAt: "2026-05-17T00:00:00.000Z",
+        updatedAt: "2026-05-17T00:00:00.000Z",
+        totalLoads: 0,
+        avgLoadMs: 0,
+        lastLoadAt: null,
+        isActive: false,
+      },
+      config: {
+        name: "Proof Widget (copy)",
+        widgetType: "EMBED",
+        layoutType: "CAROUSEL",
+        themeMode: "LIGHT",
+        tokens: {
+          preset: "clean",
+          accentColor: "#111111",
+          bgColor: "#ffffff",
+          textColor: "#111111",
+          borderRadius: 12,
+          fontFamily: '"Geist", system-ui, sans-serif',
+          cardStyle: "BORDERED",
+          density: "DEFAULT",
+        },
+        visibility: {
+          showRating: true,
+          showAvatar: true,
+          showCompany: true,
+          showDate: false,
+          showSource: false,
+        },
+        behavior: {
+          maxItems: 9,
+          autoRotate: true,
+          rotateInterval: 5000,
+          showBranding: true,
+        },
+        wall: null,
+      },
+    });
+
+    const { result } = renderHook(() => useDuplicateWidget("launchpad"), {
+      wrapper,
+    });
+
+    result.current.mutate("widget_123");
+
+    await waitFor(() => expect(result.current.data?.id).toBe("widget_copy"));
+    expect(duplicateWidget).toHaveBeenCalledWith(
+      "session-token",
+      "launchpad",
+      "widget_123",
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.widgets.list("launchpad"),
     });
     invalidateSpy.mockRestore();
   });

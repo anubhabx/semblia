@@ -809,6 +809,17 @@ export function createWidget(
   );
 }
 
+export function duplicateWidget(
+  token: string | null,
+  slug: string,
+  widgetId: string,
+): Promise<V2WidgetDTO> {
+  return post<V2WidgetDTO>(
+    `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}/duplicate`,
+    token,
+  );
+}
+
 export function updateWidget(
   token: string | null,
   slug: string,

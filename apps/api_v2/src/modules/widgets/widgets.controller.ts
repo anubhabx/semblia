@@ -94,6 +94,17 @@ export class WidgetsController {
     return this.widgetsService.update(params, body, request);
   }
 
+  @Post(":widgetId/duplicate")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PROJECT)
+  duplicate(
+    @CurrentUserId() _userId: string,
+    @Param(new ZodValidationPipe(widgetParamsSchema)) params: WidgetParamsDto,
+    @Req() request: ProjectRequest,
+  ) {
+    return this.widgetsService.duplicate(params, request);
+  }
+
   @Delete(":widgetId")
   @UseGuards(CapabilityGuard)
   @RequireCapability(Capability.MANAGE_PUBLISH_SURFACES)

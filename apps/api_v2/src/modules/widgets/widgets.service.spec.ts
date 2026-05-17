@@ -1,4 +1,4 @@
-import { ConflictException } from "@nestjs/common";
+import { ConflictException, NotFoundException } from "@nestjs/common";
 import {
   CardStyle,
   LayoutType,
@@ -187,6 +187,7 @@ describe("WidgetsService", () => {
           totalLoads: 4,
           avgLoadMs: 245,
           lastLoadAt: "2026-04-04T00:00:00.000Z",
+          isActive: true,
         },
         config: {
           name: "Proof Widget",
@@ -220,6 +221,215 @@ describe("WidgetsService", () => {
         },
       },
     ]);
+  });
+
+  it("duplicate creates an inactive copy with source config fields and stub metrics", async () => {
+    const source = makeWidget({
+      id: "widget_source",
+      name: "Launch proof carousel",
+      kind: WidgetType.EMBED,
+      layout: LayoutType.GRID,
+      theme: ThemeMode.DARK,
+      preset: "bold",
+      accent: "#ff3366",
+      text: "#f8fafc",
+      bg: "#020617",
+      line: "#334155",
+      surface: "#111827",
+      radius: 20,
+      fontFamily: '"Inter", sans-serif',
+      fontHead: '"Fraunces", serif',
+      cardStyle: CardStyle.ELEVATED,
+      density: WidgetDensity.COZY,
+      showRating: false,
+      showAvatar: false,
+      showCompany: true,
+      showDate: true,
+      showSource: true,
+      maxItems: 12,
+      autoRotate: false,
+      rotateInterval: 8000,
+      showBranding: false,
+      contentMode: WidgetContentMode.HANDPICKED,
+      pickedIds: ["testimonial_1", "testimonial_2"],
+      isActive: true,
+    });
+    mockWidgetFindFirst.mockResolvedValue(source);
+    mockWidgetCreate.mockResolvedValue(
+      makeWidget({
+        ...source,
+        id: "widget_copy",
+        name: "Launch proof carousel (copy)",
+        isActive: false,
+      }),
+    );
+
+    const service = makeService();
+    const result = await service.duplicate(
+      { slug: "acme", widgetId: "widget_source" },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(mockWidgetFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "widget_source", projectId: "project_1" },
+      }),
+    );
+    expect(mockWidgetCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          id: expect.stringMatching(/^c[a-z0-9]{8,}$/),
+          projectId: "project_1",
+          name: "Launch proof carousel (copy)",
+          kind: WidgetType.EMBED,
+          layout: LayoutType.GRID,
+          theme: ThemeMode.DARK,
+          preset: "bold",
+          accent: "#ff3366",
+          text: "#f8fafc",
+          bg: "#020617",
+          line: "#334155",
+          surface: "#111827",
+          radius: 20,
+          fontFamily: '"Inter", sans-serif',
+          fontHead: '"Fraunces", serif',
+          cardStyle: CardStyle.ELEVATED,
+          density: WidgetDensity.COZY,
+          showRating: false,
+          showAvatar: false,
+          showCompany: true,
+          showDate: true,
+          showSource: true,
+          maxItems: 12,
+          autoRotate: false,
+          rotateInterval: 8000,
+          showBranding: false,
+          contentMode: WidgetContentMode.HANDPICKED,
+          pickedIds: ["testimonial_1", "testimonial_2"],
+          wallSlug: null,
+          wallTitle: null,
+          wallSubhead: null,
+          isActive: false,
+        },
+        select: expect.any(Object),
+      }),
+    );
+    expect(mockSaveStudioDraft).not.toHaveBeenCalled();
+    expect(mockWidgetAnalyticsGroupBy).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      id: "widget_copy",
+      projectId: "project_1",
+      entry: {
+        id: "widget_copy",
+        name: "Launch proof carousel (copy)",
+        isActive: false,
+        totalLoads: 0,
+        avgLoadMs: 0,
+        lastLoadAt: null,
+      },
+    });
+  });
+
+  it("duplicate truncates the copy suffix to the widget name limit", async () => {
+    const sourceName = "x".repeat(255);
+    mockWidgetFindFirst.mockResolvedValue(makeWidget({ name: sourceName }));
+    mockWidgetCreate.mockResolvedValue(
+      makeWidget({
+        id: "widget_copy",
+        name: `${sourceName} (copy)`.slice(0, 255),
+      }),
+    );
+
+    const service = makeService();
+    await service.duplicate(
+      { slug: "acme", widgetId: "widget_1" },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(mockWidgetCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: `${sourceName} (copy)`.slice(0, 255),
+        }),
+      }),
+    );
+  });
+
+  it("duplicate throws 404 when the source widget is missing", async () => {
+    mockWidgetFindFirst.mockResolvedValue(null);
+
+    const service = makeService();
+
+    await expect(
+      service.duplicate(
+        { slug: "acme", widgetId: "widget_missing" },
+        { projectAccess: { projectId: "project_1" } },
+      ),
+    ).rejects.toThrow(NotFoundException);
+    expect(mockWidgetCreate).not.toHaveBeenCalled();
+  });
+
+  it("duplicate throws 404 without leaking widgets from a different project", async () => {
+    mockWidgetFindFirst.mockResolvedValue(null);
+
+    const service = makeService();
+
+    await expect(
+      service.duplicate(
+        { slug: "acme", widgetId: "widget_other_project" },
+        { projectAccess: { projectId: "project_1" } },
+      ),
+    ).rejects.toThrow(NotFoundException);
+    expect(mockWidgetFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "widget_other_project", projectId: "project_1" },
+      }),
+    );
+    expect(mockWidgetCreate).not.toHaveBeenCalled();
+  });
+
+  it("duplicate clears wall slugs while carrying wall titles and subheads", async () => {
+    mockWidgetFindFirst.mockResolvedValue(
+      makeWidget({
+        id: "widget_wall",
+        name: "Proof wall",
+        kind: WidgetType.WALL_OF_LOVE,
+        layout: LayoutType.WALL,
+        wallSlug: "proof-wall",
+        wallTitle: "Proof Wall",
+        wallSubhead: "What customers say",
+      }),
+    );
+    mockWidgetCreate.mockResolvedValue(
+      makeWidget({
+        id: "widget_wall_copy",
+        name: "Proof wall (copy)",
+        kind: WidgetType.WALL_OF_LOVE,
+        layout: LayoutType.WALL,
+        wallSlug: null,
+        wallTitle: "Proof Wall",
+        wallSubhead: "What customers say",
+        isActive: false,
+      }),
+    );
+
+    const service = makeService();
+    const result = await service.duplicate(
+      { slug: "acme", widgetId: "widget_wall" },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(mockWidgetCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          kind: WidgetType.WALL_OF_LOVE,
+          wallSlug: null,
+          wallTitle: "Proof Wall",
+          wallSubhead: "What customers say",
+        }),
+      }),
+    );
+    expect(result.config.wall).toBeNull();
   });
 
   it("create generates a normalized safe wall slug and retries with a hex suffix on collision", async () => {

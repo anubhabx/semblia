@@ -327,6 +327,7 @@ export interface V2WidgetListEntry {
   totalLoads: number;
   avgLoadMs: number;
   lastLoadAt: string | null;
+  isActive: boolean;
 }
 
 export interface V2WidgetDTO {

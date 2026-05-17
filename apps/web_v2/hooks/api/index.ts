@@ -49,6 +49,7 @@ export {
   useWidgetsList,
   useWidget,
   useCreateWidget,
+  useDuplicateWidget,
   useUpdateWidget,
   useDeleteWidget,
   useWidgetDraft,

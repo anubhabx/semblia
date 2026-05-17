@@ -195,6 +195,51 @@ export class WidgetsService {
     return this.toWidgetDto(updated);
   }
 
+  async duplicate(params: WidgetParamsDto, request: ProjectRequest) {
+    const projectId = this.getProjectIdFromRequest(request);
+    const source = await this.getOwnedWidgetOrThrow(params.widgetId, projectId);
+
+    const created = await this.prisma.client.widget.create({
+      data: {
+        id: this.createCuid(),
+        projectId,
+        name: this.toDuplicateWidgetName(source.name),
+        kind: source.kind,
+        layout: source.layout,
+        theme: source.theme,
+        preset: source.preset,
+        accent: source.accent,
+        text: source.text,
+        bg: source.bg,
+        line: source.line,
+        surface: source.surface,
+        radius: source.radius,
+        fontFamily: source.fontFamily,
+        fontHead: source.fontHead,
+        cardStyle: source.cardStyle,
+        density: source.density,
+        showRating: source.showRating,
+        showAvatar: source.showAvatar,
+        showCompany: source.showCompany,
+        showDate: source.showDate,
+        showSource: source.showSource,
+        maxItems: source.maxItems,
+        autoRotate: source.autoRotate,
+        rotateInterval: source.rotateInterval,
+        showBranding: source.showBranding,
+        contentMode: source.contentMode,
+        pickedIds: source.pickedIds,
+        wallSlug: null,
+        wallTitle: source.wallTitle,
+        wallSubhead: source.wallSubhead,
+        isActive: false,
+      },
+      select: WIDGET_SELECT,
+    });
+
+    return this.toWidgetDto(created);
+  }
+
   async delete(params: WidgetParamsDto, request: ProjectRequest) {
     const widget = await this.getOwnedWidgetOrThrow(
       params.widgetId,
@@ -375,6 +420,7 @@ export class WidgetsService {
         totalLoads: metrics?.totalLoads ?? 0,
         avgLoadMs: metrics?.avgLoadMs ?? 0,
         lastLoadAt: metrics?.lastLoadAt ?? null,
+        isActive: widget.isActive,
       },
       config: {
         name: widget.name,
@@ -651,6 +697,14 @@ export class WidgetsService {
     }
 
     return kind === "wall" ? WidgetType.WALL_OF_LOVE : WidgetType.EMBED;
+  }
+
+  private createCuid() {
+    return `c${Date.now().toString(36)}${randomBytes(10).toString("hex")}`;
+  }
+
+  private toDuplicateWidgetName(name: string) {
+    return `${name} (copy)`.slice(0, 255);
   }
 
   private buildGeneratedWallSlug(
