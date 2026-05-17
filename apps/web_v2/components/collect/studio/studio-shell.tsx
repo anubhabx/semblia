@@ -19,7 +19,10 @@ import {
   SlidersHorizontal as SlidersHorizontalIcon,
   Eye as EyeIcon,
 } from "@phosphor-icons/react";
-import { useStudioStore, isStudioDirty } from "@/lib/collect/studio-store";
+import {
+  StudioDraftProvider,
+  useStudioDraft,
+} from "@/lib/collect/studio-draft-context";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { StudioControls } from "./studio-controls";
 import { StudioPreview } from "./studio-preview";
@@ -39,9 +42,18 @@ export function StudioShell({
   slug: string;
   formId: string;
 }) {
+  return (
+    <StudioDraftProvider slug={slug} formId={formId}>
+      <StudioShellInner slug={slug} />
+    </StudioDraftProvider>
+  );
+}
+
+function StudioShellInner({ slug }: { slug: string }) {
   const router = useRouter();
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
+  const { dirty, save, reset, isSaving } = useStudioDraft();
 
   // Mobile: which tab is active
   const [mobileTab, setMobileTab] = React.useState<MobileTab>("preview");
@@ -49,19 +61,12 @@ export function StudioShell({
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
 
-  // ─── Granular selectors — avoid full-store subscription ────────────────
-  const dirty = useStudioStore((s) => {
-    const snap = s.snapshots[formId];
-    return snap ? isStudioDirty(snap) : false;
-  });
-  const hasSnapshot = useStudioStore((s) => !!s.snapshots[formId]);
-  const save = useStudioStore((s) => s.save);
-  const reset = useStudioStore((s) => s.reset);
-
-  // Ensure the project has snapshots on mount
+  // Track dirty flag in a ref so window event handlers see the latest value
+  // without needing to be re-bound on every change.
+  const dirtyRef = React.useRef(dirty);
   React.useEffect(() => {
-    useStudioStore.getState().ensureProject(slug);
-  }, [slug]);
+    dirtyRef.current = dirty;
+  }, [dirty]);
 
   // ─── Focus management ─────────────────────────────────────────────────
   React.useEffect(() => {
@@ -72,35 +77,39 @@ export function StudioShell({
   // ─── Unsaved-changes guard (beforeunload) ─────────────────────────────
   React.useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      const snap = useStudioStore.getState().snapshots[formId];
-      if (snap && isStudioDirty(snap)) {
+      if (dirtyRef.current) {
         e.preventDefault();
       }
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [formId]);
+  }, []);
 
   // ─── Save / Reset handlers ────────────────────────────────────────────
 
-  const handleSave = React.useCallback(() => {
-    save(formId);
-    toast.success("Studio changes saved");
-  }, [save, formId]);
+  const handleSave = React.useCallback(async () => {
+    try {
+      await save();
+      toast.success("Studio changes saved");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save draft";
+      toast.error(message);
+    }
+  }, [save]);
 
   const handleReset = React.useCallback(() => {
-    reset(formId);
+    reset();
     toast("Studio changes reset");
-  }, [reset, formId]);
+  }, [reset]);
 
   const handleClose = React.useCallback(() => {
-    const snap = useStudioStore.getState().snapshots[formId];
-    if (snap && isStudioDirty(snap)) {
+    if (dirtyRef.current) {
       setLeaveConfirmOpen(true);
       return;
     }
     router.push(`/projects/${slug}/collect`);
-  }, [router, slug, formId]);
+  }, [router, slug]);
 
   const handleConfirmLeave = React.useCallback(() => {
     setLeaveConfirmOpen(false);
@@ -114,18 +123,14 @@ export function StudioShell({
       if (!mod) return;
       if (e.key === "s") {
         e.preventDefault();
-        const snap = useStudioStore.getState().snapshots[formId];
-        if (snap && isStudioDirty(snap)) {
-          useStudioStore.getState().save(formId);
-          toast.success("Saved");
+        if (dirtyRef.current) {
+          void handleSave();
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [formId]);
-
-  if (!hasSnapshot) return null;
+  }, [handleSave]);
 
   return (
     <div
@@ -160,6 +165,7 @@ export function StudioShell({
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         dirty={dirty}
+        isSaving={isSaving}
         onReset={handleReset}
         onSave={handleSave}
       />
@@ -177,7 +183,7 @@ export function StudioShell({
             aria-hidden={!sidebarOpen}
           >
             <div className="w-[380px] h-full">
-              <StudioControls formId={formId} />
+              <StudioControls />
             </div>
           </aside>
 
@@ -185,7 +191,7 @@ export function StudioShell({
             className="flex min-h-0 h-full flex-1 flex-col min-w-0"
             aria-label="Form preview"
           >
-            <StudioPreview formId={formId} />
+            <StudioPreview />
           </main>
         </div>
       ) : (
@@ -200,7 +206,7 @@ export function StudioShell({
               )}
               aria-hidden={mobileTab !== "design"}
             >
-              <StudioControls formId={formId} />
+              <StudioControls />
             </div>
             <div
               className={cn(
@@ -209,7 +215,7 @@ export function StudioShell({
               )}
               aria-hidden={mobileTab !== "preview"}
             >
-              <StudioPreview formId={formId} />
+              <StudioPreview />
             </div>
           </div>
 

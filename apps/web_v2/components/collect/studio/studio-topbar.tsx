@@ -18,6 +18,7 @@ interface StudioTopbarProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   dirty: boolean;
+  isSaving?: boolean;
   onReset: () => void;
   onSave: () => void;
 }
@@ -28,6 +29,7 @@ export function StudioTopbar({
   sidebarOpen,
   setSidebarOpen,
   dirty,
+  isSaving = false,
   onReset,
   onSave,
 }: StudioTopbarProps) {
@@ -103,11 +105,11 @@ export function StudioTopbar({
         <Button
           size="sm"
           onClick={onSave}
-          disabled={!dirty}
+          disabled={!dirty || isSaving}
           className="gap-1.5 text-xs"
         >
           <SaveIcon className="size-3.5" aria-hidden="true" />
-          Save
+          {isSaving ? "Saving…" : "Save"}
         </Button>
       </div>
     </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { useStudioStore } from "@/lib/collect/studio-store";
+import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 import { FONT_CHOICES } from "@/lib/collect/studio-presets";
 import type { DesignTokens } from "@/lib/collect/studio-types";
 import {
@@ -15,14 +14,12 @@ import {
 
 /* ─── Typography section ──────────────────────────────────────────────────── */
 
-export function TypographySection({ formId }: { formId: string }) {
-  const t = useStudioStore((s) => s.snapshots[formId]?.draft?.tokens);
-  const setToken = useStudioStore((s) => s.setToken);
-
-  if (!t) return null;
+export function TypographySection() {
+  const { draft, setToken } = useStudioDraft();
+  const t = draft.tokens;
 
   const setTok = <K extends keyof DesignTokens>(k: K, v: DesignTokens[K]) =>
-    setToken(formId, k, v);
+    setToken(k, v);
 
   return (
     <SectionCollapsible title="Typography">
@@ -86,14 +83,12 @@ export function TypographySection({ formId }: { formId: string }) {
 
 /* ─── Color section ───────────────────────────────────────────────────────── */
 
-export function ColorSection({ formId }: { formId: string }) {
-  const t = useStudioStore((s) => s.snapshots[formId]?.draft?.tokens);
-  const setToken = useStudioStore((s) => s.setToken);
-
-  if (!t) return null;
+export function ColorSection() {
+  const { draft, setToken } = useStudioDraft();
+  const t = draft.tokens;
 
   const setTok = <K extends keyof DesignTokens>(k: K, v: DesignTokens[K]) =>
-    setToken(formId, k, v);
+    setToken(k, v);
 
   return (
     <SectionCollapsible title="Color">

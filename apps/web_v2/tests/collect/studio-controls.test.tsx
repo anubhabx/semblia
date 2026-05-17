@@ -1,10 +1,89 @@
+import * as React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { useStudioStore } from "@/lib/collect/studio-store";
+import type { V2CollectionFormDTO, V2StudioDraftDTO } from "@workspace/types";
+import { StudioDraftProvider } from "@/lib/collect/studio-draft-context";
 import { StudioControls } from "@/components/collect/studio/studio-controls";
+import { buildDefaultFormConfig } from "@/lib/collect/studio-presets";
+import { fetchForm, fetchFormDraft } from "@/lib/tresta-api";
+
+vi.mock("@clerk/nextjs", () => ({
+  useAuth: () => ({
+    getToken: vi.fn().mockResolvedValue("session-token"),
+    isSignedIn: true,
+  }),
+}));
+
+vi.mock("@/lib/tresta-api", () => ({
+  fetchForm: vi.fn(),
+  fetchFormDraft: vi.fn(),
+  saveFormDraft: vi.fn(),
+}));
 
 const SLUG = "test-project";
-let formId: string;
+const FORM_ID = "form_1";
+
+function formDto(): V2CollectionFormDTO {
+  return {
+    id: FORM_ID,
+    projectId: "proj_1",
+    entry: {
+      id: FORM_ID,
+      name: "Default Form",
+      description: "",
+      isActive: true,
+      abWeight: 100,
+      createdAt: "2026-05-01T00:00:00.000Z",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+      submissions: 0,
+      views: 0,
+      responseRate: 0,
+      avgRating: 0,
+      lastSubmissionAt: null,
+    },
+    config: buildDefaultFormConfig(),
+  };
+}
+
+function draftDto(): V2StudioDraftDTO {
+  return {
+    resourceType: "FORM",
+    resourceId: FORM_ID,
+    version: 0,
+    publishedVersion: null,
+    draft: null,
+    updatedByUserId: null,
+    updatedAt: null,
+  };
+}
+
+function Harness({ children }: { children: React.ReactNode }) {
+  const client = React.useMemo(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      }),
+    [],
+  );
+  return (
+    <QueryClientProvider client={client}>
+      <StudioDraftProvider slug={SLUG} formId={FORM_ID}>
+        {children}
+      </StudioDraftProvider>
+    </QueryClientProvider>
+  );
+}
+
+async function renderControls() {
+  const utils = render(
+    <Harness>
+      <StudioControls />
+    </Harness>,
+  );
+  await waitFor(() => expect(screen.getByText("Form Studio")).not.toBeNull());
+  return utils;
+}
 
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
@@ -12,38 +91,32 @@ beforeEach(() => {
     value: vi.fn(),
     writable: true,
   });
-
-  // Reset store between tests
-  useStudioStore.setState({
-    formsByProject: {},
-    snapshots: {},
-    device: "desktop",
-  });
-  formId = useStudioStore.getState().ensureProject(SLUG);
+  vi.mocked(fetchForm).mockReset().mockResolvedValue(formDto());
+  vi.mocked(fetchFormDraft).mockReset().mockResolvedValue(draftDto());
 });
 
 describe("<StudioControls /> — rendering", () => {
-  it("renders the header with Form Studio branding", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders the header with Form Studio branding", async () => {
+    await renderControls();
     expect(screen.getByText("Form Studio")).not.toBeNull();
     expect(screen.getByText(/v0\.5/)).not.toBeNull();
   });
 
-  it("renders device toggle pills (Desktop, Tablet, Mobile)", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders device toggle pills (Desktop, Tablet, Mobile)", async () => {
+    await renderControls();
     expect(screen.getByRole("button", { name: "Desktop" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Tablet" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Mobile" })).not.toBeNull();
   });
 
-  it("renders Remix and Reset buttons", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders Remix and Reset buttons", async () => {
+    await renderControls();
     expect(screen.getByRole("button", { name: /Remix/ })).not.toBeNull();
     expect(screen.getByRole("button", { name: /Reset/ })).not.toBeNull();
   });
 
-  it("renders collapsible sections", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders collapsible sections", async () => {
+    await renderControls();
     expect(screen.getByText("House styles")).not.toBeNull();
     expect(screen.getByText("Typography")).not.toBeNull();
     expect(screen.getByText("Color")).not.toBeNull();
@@ -55,81 +128,72 @@ describe("<StudioControls /> — rendering", () => {
     expect(screen.queryByText("Content")).toBeNull();
     expect(screen.queryByText("Questions & Logic")).toBeNull();
   });
-
-  it("returns null when formId has no snapshot", () => {
-    const { container } = render(<StudioControls formId="nonexistent" />);
-    expect(container.innerHTML).toBe("");
-  });
 });
 
 describe("<StudioControls /> — section collapse/expand", () => {
-  it("collapses a section when clicking its header", () => {
-    render(<StudioControls formId={formId} />);
+  it("collapses a section when clicking its header", async () => {
+    await renderControls();
     const layoutBtn = screen.getByRole("button", { name: /House styles/ });
-    // The collapse inner has content
     const section = layoutBtn.parentElement;
     expect(section).toBeTruthy();
 
-    // Find the collapse element
     const collapseEl = section!.querySelector(".studio-collapse");
     expect(collapseEl).toBeTruthy();
     expect(collapseEl!.hasAttribute("data-closed")).toBe(false);
 
-    // Click to collapse
     fireEvent.click(layoutBtn);
     expect(collapseEl!.hasAttribute("data-closed")).toBe(true);
 
-    // Click to expand
     fireEvent.click(layoutBtn);
     expect(collapseEl!.hasAttribute("data-closed")).toBe(false);
   });
 });
 
 describe("<StudioControls /> — color & typography", () => {
-  it("renders color inputs for each design token", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders color inputs for each design token", async () => {
+    await renderControls();
     expect(screen.getByText("Background")).not.toBeNull();
     expect(screen.getByText("Surface")).not.toBeNull();
     expect(screen.getByText("Ink")).not.toBeNull();
     expect(screen.getByText("Accent")).not.toBeNull();
   });
 
-  it("updates background color via text input", () => {
-    render(<StudioControls formId={formId} />);
-    const snap = useStudioStore.getState().snapshots[formId]!;
-    // bg value may appear in multiple inputs (bg + surface can share the same hex),
-    // so use getAllByDisplayValue and pick the first one (which is the Background input)
-    const bgInputs = screen.getAllByDisplayValue(snap.draft.tokens.bg);
+  it("updates background color via text input", async () => {
+    await renderControls();
+    const initial = buildDefaultFormConfig();
+    const bgInputs = screen.getAllByDisplayValue(initial.tokens.bg);
     fireEvent.change(bgInputs[0], { target: { value: "#ff0000" } });
 
-    const updated = useStudioStore.getState().snapshots[formId]!;
-    expect(updated.draft.tokens.bg).toBe("#ff0000");
+    await waitFor(() => {
+      expect(screen.getAllByDisplayValue("#ff0000").length).toBeGreaterThan(0);
+    });
   });
 });
 
 describe("<StudioControls /> — preset cards", () => {
-  it("renders style preset cards", () => {
-    render(<StudioControls formId={formId} />);
+  it("renders style preset cards", async () => {
+    await renderControls();
     expect(screen.getByText("Editorial")).not.toBeNull();
     expect(screen.getByText("Neo-Brutalist")).not.toBeNull();
-    // "Soft" may appear elsewhere (e.g. Shadow "Soft" pill), so use getAllByText
     expect(screen.getAllByText("Soft").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Noir")).not.toBeNull();
   });
 
-  it("applies a preset when clicked", () => {
-    render(<StudioControls formId={formId} />);
+  it("applies a preset when clicked", async () => {
+    await renderControls();
     const noirBtn = screen.getByText("Noir").closest("button")!;
     fireEvent.click(noirBtn);
 
-    const snap = useStudioStore.getState().snapshots[formId]!;
-    expect(snap.draft.preset).toBe("noir");
+    await waitFor(() => {
+      // The Noir card should become selected (border-foreground)
+      expect(noirBtn.className).toMatch(/border-foreground/);
+    });
   });
 });
 
 describe("<StudioControls /> — removed form builder surfaces", () => {
-  it("does not render layout thumbnails or question controls", () => {
-    render(<StudioControls formId={formId} />);
+  it("does not render layout thumbnails or question controls", async () => {
+    await renderControls();
     expect(screen.queryByText("Classic")).toBeNull();
     expect(screen.queryByText("Hero Split")).toBeNull();
     expect(screen.queryByRole("button", { name: /Add question/ })).toBeNull();
@@ -137,13 +201,15 @@ describe("<StudioControls /> — removed form builder surfaces", () => {
 });
 
 describe("<StudioControls /> — pills toggle", () => {
-  it("switches device via Pills toggle", () => {
-    render(<StudioControls formId={formId} />);
+  it("switches device via Pills toggle", async () => {
+    await renderControls();
 
-    expect(useStudioStore.getState().device).toBe("desktop");
-    fireEvent.click(screen.getByRole("button", { name: "Tablet" }));
-    expect(useStudioStore.getState().device).toBe("tablet");
-    fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
-    expect(useStudioStore.getState().device).toBe("mobile");
+    const tablet = screen.getByRole("button", { name: "Tablet" });
+    fireEvent.click(tablet);
+    await waitFor(() => expect(tablet.className).toMatch(/bg-primary/));
+
+    const mobile = screen.getByRole("button", { name: "Mobile" });
+    fireEvent.click(mobile);
+    await waitFor(() => expect(mobile.className).toMatch(/bg-primary/));
   });
 });

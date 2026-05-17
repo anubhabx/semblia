@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useStudioStore } from "@/lib/collect/studio-store";
+import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 import { STYLE_PRESETS } from "@/lib/collect/studio-presets";
 import type { DesignTokens } from "@/lib/collect/studio-types";
 import { SectionCollapsible } from "./studio-primitives";
@@ -61,11 +61,8 @@ function PresetCard({
 
 const MemoPresetCard = React.memo(PresetCard);
 
-export function HouseStylesSection({ formId }: { formId: string }) {
-  const draft = useStudioStore((s) => s.snapshots[formId]?.draft);
-  const applyStylePreset = useStudioStore((s) => s.applyStylePreset);
-
-  if (!draft) return null;
+export function HouseStylesSection() {
+  const { draft, applyStylePreset } = useStudioDraft();
 
   return (
     <SectionCollapsible title="House styles">
@@ -75,7 +72,7 @@ export function HouseStylesSection({ formId }: { formId: string }) {
             key={key}
             p={preset}
             selected={draft.preset === key}
-            onClick={() => applyStylePreset(formId, key)}
+            onClick={() => applyStylePreset(key)}
           />
         ))}
       </div>

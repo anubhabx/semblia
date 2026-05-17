@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useStudioStore } from "@/lib/collect/studio-store";
+import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 import type { StudioDevice } from "@/lib/collect/studio-types";
 import { Button } from "@/components/ui/button";
 import { StudioMark } from "@/components/shared";
@@ -13,22 +13,8 @@ import { ShapeSection } from "./controls-shape";
 
 /* ─── Main controls panel ─────────────────────────────────────────────────── */
 
-export const StudioControls = React.memo(function StudioControls({
-  formId,
-}: {
-  formId: string;
-}) {
-  const draft = useStudioStore((s) => s.snapshots[formId]?.draft);
-  const randomize = useStudioStore((s) => s.randomize);
-  const reset = useStudioStore((s) => s.reset);
-  const device = useStudioStore((s) => s.device);
-  const setDevice = useStudioStore((s) => s.setDevice);
-
-  const handleRandomize = React.useCallback(
-    () => randomize(formId),
-    [randomize, formId],
-  );
-  const handleReset = React.useCallback(() => reset(formId), [reset, formId]);
+export const StudioControls = React.memo(function StudioControls() {
+  const { draft, randomize, reset, device, setDevice } = useStudioDraft();
 
   const devices: { key: StudioDevice; label: string }[] = [
     { key: "desktop", label: "Desktop" },
@@ -69,14 +55,14 @@ export const StudioControls = React.memo(function StudioControls({
         <Button
           variant="outline"
           className="flex-1 text-[12.5px] font-semibold"
-          onClick={handleRandomize}
+          onClick={randomize}
         >
           ↻ Remix
         </Button>
         <Button
           variant="ghost"
           className="flex-1 text-[12.5px] font-semibold text-muted-foreground"
-          onClick={handleReset}
+          onClick={reset}
         >
           ↺ Reset
         </Button>
@@ -88,10 +74,10 @@ export const StudioControls = React.memo(function StudioControls({
         </div>
       </div>
 
-      <HouseStylesSection formId={formId} />
-      <TypographySection formId={formId} />
-      <ColorSection formId={formId} />
-      <ShapeSection formId={formId} />
+      <HouseStylesSection />
+      <TypographySection />
+      <ColorSection />
+      <ShapeSection />
 
       <div className="h-15" />
     </div>

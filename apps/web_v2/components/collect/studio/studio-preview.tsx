@@ -9,7 +9,7 @@ import * as React from "react";
 import { DeviceFrame } from "@/components/collect/device-frame";
 import { tokensToCssVars, textureBg } from "@/lib/collect/studio-token-css";
 import type { FormConfig, StudioDevice } from "@/lib/collect/studio-types";
-import { useStudioStore } from "@/lib/collect/studio-store";
+import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 
 /* ─── Device size map ─────────────────────────────────────────────────────── */
 
@@ -489,13 +489,8 @@ function TokenPreviewShell({ draft }: { draft: FormConfig }) {
   );
 }
 
-export const StudioPreview = React.memo(function StudioPreview({
-  formId,
-}: {
-  formId: string;
-}) {
-  const draft = useStudioStore((s) => s.snapshots[formId]?.draft);
-  const device = useStudioStore((s) => s.device);
+export const StudioPreview = React.memo(function StudioPreview() {
+  const { draft, device } = useStudioDraft();
 
   React.useEffect(ensurePreviewCss, []);
 

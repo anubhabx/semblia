@@ -1,6 +1,6 @@
 "use client";
 
-import { useStudioStore } from "@/lib/collect/studio-store";
+import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 import type {
   DesignTokens,
   FieldShape,
@@ -18,14 +18,12 @@ import {
 
 /* ─── Shape & density section ─────────────────────────────────────────────── */
 
-export function ShapeSection({ formId }: { formId: string }) {
-  const t = useStudioStore((s) => s.snapshots[formId]?.draft?.tokens);
-  const setToken = useStudioStore((s) => s.setToken);
-
-  if (!t) return null;
+export function ShapeSection() {
+  const { draft, setToken } = useStudioDraft();
+  const t = draft.tokens;
 
   const setTok = <K extends keyof DesignTokens>(k: K, v: DesignTokens[K]) =>
-    setToken(formId, k, v);
+    setToken(k, v);
 
   return (
     <SectionCollapsible title="Shape & density">
