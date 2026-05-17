@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { fmtNum, fmtRelative } from "@/lib/format";
 import type { V2ApiKeyDTO, V2ApiKeyEventDTO } from "@workspace/types";
 import {
@@ -287,60 +286,6 @@ function ActivityTab({ slug, keyId }: { slug: string; keyId: string }) {
 
 /* ─── Settings tab ────────────────────────────────────────────────────────── */
 
-function ChipInput({
-  values,
-  onChange,
-  placeholder,
-}: {
-  values: string[];
-  onChange: (v: string[]) => void;
-  placeholder?: string;
-}) {
-  const [input, setInput] = React.useState("");
-
-  function commit() {
-    const val = input.trim();
-    if (!val || values.includes(val)) return;
-    onChange([...values, val]);
-    setInput("");
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-1 focus-within:ring-ring min-h-9">
-      {values.map((v) => (
-        <span
-          key={v}
-          className="flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px]"
-        >
-          {v}
-          <button
-            type="button"
-            onClick={() => onChange(values.filter((x) => x !== v))}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ×
-          </button>
-        </span>
-      ))}
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") {
-            e.preventDefault();
-            commit();
-          }
-          if (e.key === "Backspace" && !input && values.length)
-            onChange(values.slice(0, -1));
-        }}
-        onBlur={commit}
-        placeholder={values.length === 0 ? placeholder : undefined}
-        className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-      />
-    </div>
-  );
-}
-
 const RATE_PRESETS = [10, 60, 600, 3000];
 
 function SettingsTab({
@@ -477,10 +422,7 @@ export function ApiKeyDetailClient({
     () => allKeys.find((k) => k.id === keyId) ?? null,
     [allKeys, keyId],
   );
-  const { data: events = [], isLoading: eventsLoading } = useApiKeyEvents(
-    slug,
-    keyId,
-  );
+  const { data: events = [] } = useApiKeyEvents(slug, keyId);
 
   const [tab, setTab] = React.useState<Tab>("overview");
   const [rotateOpen, setRotateOpen] = React.useState(false);
