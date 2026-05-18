@@ -30,8 +30,8 @@ function sectionLabelFor(pathname: string, slug: string): string | null {
       return "Widgets";
     case "analytics":
       return "Analytics";
-    case "api-keys":
-      return "API Keys";
+    case "developers":
+      return "Developers";
     case "settings":
       return "Settings";
     default:

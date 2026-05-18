@@ -1,24 +1,24 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { serverFetchProjectBySlug } from "@/lib/tresta-api-server";
-import { ApiKeyDetailClient } from "@/components/api-keys/api-key-detail-client";
+import { SdkComingSoon } from "@/components/developers/sdk/sdk-coming-soon";
 
 export async function generateMetadata(props: {
-  params: Promise<{ slug: string; keyId: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await props.params;
   const project = await serverFetchProjectBySlug(slug);
   return {
-    title: project ? `API Key — ${project.name}` : "API Key",
+    title: project ? `SDK — ${project.name}` : "SDK",
   };
 }
 
-export default async function ApiKeyDetailPage(props: {
-  params: Promise<{ slug: string; keyId: string }>;
+export default async function DevelopersSdkPage(props: {
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug, keyId } = await props.params;
+  const { slug } = await props.params;
   const project = await serverFetchProjectBySlug(slug);
   if (!project) notFound();
 
-  return <ApiKeyDetailClient slug={slug} keyId={keyId} />;
+  return <SdkComingSoon slug={slug} />;
 }

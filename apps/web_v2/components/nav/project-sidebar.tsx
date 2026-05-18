@@ -8,7 +8,7 @@ import {
   BroadcastIcon as RadioIcon,
   PuzzlePieceIcon as PuzzleIcon,
   ChartBarIcon as BarChart3Icon,
-  KeyIcon as KeyRoundIcon,
+  CodeIcon,
   SlidersHorizontalIcon as SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
 import type { V2ProjectDTO } from "@workspace/types";
@@ -51,9 +51,9 @@ function buildNav(slug: string, project: V2ProjectDTO): ProjectNavItem[] {
       icon: BarChart3Icon,
     },
     {
-      label: "API Keys",
-      href: `/projects/${slug}/api-keys`,
-      icon: KeyRoundIcon,
+      label: "Developers",
+      href: `/projects/${slug}/developers`,
+      icon: CodeIcon,
     },
     {
       label: "Settings",

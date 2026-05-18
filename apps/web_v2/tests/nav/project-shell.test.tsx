@@ -94,6 +94,14 @@ describe("project shell navigation", () => {
     expect(screen.getByText("4")).toBeTruthy();
   });
 
+  it("links the developer surface as a single Developers entry", () => {
+    render(<ProjectSidebarNav slug="launchpad" project={makeProject()} />);
+
+    const link = screen.getByRole("link", { name: /developers/i });
+    expect(link.getAttribute("href")).toBe("/projects/launchpad/developers");
+    expect(screen.queryByRole("link", { name: /^api keys$/i })).toBeNull();
+  });
+
   it("loads switcher options from the typed projects endpoint", async () => {
     const current = makeProject();
     const second = makeProject({

@@ -10,9 +10,12 @@ import { timeAgo } from "@/lib/format";
 
 interface ApiUsageCardProps {
   keys: ApiKeyUsageData[];
+  projectSlug: string;
 }
 
-export function ApiUsageCard({ keys }: ApiUsageCardProps) {
+export function ApiUsageCard({ keys, projectSlug }: ApiUsageCardProps) {
+  const manageHref = `/projects/${projectSlug}/developers/keys`;
+
   if (keys.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-5">
@@ -22,7 +25,7 @@ export function ApiUsageCard({ keys }: ApiUsageCardProps) {
         <p className="text-xs text-muted-foreground">
           No API keys configured.{" "}
           <Link
-            href="/account/api-keys"
+            href={manageHref}
             className="text-foreground underline-offset-2 hover:underline"
           >
             Manage keys
@@ -42,7 +45,7 @@ export function ApiUsageCard({ keys }: ApiUsageCardProps) {
           </p>
         </div>
         <Link
-          href="/account/api-keys"
+          href={manageHref}
           className="flex items-center gap-0.5 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
         >
           Manage

@@ -23,7 +23,6 @@ import {
 
 /* ─── Shared helpers ─────────────────────────────────────────────────────── */
 
-/** Stable reference evaluated once at module load time — safe for purity rules */
 const MODULE_NOW = Date.now();
 
 function KeyTypeBadge({ type }: { type: V2ApiKeyDTO["keyType"] }) {
@@ -140,7 +139,7 @@ function useKeyActions({
       label: "View details",
       icon: ArrowSquareOutIcon,
       pinned: true,
-      onSelect: () => router.push(`/projects/${slug}/api-keys/${keyId}`),
+      onSelect: () => router.push(`/projects/${slug}/developers/keys/${keyId}`),
     },
     {
       id: "rotate",
@@ -269,7 +268,7 @@ export const ApiKeyRow = React.memo(function ApiKeyRow({
         onOpenChange={setRotateOpen}
         intent="warning"
         title={<>Rotate &ldquo;{entry.name}&rdquo;?</>}
-        description="Rotating creates a new key and revokes this one in 24 hours. Update your servers before then."
+        description="Rotating replaces the secret immediately. The old secret stops working right away — update your servers before continuing."
         cancelLabel="Cancel"
         confirmLabel="Rotate key"
         onConfirm={onRotate}
@@ -375,7 +374,7 @@ export const ApiKeyCard = React.memo(function ApiKeyCard({
         onOpenChange={setRotateOpen}
         intent="warning"
         title={<>Rotate &ldquo;{entry.name}&rdquo;?</>}
-        description="Rotating creates a new key and revokes this one in 24 hours. Update your servers before then."
+        description="Rotating replaces the secret immediately. The old secret stops working right away — update your servers before continuing."
         cancelLabel="Cancel"
         confirmLabel="Rotate key"
         onConfirm={onRotate}

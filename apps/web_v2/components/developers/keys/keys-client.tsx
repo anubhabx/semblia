@@ -19,7 +19,6 @@ import {
   EmptyContent,
 } from "@/components/ui/empty";
 import {
-  PageHeader,
   PageBody,
   PageToolbar,
   ViewToggle,
@@ -29,12 +28,13 @@ import {
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { useApiKeysList, useRevokeApiKey, useRotateApiKey } from "@/hooks/api";
+import { DeveloperShell } from "@/components/developers/developer-shell";
 import {
   ApiKeyRow,
   ApiKeyCard,
   ApiKeyListItemSkeleton,
   ApiKeyCardSkeleton,
-} from "./api-key-list-item";
+} from "./key-list-item";
 import { CreateKeyDialog } from "./create-key-dialog";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -238,12 +238,12 @@ function KeySection({
 
 /* ─── Main client ─────────────────────────────────────────────────────────── */
 
-export function ApiKeysClient({ slug }: { slug: string }) {
+export function KeysClient({ slug }: { slug: string }) {
   const { data: allKeys = [], isLoading: loading } = useApiKeysList(slug);
   const revokeMutation = useRevokeApiKey(slug);
   const rotateMutation = useRotateApiKey(slug);
 
-  const [viewMode, setViewMode] = useViewMode("api-keys:view", "list");
+  const [viewMode, setViewMode] = useViewMode("developer-keys:view", "list");
   const [filter, setFilter] = React.useState<StatusFilter>("all");
   const [search, setSearch] = React.useState("");
   const [createType, setCreateType] = React.useState<ApiKeyType | null>(null);
@@ -279,35 +279,29 @@ export function ApiKeysClient({ slug }: { slug: string }) {
 
   const showToolbar = !loading && allKeys.length > 0;
 
-  return (
-    <div className="flex flex-1 flex-col">
-      <PageHeader
-        title="API Keys"
-        description="Authenticate your widgets and server integrations."
-        actions={
-          showToolbar ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="shrink-0 gap-1.5 text-xs">
-                  <PlusIcon className="size-3.5" weight="bold" aria-hidden />
-                  New key
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setCreateType("PUBLISHABLE")}>
-                  <EyeIcon className="mr-2 size-3.5" />
-                  Publishable key
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setCreateType("SECRET")}>
-                  <LockKeyIcon className="mr-2 size-3.5" />
-                  Secret key
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : undefined
-        }
-      />
+  const actions = showToolbar ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" className="shrink-0 gap-1.5 text-xs">
+          <PlusIcon className="size-3.5" weight="bold" aria-hidden />
+          New key
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => setCreateType("PUBLISHABLE")}>
+          <EyeIcon className="mr-2 size-3.5" />
+          Publishable key
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setCreateType("SECRET")}>
+          <LockKeyIcon className="mr-2 size-3.5" />
+          Secret key
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : undefined;
 
+  return (
+    <DeveloperShell slug={slug} active="keys" actions={actions}>
       {showToolbar && (
         <PageToolbar
           leading={
@@ -337,7 +331,6 @@ export function ApiKeysClient({ slug }: { slug: string }) {
 
       <PageBody padding="bare" className="overflow-y-auto">
         {!loading && allKeys.length === 0 ? (
-          /* Global empty state — centered, inset */
           <div className="px-4 py-12 sm:px-6">
             <Empty>
               <EmptyHeader>
@@ -416,6 +409,6 @@ export function ApiKeysClient({ slug }: { slug: string }) {
           if (!open) setCreateType(null);
         }}
       />
-    </div>
+    </DeveloperShell>
   );
 }

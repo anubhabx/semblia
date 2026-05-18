@@ -1161,7 +1161,7 @@ export function fetchAgentAccessOverview(token: string | null, slug: string) {
 export function createAgentKey(
   token: string | null,
   slug: string,
-  body: { name: string; presetId: string },
+  body: { name: string; preset: string },
 ) {
   return post<V2CreatedApiKeyDTO>(
     `/projects/${encodeURIComponent(slug)}/agent-access/keys`,

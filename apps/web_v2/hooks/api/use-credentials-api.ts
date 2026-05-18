@@ -123,7 +123,7 @@ export function useCreateAgentKey(slug: string) {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (body: { name: string; presetId: string }) => {
+    mutationFn: async (body: { name: string; preset: string }) => {
       const token = await getToken();
       return createAgentKey(token, slug, body);
     },

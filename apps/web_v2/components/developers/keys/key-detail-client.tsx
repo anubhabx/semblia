@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { fmtNum, fmtRelative } from "@/lib/format";
 import type { V2ApiKeyDTO, V2ApiKeyEventDTO } from "@workspace/types";
 import {
@@ -16,6 +17,7 @@ import {
   ArrowsClockwiseIcon,
   ProhibitIcon,
   ClockIcon,
+  KeyIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Empty,
@@ -37,6 +45,7 @@ import {
   EmptyMedia,
   EmptyTitle,
   EmptyDescription,
+  EmptyContent,
 } from "@/components/ui/empty";
 import {
   PageHeader,
@@ -51,7 +60,10 @@ import {
   useRevokeApiKey,
   useRotateApiKey,
 } from "@/hooks/api";
-import { CreateKeyDialog } from "./create-key-dialog";
+import {
+  RevealStep,
+  ConfirmCloseDialog,
+} from "@/components/developers/shared/reveal-step";
 
 /* ─── Tab type ────────────────────────────────────────────────────────────── */
 
@@ -82,7 +94,6 @@ function KpiCard({
 /* ─── Usage chart ─────────────────────────────────────────────────────────── */
 
 function UsageChart({ data }: { data: V2ApiKeyEventDTO[] }) {
-  // Aggregate events into daily counts
   const daily = React.useMemo(() => {
     const map = new Map<string, number>();
     for (const event of data) {
@@ -299,8 +310,8 @@ function SettingsTab({
   const [rateLimit, setRateLimit] = React.useState(entry.rateLimit);
   const [revokeOpen, setRevokeOpen] = React.useState(false);
 
-  // Note: V2 API does not yet expose update-key endpoint, so isDirty/save
-  // is prepared but disabled until the backend contract is ready.
+  // V2 API does not yet expose an update-key endpoint; save remains disabled
+  // until the contract exists.
   const isDirty = name !== entry.name || rateLimit !== entry.rateLimit;
 
   const rateLabelIdx = RATE_PRESETS.indexOf(rateLimit);
@@ -311,7 +322,6 @@ function SettingsTab({
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Name */}
       <div className="space-y-1.5">
         <Label htmlFor="settings-name">Key name</Label>
         <Input
@@ -322,7 +332,6 @@ function SettingsTab({
         />
       </div>
 
-      {/* Rate limit */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Rate limit</Label>
@@ -344,7 +353,6 @@ function SettingsTab({
         </div>
       </div>
 
-      {/* Save bar */}
       {isDirty && (
         <div className="sticky bottom-0 flex items-center justify-end gap-2 rounded-lg border border-border bg-background/95 px-4 py-2.5 shadow-sm backdrop-blur">
           <span className="mr-auto text-xs text-muted-foreground">
@@ -370,7 +378,6 @@ function SettingsTab({
         </div>
       )}
 
-      {/* Danger zone */}
       <div className="rounded-lg border border-destructive/40 p-4 space-y-3">
         <p className="text-xs font-semibold text-destructive">Danger zone</p>
         <div className="flex items-center justify-between gap-4">
@@ -407,7 +414,7 @@ function SettingsTab({
 
 /* ─── Main detail client ──────────────────────────────────────────────────── */
 
-export function ApiKeyDetailClient({
+export function KeyDetailClient({
   slug,
   keyId,
 }: {
@@ -426,11 +433,11 @@ export function ApiKeyDetailClient({
 
   const [tab, setTab] = React.useState<Tab>("overview");
   const [rotateOpen, setRotateOpen] = React.useState(false);
+  const [revokeOpen, setRevokeOpen] = React.useState(false);
   const [rotatePlaintext, setRotatePlaintext] = React.useState<string | null>(
     null,
   );
-
-  const loading = keysLoading;
+  const [rotateConfirmClose, setRotateConfirmClose] = React.useState(false);
 
   async function handleRevoke() {
     await revokeMutation.mutateAsync(keyId);
@@ -443,7 +450,7 @@ export function ApiKeyDetailClient({
     }
   }
 
-  if (loading || !key) {
+  if (keysLoading) {
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader
@@ -465,9 +472,39 @@ export function ApiKeyDetailClient({
     );
   }
 
+  if (!key) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <PageHeader eyebrow="Developers · API keys" title="Key not found" />
+        <PageBody padding="default">
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <KeyIcon weight="bold" />
+              </EmptyMedia>
+              <EmptyTitle>This key isn&apos;t in your project</EmptyTitle>
+              <EmptyDescription>
+                It may have been revoked, deleted, or belongs to a different
+                project.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button asChild variant="outline" size="sm" className="text-xs">
+                <Link href={`/projects/${slug}/developers/keys`}>
+                  Back to keys
+                </Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        </PageBody>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
+        eyebrow="Developers · API keys"
         title={key.name}
         description={
           <span className="font-mono text-[11px]">
@@ -490,7 +527,7 @@ export function ApiKeyDetailClient({
               size="sm"
               className="gap-1.5 text-xs"
               disabled={!key.isActive}
-              onClick={handleRevoke}
+              onClick={() => setRevokeOpen(true)}
             >
               <ProhibitIcon className="size-3.5" aria-hidden />
               Revoke
@@ -518,7 +555,7 @@ export function ApiKeyDetailClient({
         {tab === "overview" && <UsageChart data={events} />}
         {tab === "activity" && <ActivityTab slug={slug} keyId={keyId} />}
         {tab === "settings" && (
-          <SettingsTab entry={key} onRevoke={handleRevoke} />
+          <SettingsTab entry={key} onRevoke={() => setRevokeOpen(true)} />
         )}
       </PageBody>
 
@@ -527,23 +564,53 @@ export function ApiKeyDetailClient({
         onOpenChange={setRotateOpen}
         intent="warning"
         title={<>Rotate &ldquo;{key.name}&rdquo;?</>}
-        description="Rotating creates a new key and revokes this one in 24 hours. Update your servers before then."
+        description="Rotating replaces the secret immediately. The old secret stops working right away — update your servers before continuing."
         cancelLabel="Cancel"
         confirmLabel="Rotate key"
         onConfirm={handleRotate}
       />
 
-      {/* Show new key after rotate */}
-      {rotatePlaintext != null && (
-        <CreateKeyDialog
-          open={true}
-          initialType={key.keyType as "PUBLISHABLE" | "SECRET"}
-          slug={slug}
-          onOpenChange={(open) => {
-            if (!open) setRotatePlaintext(null);
-          }}
-        />
-      )}
+      <ConfirmationDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        intent="danger"
+        title={<>Revoke &ldquo;{key.name}&rdquo;?</>}
+        description="This key stops working immediately. You can't undo it."
+        cancelLabel="Keep key"
+        confirmLabel="Revoke key"
+        onConfirm={handleRevoke}
+      />
+
+      {/* Show rotated secret — copy-once reveal, guarded close. */}
+      <Dialog
+        open={rotatePlaintext != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRotateConfirmClose(true);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Key rotated</DialogTitle>
+          </DialogHeader>
+          {rotatePlaintext != null && (
+            <RevealStep
+              plaintext={rotatePlaintext}
+              onClose={() => setRotatePlaintext(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmCloseDialog
+        open={rotateConfirmClose}
+        onOpenChange={setRotateConfirmClose}
+        onConfirm={() => {
+          setRotateConfirmClose(false);
+          setRotatePlaintext(null);
+        }}
+      />
     </div>
   );
 }

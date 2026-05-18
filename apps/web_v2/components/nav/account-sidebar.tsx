@@ -8,7 +8,6 @@ import {
   ShieldCheckIcon,
   CreditCardIcon,
   BellIcon,
-  KeyIcon,
   SlidersHorizontalIcon,
   ListIcon,
 } from "@phosphor-icons/react";
@@ -35,7 +34,6 @@ const NAV: AccountNavItem[] = [
     icon: BellIcon,
     disabled: true,
   },
-  { label: "API Keys", href: "/account/api-keys", icon: KeyIcon },
   {
     label: "Defaults",
     href: "/account/defaults",

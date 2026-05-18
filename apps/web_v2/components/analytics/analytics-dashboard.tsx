@@ -525,7 +525,7 @@ function SourcesTab({ data, projectSlug }: TabProps) {
 function ApiTab({ data, projectSlug }: TabProps) {
   return (
     <div className="space-y-4">
-      <ApiUsageCard keys={data.apiKeyUsage} />
+      <ApiUsageCard keys={data.apiKeyUsage} projectSlug={projectSlug} />
       <AlertsRail alerts={data.alerts} projectSlug={projectSlug} />
     </div>
   );

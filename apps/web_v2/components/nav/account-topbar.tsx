@@ -17,7 +17,6 @@ const SECTION_LABELS: Record<string, string> = {
   security: "Security",
   billing: "Billing",
   notifications: "Notifications",
-  "api-keys": "API Keys",
   defaults: "Defaults",
 };
 
