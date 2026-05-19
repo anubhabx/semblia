@@ -18,6 +18,7 @@ import type {
   V2ProjectDTO,
   V2ProjectMemberDTO,
   V2ProjectMemberRole,
+  V2PublicSurfaceHostDTO,
   V2TestimonialDTO,
   V2SubmissionDTO,
   V2SubmissionAnnotationDTO,
@@ -356,6 +357,15 @@ export function removeProjectMember(
 ) {
   return del(
     `/projects/${encodeURIComponent(slug)}/members/${encodeURIComponent(userId)}`,
+    token,
+  );
+}
+
+// ── Project public-surface hosts ────────────────────────────────────────────
+
+export function fetchPublicSurfaceHosts(token: string | null, slug: string) {
+  return api<V2PublicSurfaceHostDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/public-surface-hosts`,
     token,
   );
 }

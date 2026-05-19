@@ -11,6 +11,7 @@ import {
   Prisma,
   type ProjectMember,
 } from "@workspace/database/prisma";
+import type { V2PublicSurfaceHostDTO } from "@workspace/types";
 import type { ActorContext } from "../../common/authz/actor-context.js";
 import {
   Capability,
@@ -80,12 +81,30 @@ const PROJECT_MEMBER_SELECT = {
   },
 } satisfies Prisma.ProjectMemberSelect;
 
+const PUBLIC_SURFACE_HOST_SELECT = {
+  id: true,
+  projectId: true,
+  feature: true,
+  resourceType: true,
+  resourceId: true,
+  hostname: true,
+  isDefault: true,
+  status: true,
+  verifiedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.PublicSurfaceHostSelect;
+
 type ProjectWithCounts = Prisma.ProjectGetPayload<{
   select: typeof PROJECT_SELECT;
 }>;
 
 type ProjectMemberWithUser = Prisma.ProjectMemberGetPayload<{
   select: typeof PROJECT_MEMBER_SELECT;
+}>;
+
+type PublicSurfaceHostRow = Prisma.PublicSurfaceHostGetPayload<{
+  select: typeof PUBLIC_SURFACE_HOST_SELECT;
 }>;
 
 type ProjectJsonShape = Prisma.JsonValue | null;
@@ -578,6 +597,18 @@ export class ProjectsService {
     ].sort((left, right) => left.localeCompare(right));
   }
 
+  async listPublicSurfaceHosts(
+    projectId: string,
+  ): Promise<V2PublicSurfaceHostDTO[]> {
+    const hosts = await this.prisma.client.publicSurfaceHost.findMany({
+      where: { projectId },
+      orderBy: [{ feature: "asc" }, { hostname: "asc" }],
+      select: PUBLIC_SURFACE_HOST_SELECT,
+    });
+
+    return hosts.map((host) => this.toPublicSurfaceHostResponse(host));
+  }
+
   async replaceAllowedOrigins(
     projectId: string,
     origins: string[],
@@ -838,6 +869,24 @@ export class ProjectsService {
       role: member.role,
       createdAt: member.createdAt,
       user: member.user,
+    };
+  }
+
+  private toPublicSurfaceHostResponse(
+    host: PublicSurfaceHostRow,
+  ): V2PublicSurfaceHostDTO {
+    return {
+      id: host.id,
+      projectId: host.projectId,
+      feature: host.feature,
+      resourceType: host.resourceType,
+      resourceId: host.resourceId,
+      hostname: host.hostname,
+      isDefault: host.isDefault,
+      status: host.status,
+      verifiedAt: host.verifiedAt?.toISOString() ?? null,
+      createdAt: host.createdAt.toISOString(),
+      updatedAt: host.updatedAt.toISOString(),
     };
   }
 

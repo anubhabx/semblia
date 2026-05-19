@@ -13,6 +13,7 @@ export {
   useAddProjectMember,
   useUpdateProjectMember,
   useRemoveProjectMember,
+  usePublicSurfaceHosts,
   useAllowedOrigins,
   useReplaceAllowedOrigins,
   useGenerateSigningSecret,

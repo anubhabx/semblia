@@ -134,6 +134,10 @@ export type V2IntegrationAuthStrategy =
 export type V2IntegrationConnectionStatus = "ACTIVE" | "DISABLED" | "REVOKED";
 export type V2PublicSurfaceFeature = "COLLECTION" | "WALL";
 export type V2PublicSurfaceResourceType = "PROJECT" | "FORM" | "WIDGET";
+export type V2PublicSurfaceHostStatus =
+  | "ACTIVE"
+  | "PENDING_VERIFICATION"
+  | "DISABLED";
 
 export interface V2PaginatedResponse<T> {
   items: T[];
@@ -627,6 +631,20 @@ export interface V2PublicSurfaceWallResourceDTO {
   title: string;
   subhead: string;
   endpoint: string;
+}
+
+export interface V2PublicSurfaceHostDTO {
+  id: string;
+  projectId: string;
+  feature: V2PublicSurfaceFeature;
+  resourceType: V2PublicSurfaceResourceType;
+  resourceId: string | null;
+  hostname: string;
+  isDefault: boolean;
+  status: V2PublicSurfaceHostStatus;
+  verifiedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface V2PublicSurfaceResolutionDTO {

@@ -3,64 +3,78 @@
 /**
  * HostsClient — Public surfaces panel.
  *
- * The backend seeds two default PublicSurfaceHost rows per project on creation
- * (`<slug>.testimonials.tresta.app` for COLLECTION + `<slug>.walls.tresta.app`
- * for WALL — see `apps/api_v2/src/modules/projects/projects.service.ts`). Until
- * a dedicated authenticated list endpoint exists, this surface derives the
- * default hostnames from `project.slug` so users see their public URLs without
- * a second roundtrip.
- *
- * TODO(codex): when `GET /v2/projects/:slug/public-surface-hosts` lands, swap
- * the slug-derived rows for `usePublicSurfaceHosts(slug)` and surface the real
- * `status` / `verifiedAt` / `isDefault` fields per row.
+ * Reads the project's PublicSurfaceHost rows via `usePublicSurfaceHosts`.
+ * Defaults seeded on project create are `<slug>.testimonials.tresta.app`
+ * (COLLECTION) and `<slug>.walls.tresta.app` (WALL) — see
+ * `apps/api_v2/src/modules/projects/projects.service.ts`.
  */
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { V2ProjectDTO } from "@workspace/types";
+import type {
+  V2ProjectDTO,
+  V2PublicSurfaceHostDTO,
+  V2PublicSurfaceFeature,
+  V2PublicSurfaceHostStatus,
+} from "@workspace/types";
 import {
   GlobeIcon,
   CopyIcon,
   ArrowSquareOutIcon,
   CheckCircleIcon,
 } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageBody, SettingsSection } from "@/components/shared";
+import { usePublicSurfaceHosts } from "@/hooks/api";
 
-interface HostRow {
-  feature: "COLLECTION" | "WALL";
-  label: string;
-  description: string;
-  hostname: string;
-  publicHref: string;
-}
+const FEATURE_COPY: Record<
+  V2PublicSurfaceFeature,
+  { label: string; description: string }
+> = {
+  COLLECTION: {
+    label: "Collection page",
+    description: "Public form where customers leave testimonials.",
+  },
+  WALL: {
+    label: "Testimonial wall",
+    description: "Public wall that surfaces approved testimonials.",
+  },
+};
 
-function buildDefaultHosts(slug: string): HostRow[] {
-  return [
-    {
-      feature: "COLLECTION",
-      label: "Collection page",
-      description:
-        "Public testimonial form where customers leave new feedback.",
-      hostname: `${slug}.testimonials.tresta.app`,
-      publicHref: `https://${slug}.testimonials.tresta.app`,
-    },
-    {
-      feature: "WALL",
-      label: "Testimonial wall",
-      description: "Public wall that surfaces approved testimonials.",
-      hostname: `${slug}.walls.tresta.app`,
-      publicHref: `https://${slug}.walls.tresta.app`,
-    },
-  ];
-}
+const STATUS_COPY: Record<
+  V2PublicSurfaceHostStatus,
+  { label: string; className: string }
+> = {
+  ACTIVE: {
+    label: "Active",
+    className:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+  PENDING_VERIFICATION: {
+    label: "Pending",
+    className:
+      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+  DISABLED: {
+    label: "Disabled",
+    className: "border-border bg-muted/40 text-muted-foreground",
+  },
+};
 
-function HostCard({ row }: { row: HostRow }) {
+function HostCard({ host }: { host: V2PublicSurfaceHostDTO }) {
+  const copy = FEATURE_COPY[host.feature] ?? {
+    label: host.feature,
+    description: "",
+  };
+  const status = STATUS_COPY[host.status];
+  const publicHref = `https://${host.hostname}`;
   const [copied, setCopied] = React.useState(false);
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(row.publicHref);
+      await navigator.clipboard.writeText(publicHref);
       setCopied(true);
       toast.success("URL copied");
       window.setTimeout(() => setCopied(false), 1500);
@@ -82,14 +96,31 @@ function HostCard({ row }: { row: HostRow }) {
               />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                {row.label}
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {copy.label}
+                </p>
+                {host.isDefault && (
+                  <span className="rounded-sm border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    Default
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "rounded-sm border px-1.5 py-0.5 text-[10px] font-medium",
+                    status.className,
+                  )}
+                >
+                  {status.label}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {copy.description}
               </p>
-              <p className="text-xs text-muted-foreground">{row.description}</p>
             </div>
           </div>
           <p className="mt-3 truncate font-mono text-[12.5px] text-foreground">
-            {row.hostname}
+            {host.hostname}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -113,8 +144,9 @@ function HostCard({ row }: { row: HostRow }) {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs"
+            disabled={host.status !== "ACTIVE"}
           >
-            <a href={row.publicHref} target="_blank" rel="noreferrer noopener">
+            <a href={publicHref} target="_blank" rel="noreferrer noopener">
               Open
               <ArrowSquareOutIcon className="size-3" aria-hidden />
             </a>
@@ -126,24 +158,34 @@ function HostCard({ row }: { row: HostRow }) {
 }
 
 export function HostsClient({ project }: { project: V2ProjectDTO }) {
-  const hosts = React.useMemo(
-    () => buildDefaultHosts(project.slug),
-    [project.slug],
-  );
+  const hosts = usePublicSurfaceHosts(project.slug);
+  const rows = hosts.data ?? [];
 
   return (
     <PageBody padding="default">
       <div className="space-y-8 pb-8">
         <SettingsSection
-          id="default-hosts"
-          title="Default hosts"
-          description="Every project ships with these public surfaces under tresta.app subdomains."
+          id="hosted-surfaces"
+          title="Hosted surfaces"
+          description="Public URLs where this project's collection and wall pages are served."
         >
-          <div className="space-y-3">
-            {hosts.map((row) => (
-              <HostCard key={row.feature} row={row} />
-            ))}
-          </div>
+          {hosts.isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-24 rounded-lg" />
+              <Skeleton className="h-24 rounded-lg" />
+            </div>
+          ) : rows.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
+              No hosted surfaces yet. Default hosts are seeded when the project
+              is created.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {rows.map((host) => (
+                <HostCard key={host.id} host={host} />
+              ))}
+            </div>
+          )}
         </SettingsSection>
 
         <SettingsSection

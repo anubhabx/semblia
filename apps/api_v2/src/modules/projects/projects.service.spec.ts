@@ -15,6 +15,7 @@ const mockProjectMemberCreate = vi.fn();
 const mockProjectMemberFindMany = vi.fn();
 const mockProjectTrustedOriginFindMany = vi.fn();
 const mockPublicSurfaceHostCreateMany = vi.fn();
+const mockPublicSurfaceHostFindMany = vi.fn();
 const mockTestimonialGroupBy = vi.fn();
 const mockTestimonialCount = vi.fn();
 const mockTransaction = vi.fn();
@@ -43,6 +44,7 @@ const prismaMock = {
     },
     publicSurfaceHost: {
       createMany: mockPublicSurfaceHostCreateMany,
+      findMany: mockPublicSurfaceHostFindMany,
     },
   },
 } as unknown as PrismaService;
@@ -223,6 +225,105 @@ describe("ProjectsService allowed origins", () => {
       ],
       skipDuplicates: true,
     });
+  });
+
+  it("lists the default public surface hosts for a project as DTO-shaped rows", async () => {
+    mockProjectCreate.mockResolvedValue({
+      id: "project_1",
+      userId: "user_1",
+      organizationId: null,
+      name: "Acme",
+      shortDescription: null,
+      description: null,
+      slug: "acme",
+      logoUrl: null,
+      projectType: null,
+      websiteUrl: null,
+      collectionFormUrl: null,
+      brandColorPrimary: null,
+      brandColorSecondary: null,
+      socialLinks: null,
+      tags: [],
+      visibility: "PRIVATE",
+      isActive: true,
+      autoModeration: true,
+      autoApproveVerified: false,
+      profanityFilterLevel: "MODERATE",
+      formConfig: null,
+      createdAt: new Date("2026-05-02T00:00:00.000Z"),
+      updatedAt: new Date("2026-05-02T00:00:00.000Z"),
+      _count: {
+        testimonials: 0,
+        widgets: 0,
+        apiKeys: 0,
+      },
+    });
+    mockPublicSurfaceHostFindMany.mockResolvedValue([
+      publicSurfaceHostRecord({
+        id: "host_collection",
+        feature: "COLLECTION",
+        hostname: "acme.testimonials.tresta.app",
+      }),
+      publicSurfaceHostRecord({
+        id: "host_wall",
+        feature: "WALL",
+        hostname: "acme.walls.tresta.app",
+      }),
+    ]);
+
+    await service.create("user_1", {
+      name: "Acme",
+      slug: "acme",
+      tags: [],
+    });
+
+    const hosts = await service.listPublicSurfaceHosts("project_1");
+
+    expect(mockPublicSurfaceHostFindMany).toHaveBeenCalledWith({
+      where: { projectId: "project_1" },
+      orderBy: [{ feature: "asc" }, { hostname: "asc" }],
+      select: {
+        id: true,
+        projectId: true,
+        feature: true,
+        resourceType: true,
+        resourceId: true,
+        hostname: true,
+        isDefault: true,
+        status: true,
+        verifiedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    expect(hosts).toEqual([
+      {
+        id: "host_collection",
+        projectId: "project_1",
+        feature: "COLLECTION",
+        resourceType: "PROJECT",
+        resourceId: null,
+        hostname: "acme.testimonials.tresta.app",
+        isDefault: true,
+        status: "ACTIVE",
+        verifiedAt: "2026-05-02T00:00:00.000Z",
+        createdAt: "2026-05-02T00:00:00.000Z",
+        updatedAt: "2026-05-02T00:00:00.000Z",
+      },
+      {
+        id: "host_wall",
+        projectId: "project_1",
+        feature: "WALL",
+        resourceType: "PROJECT",
+        resourceId: null,
+        hostname: "acme.walls.tresta.app",
+        isDefault: true,
+        status: "ACTIVE",
+        verifiedAt: "2026-05-02T00:00:00.000Z",
+        createdAt: "2026-05-02T00:00:00.000Z",
+        updatedAt: "2026-05-02T00:00:00.000Z",
+      },
+    ]);
   });
 
   it("creates new projects under the active Clerk organization when present", async () => {
@@ -445,6 +546,25 @@ function projectRecord(overrides: Partial<Record<string, unknown>> = {}) {
       widgets: 0,
       apiKeys: 0,
     },
+    ...overrides,
+  };
+}
+
+function publicSurfaceHostRecord(
+  overrides: Partial<Record<string, unknown>> = {},
+) {
+  return {
+    id: "host_1",
+    projectId: "project_1",
+    feature: "COLLECTION",
+    resourceType: "PROJECT",
+    resourceId: null,
+    hostname: "acme.testimonials.tresta.app",
+    isDefault: true,
+    status: "ACTIVE",
+    verifiedAt: new Date("2026-05-02T00:00:00.000Z"),
+    createdAt: new Date("2026-05-02T00:00:00.000Z"),
+    updatedAt: new Date("2026-05-02T00:00:00.000Z"),
     ...overrides,
   };
 }

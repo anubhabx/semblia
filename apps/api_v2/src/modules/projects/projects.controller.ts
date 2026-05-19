@@ -181,6 +181,19 @@ export class ProjectsController {
     };
   }
 
+  @Get(":slug/public-surface-hosts")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.VIEW_PROJECT)
+  async listPublicSurfaceHosts(
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    _params: ProjectSlugParamsDto,
+    @Req() request: { projectAccess?: { projectId: string } },
+  ) {
+    return this.projectsService.listPublicSurfaceHosts(
+      this.getProjectIdFromRequest(request),
+    );
+  }
+
   @Put(":slug/allowed-origins")
   @UseGuards(CapabilityGuard)
   @RequireCapability(Capability.MANAGE_PROJECT)

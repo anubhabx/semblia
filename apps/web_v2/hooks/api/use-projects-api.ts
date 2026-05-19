@@ -14,6 +14,7 @@ import {
   updateProjectMember,
   removeProjectMember,
   fetchAllowedOrigins,
+  fetchPublicSurfaceHosts,
   replaceAllowedOrigins,
   generateSigningSecret,
   clearSigningSecret,
@@ -164,6 +165,20 @@ export function useRemoveProjectMember(slug: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.projects.members(slug) });
     },
+  });
+}
+
+export function usePublicSurfaceHosts(slug: string, options?: ApiQueryOptions) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.projects.publicSurfaceHosts(slug),
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchPublicSurfaceHosts(token, slug);
+    },
+    enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
   });
 }
 
