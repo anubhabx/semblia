@@ -13,6 +13,10 @@ import {
   addProjectMember,
   updateProjectMember,
   removeProjectMember,
+  fetchProjectMemberInvites,
+  createProjectMemberInvite,
+  revokeProjectMemberInvite,
+  acceptProjectMemberInvite,
   fetchAllowedOrigins,
   fetchPublicSurfaceHosts,
   replaceAllowedOrigins,
@@ -164,6 +168,72 @@ export function useRemoveProjectMember(slug: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.projects.members(slug) });
+    },
+  });
+}
+
+export function useProjectMemberInvites(
+  slug: string,
+  options?: ApiQueryOptions,
+) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.projects.memberInvites(slug),
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchProjectMemberInvites(token, slug);
+    },
+    enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
+  });
+}
+
+export function useCreateProjectMemberInvite(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: { email: string; role?: V2ProjectMemberRole }) => {
+      const token = await getToken();
+      return createProjectMemberInvite(token, slug, body);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.projects.memberInvites(slug),
+      });
+    },
+  });
+}
+
+export function useRevokeProjectMemberInvite(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (inviteId: string) => {
+      const token = await getToken();
+      return revokeProjectMemberInvite(token, slug, inviteId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.projects.memberInvites(slug),
+      });
+    },
+  });
+}
+
+export function useAcceptProjectMemberInvite() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (inviteId: string) => {
+      const token = await getToken();
+      return acceptProjectMemberInvite(token, inviteId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
   });
 }

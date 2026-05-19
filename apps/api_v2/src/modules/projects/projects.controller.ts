@@ -23,16 +23,20 @@ import { RequireCapability } from "../../common/authz/require-capability.decorat
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
 import {
   addProjectMemberBodySchema,
+  createProjectMemberInviteBodySchema,
   replaceAllowedOriginsBodySchema,
   createProjectBodySchema,
   listProjectsQuerySchema,
+  projectMemberInviteParamsSchema,
   projectMemberParamsSchema,
   projectSlugParamsSchema,
   updateProjectMemberBodySchema,
   updateProjectBodySchema,
   type AddProjectMemberBodyDto,
+  type CreateProjectMemberInviteBodyDto,
   type CreateProjectBodyDto,
   type ListProjectsQueryDto,
+  type ProjectMemberInviteParamsDto,
   type ProjectMemberParamsDto,
   type ProjectSlugParamsDto,
   type ReplaceAllowedOriginsBodyDto,
@@ -127,6 +131,43 @@ export class ProjectsController {
     params: ProjectSlugParamsDto,
   ) {
     return this.projectsService.listMembers(userId, params);
+  }
+
+  @Get(":slug/members/invites")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.VIEW_PROJECT)
+  listMemberInvites(
+    @CurrentUserId() userId: string,
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    params: ProjectSlugParamsDto,
+  ) {
+    return this.projectsService.listMemberInvites(userId, params);
+  }
+
+  @Post(":slug/members/invites")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_MEMBERS)
+  createMemberInvite(
+    @CurrentUserId() userId: string,
+    @CurrentActor() actor: ActorContext | null,
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    params: ProjectSlugParamsDto,
+    @Body(new ZodValidationPipe(createProjectMemberInviteBodySchema))
+    body: CreateProjectMemberInviteBodyDto,
+  ) {
+    return this.projectsService.createMemberInvite(userId, params, body, actor);
+  }
+
+  @Delete(":slug/members/invites/:inviteId")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_MEMBERS)
+  revokeMemberInvite(
+    @CurrentUserId() userId: string,
+    @CurrentActor() actor: ActorContext | null,
+    @Param(new ZodValidationPipe(projectMemberInviteParamsSchema))
+    params: ProjectMemberInviteParamsDto,
+  ) {
+    return this.projectsService.revokeMemberInvite(userId, params, actor);
   }
 
   @Post(":slug/members")

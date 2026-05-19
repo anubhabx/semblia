@@ -140,6 +140,14 @@ export const projectMemberParamsSchema = projectSlugParamsSchema.extend({
   userId: z.string().trim().min(1),
 });
 
+export const projectInviteParamsSchema = z.object({
+  inviteId: z.string().trim().min(1),
+});
+
+export const projectMemberInviteParamsSchema = projectSlugParamsSchema.extend({
+  inviteId: z.string().trim().min(1),
+});
+
 export const listProjectsQuerySchema = paginationQuerySchema;
 
 export const createProjectBodySchema = z.object({
@@ -188,9 +196,24 @@ export const updateProjectMemberBodySchema = z.object({
   role: memberRoleSchema,
 });
 
+export const createProjectMemberInviteBodySchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1)
+    .max(320)
+    .email()
+    .transform((email) => email.toLowerCase()),
+  role: memberRoleSchema.default("VIEWER"),
+});
+
 export type ProjectSlugParamsDto = z.infer<typeof projectSlugParamsSchema>;
 export type MemberRoleDto = z.infer<typeof memberRoleSchema>;
 export type ProjectMemberParamsDto = z.infer<typeof projectMemberParamsSchema>;
+export type ProjectInviteParamsDto = z.infer<typeof projectInviteParamsSchema>;
+export type ProjectMemberInviteParamsDto = z.infer<
+  typeof projectMemberInviteParamsSchema
+>;
 export type ListProjectsQueryDto = z.infer<typeof listProjectsQuerySchema>;
 export type CreateProjectBodyDto = z.infer<typeof createProjectBodySchema>;
 export type UpdateProjectBodyDto = z.infer<typeof updateProjectBodySchema>;
@@ -199,6 +222,9 @@ export type AddProjectMemberBodyDto = z.infer<
 >;
 export type UpdateProjectMemberBodyDto = z.infer<
   typeof updateProjectMemberBodySchema
+>;
+export type CreateProjectMemberInviteBodyDto = z.infer<
+  typeof createProjectMemberInviteBodySchema
 >;
 export type ReplaceAllowedOriginsBodyDto = z.infer<
   typeof replaceAllowedOriginsBodySchema

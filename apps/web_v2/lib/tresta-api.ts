@@ -18,6 +18,7 @@ import type {
   V2ProjectDTO,
   V2ProjectMemberDTO,
   V2ProjectMemberRole,
+  V2ProjectMemberInviteDTO,
   V2PublicSurfaceHostDTO,
   V2TestimonialDTO,
   V2SubmissionDTO,
@@ -359,6 +360,48 @@ export function removeProjectMember(
     `/projects/${encodeURIComponent(slug)}/members/${encodeURIComponent(userId)}`,
     token,
   );
+}
+
+// ── Project member invites ──────────────────────────────────────────────────
+
+export function fetchProjectMemberInvites(token: string | null, slug: string) {
+  return api<V2ProjectMemberInviteDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/members/invites`,
+    token,
+  );
+}
+
+export function createProjectMemberInvite(
+  token: string | null,
+  slug: string,
+  body: { email: string; role?: V2ProjectMemberRole },
+) {
+  return post<V2ProjectMemberInviteDTO>(
+    `/projects/${encodeURIComponent(slug)}/members/invites`,
+    token,
+    body,
+  );
+}
+
+export function revokeProjectMemberInvite(
+  token: string | null,
+  slug: string,
+  inviteId: string,
+) {
+  return del(
+    `/projects/${encodeURIComponent(slug)}/members/invites/${encodeURIComponent(inviteId)}`,
+    token,
+  );
+}
+
+export function acceptProjectMemberInvite(
+  token: string | null,
+  inviteId: string,
+) {
+  return post<{
+    invite: V2ProjectMemberInviteDTO;
+    member: V2ProjectMemberDTO;
+  }>(`/me/project-invites/${encodeURIComponent(inviteId)}/accept`, token);
 }
 
 // ── Project public-surface hosts ────────────────────────────────────────────

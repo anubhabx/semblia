@@ -12,6 +12,8 @@ export const queryKeys = {
       ["projects", "list", params ?? {}] as const,
     detail: (slug: string) => ["projects", slug] as const,
     members: (slug: string) => ["projects", slug, "members"] as const,
+    memberInvites: (slug: string) =>
+      ["projects", slug, "member-invites"] as const,
     allowedOrigins: (slug: string) =>
       ["projects", slug, "allowed-origins"] as const,
     publicSurfaceHosts: (slug: string) =>

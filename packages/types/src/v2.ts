@@ -95,6 +95,7 @@ export type V2NotificationType =
   | "TESTIMONIAL_REJECTED"
   | "EXPORT_DELIVERY_FAILED"
   | "AGENT_ACTION_CREATED"
+  | "PROJECT_INVITE_RECEIVED"
   | "SECURITY_ALERT";
 export type V2SubscriptionStatus =
   | "ACTIVE"
@@ -933,6 +934,26 @@ export interface V2ProjectMemberDTO {
     email: string;
     avatar: string | null;
   };
+}
+
+export type V2ProjectMemberInviteStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REVOKED"
+  | "EXPIRED";
+
+export interface V2ProjectMemberInviteDTO {
+  id: string;
+  projectId: string;
+  email: string;
+  role: V2ProjectMemberRole;
+  status: V2ProjectMemberInviteStatus;
+  invitedByUserId: string | null;
+  acceptedByUserId: string | null;
+  acceptedAt: string | null;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface V2NotificationDTO {

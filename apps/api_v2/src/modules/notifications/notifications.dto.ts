@@ -9,6 +9,7 @@ export const notificationTypeSchema = z.enum([
   "TESTIMONIAL_REJECTED",
   "EXPORT_DELIVERY_FAILED",
   "AGENT_ACTION_CREATED",
+  "PROJECT_INVITE_RECEIVED",
   "SECURITY_ALERT",
 ]);
 
@@ -38,6 +39,7 @@ const notificationTypePreferencesSchema = z
     TESTIMONIAL_REJECTED: notificationTypePreferenceSchema.optional(),
     EXPORT_DELIVERY_FAILED: notificationTypePreferenceSchema.optional(),
     AGENT_ACTION_CREATED: notificationTypePreferenceSchema.optional(),
+    PROJECT_INVITE_RECEIVED: notificationTypePreferenceSchema.optional(),
     SECURITY_ALERT: notificationTypePreferenceSchema.optional(),
   })
   .strict();

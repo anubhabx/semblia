@@ -4,28 +4,38 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import {
   MemberRole,
   ModerationStatus,
+  NotificationType,
   Prisma,
   type ProjectMember,
+  ProjectMemberInviteStatus,
 } from "@workspace/database/prisma";
-import type { V2PublicSurfaceHostDTO } from "@workspace/types";
+import type {
+  V2ProjectMemberInviteDTO,
+  V2PublicSurfaceHostDTO,
+} from "@workspace/types";
 import type { ActorContext } from "../../common/authz/actor-context.js";
 import {
   Capability,
   clerkOrgRoleCapabilities,
   credentialScopeCapabilities,
 } from "../../common/authz/capabilities.js";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import type { ProjectAccessRole } from "../../common/authz/project-access.service.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { OrganizationsService } from "../organizations/organizations.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
   AddProjectMemberBodyDto,
+  CreateProjectMemberInviteBodyDto,
   CreateProjectBodyDto,
   ListProjectsQueryDto,
+  ProjectInviteParamsDto,
+  ProjectMemberInviteParamsDto,
   ProjectMemberParamsDto,
   ProjectSlugParamsDto,
   UpdateProjectBodyDto,
@@ -81,6 +91,20 @@ const PROJECT_MEMBER_SELECT = {
   },
 } satisfies Prisma.ProjectMemberSelect;
 
+const PROJECT_MEMBER_INVITE_SELECT = {
+  id: true,
+  projectId: true,
+  email: true,
+  role: true,
+  status: true,
+  invitedByUserId: true,
+  acceptedByUserId: true,
+  acceptedAt: true,
+  expiresAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ProjectMemberInviteSelect;
+
 const PUBLIC_SURFACE_HOST_SELECT = {
   id: true,
   projectId: true,
@@ -103,6 +127,10 @@ type ProjectMemberWithUser = Prisma.ProjectMemberGetPayload<{
   select: typeof PROJECT_MEMBER_SELECT;
 }>;
 
+type ProjectMemberInviteRow = Prisma.ProjectMemberInviteGetPayload<{
+  select: typeof PROJECT_MEMBER_INVITE_SELECT;
+}>;
+
 type PublicSurfaceHostRow = Prisma.PublicSurfaceHostGetPayload<{
   select: typeof PUBLIC_SURFACE_HOST_SELECT;
 }>;
@@ -119,6 +147,8 @@ export class ProjectsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OrganizationsService)
     private readonly organizationsService: OrganizationsService,
+    @Inject(ProjectActionAuditService)
+    private readonly actionAudit: ProjectActionAuditService,
   ) {}
 
   async list(
@@ -432,6 +462,298 @@ export class ProjectsService {
     }
   }
 
+  async listMemberInvites(
+    _userId: string,
+    params: ProjectSlugParamsDto,
+  ): Promise<V2ProjectMemberInviteDTO[]> {
+    const project = await this.getProjectOrThrow(params.slug);
+    const now = new Date();
+
+    await this.expirePendingInvitesForProject(project.id, now);
+
+    const invites = await this.prisma.client.projectMemberInvite.findMany({
+      where: {
+        projectId: project.id,
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { gt: now },
+      },
+      orderBy: { createdAt: "desc" },
+      select: PROJECT_MEMBER_INVITE_SELECT,
+    });
+
+    return invites.map((invite) => this.toProjectMemberInviteResponse(invite));
+  }
+
+  async createMemberInvite(
+    userId: string,
+    params: ProjectSlugParamsDto,
+    body: CreateProjectMemberInviteBodyDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectMemberInviteDTO> {
+    if (body.role === MemberRole.OWNER) {
+      throw new UnprocessableEntityException(
+        "Project owner role cannot be invited",
+      );
+    }
+
+    const project = await this.getProjectOrThrow(params.slug);
+    const email = this.normalizeEmail(body.email);
+    const role = body.role as MemberRole;
+    const now = new Date();
+
+    await this.expirePendingInvitesByEmail(project.id, email, now);
+
+    const existingUser = await this.prisma.client.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+      select: { id: true, email: true },
+    });
+
+    if (existingUser) {
+      const existingMember = await this.prisma.client.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: project.id,
+            userId: existingUser.id,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (existingMember) {
+        throw new ConflictException("User is already a project member");
+      }
+    }
+
+    const existingInvite =
+      await this.prisma.client.projectMemberInvite.findFirst({
+        where: {
+          projectId: project.id,
+          email,
+          status: ProjectMemberInviteStatus.PENDING,
+        },
+        select: { id: true },
+      });
+
+    if (existingInvite) {
+      throw new ConflictException("A pending invite already exists");
+    }
+
+    try {
+      const invite = await this.prisma.client.$transaction(async (tx) => {
+        const createdInvite = await tx.projectMemberInvite.create({
+          data: {
+            projectId: project.id,
+            email,
+            role,
+            invitedByUserId: userId,
+          },
+          select: PROJECT_MEMBER_INVITE_SELECT,
+        });
+
+        await this.actionAudit.recordWith(tx, {
+          projectId: project.id,
+          actor: this.actorOrUser(actor, userId),
+          action: "member.invite_sent",
+          targetType: "project_member_invite",
+          targetId: createdInvite.id,
+          metadata: {
+            email,
+            role,
+          },
+        });
+
+        if (existingUser) {
+          await tx.notification.create({
+            data: {
+              userId: existingUser.id,
+              type: NotificationType.PROJECT_INVITE_RECEIVED,
+              title: "Project invitation",
+              message: `You were invited to join ${project.slug}.`,
+              link: "/projects",
+              metadata: {
+                projectId: project.id,
+                projectSlug: project.slug,
+                inviteId: createdInvite.id,
+                role,
+              },
+            },
+          });
+        }
+
+        // TODO: Queue an email invite when transactional email sending is in scope.
+        return createdInvite;
+      });
+
+      return this.toProjectMemberInviteResponse(invite);
+    } catch (error: unknown) {
+      if (this.isPrismaUniqueViolation(error)) {
+        throw new ConflictException("A pending invite already exists");
+      }
+
+      throw error;
+    }
+  }
+
+  async revokeMemberInvite(
+    userId: string,
+    params: ProjectMemberInviteParamsDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectMemberInviteDTO> {
+    const project = await this.getProjectOrThrow(params.slug);
+    const invite = await this.prisma.client.projectMemberInvite.findFirst({
+      where: {
+        id: params.inviteId,
+        projectId: project.id,
+      },
+      select: PROJECT_MEMBER_INVITE_SELECT,
+    });
+
+    if (!invite) {
+      throw new NotFoundException("Project member invite not found");
+    }
+
+    if (
+      invite.status === ProjectMemberInviteStatus.REVOKED ||
+      invite.status === ProjectMemberInviteStatus.EXPIRED
+    ) {
+      return this.toProjectMemberInviteResponse(invite);
+    }
+
+    if (invite.status !== ProjectMemberInviteStatus.PENDING) {
+      throw new ConflictException("Project member invite is not pending");
+    }
+
+    if (invite.expiresAt <= new Date()) {
+      const expiredInvite = await this.prisma.client.projectMemberInvite.update(
+        {
+          where: { id: invite.id },
+          data: { status: ProjectMemberInviteStatus.EXPIRED },
+          select: PROJECT_MEMBER_INVITE_SELECT,
+        },
+      );
+
+      return this.toProjectMemberInviteResponse(expiredInvite);
+    }
+
+    const revokedInvite = await this.prisma.client.$transaction(async (tx) => {
+      const updatedInvite = await tx.projectMemberInvite.update({
+        where: { id: invite.id },
+        data: { status: ProjectMemberInviteStatus.REVOKED },
+        select: PROJECT_MEMBER_INVITE_SELECT,
+      });
+
+      await this.actionAudit.recordWith(tx, {
+        projectId: project.id,
+        actor: this.actorOrUser(actor, userId),
+        action: "member.invite_revoked",
+        targetType: "project_member_invite",
+        targetId: updatedInvite.id,
+        metadata: {
+          email: updatedInvite.email,
+          role: updatedInvite.role,
+        },
+      });
+
+      return updatedInvite;
+    });
+
+    return this.toProjectMemberInviteResponse(revokedInvite);
+  }
+
+  async acceptMemberInvite(
+    userId: string,
+    params: ProjectInviteParamsDto,
+    actor?: ActorContext | null,
+  ) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    const invite = await this.prisma.client.projectMemberInvite.findUnique({
+      where: { id: params.inviteId },
+      select: PROJECT_MEMBER_INVITE_SELECT,
+    });
+
+    if (!invite) {
+      throw new NotFoundException("Project member invite not found");
+    }
+
+    if (this.normalizeEmail(user.email) !== invite.email) {
+      throw new ForbiddenException(
+        "Project member invite belongs to another email",
+      );
+    }
+
+    if (invite.status !== ProjectMemberInviteStatus.PENDING) {
+      throw new ConflictException("Project member invite is not pending");
+    }
+
+    if (invite.expiresAt <= new Date()) {
+      await this.prisma.client.projectMemberInvite.update({
+        where: { id: invite.id },
+        data: { status: ProjectMemberInviteStatus.EXPIRED },
+        select: { id: true },
+      });
+      throw new ConflictException("Project member invite has expired");
+    }
+
+    const result = await this.prisma.client.$transaction(async (tx) => {
+      const acceptedInvite = await tx.projectMemberInvite.update({
+        where: { id: invite.id },
+        data: {
+          status: ProjectMemberInviteStatus.ACCEPTED,
+          acceptedByUserId: user.id,
+          acceptedAt: new Date(),
+        },
+        select: PROJECT_MEMBER_INVITE_SELECT,
+      });
+
+      const member = await tx.projectMember.upsert({
+        where: {
+          projectId_userId: {
+            projectId: invite.projectId,
+            userId: user.id,
+          },
+        },
+        update: { role: invite.role },
+        create: {
+          projectId: invite.projectId,
+          userId: user.id,
+          role: invite.role,
+        },
+        select: PROJECT_MEMBER_SELECT,
+      });
+
+      await this.actionAudit.recordWith(tx, {
+        projectId: invite.projectId,
+        actor: this.actorOrUser(actor, userId),
+        action: "member.invite_accepted",
+        targetType: "project_member_invite",
+        targetId: invite.id,
+        metadata: {
+          email: invite.email,
+          role: invite.role,
+          memberId: member.id,
+        },
+      });
+
+      return {
+        invite: acceptedInvite,
+        member,
+      };
+    });
+
+    return {
+      invite: this.toProjectMemberInviteResponse(result.invite),
+      member: this.toProjectMemberResponse(result.member),
+    };
+  }
+
   private buildProjectAccessWhere(
     userId: string,
     actor?: ActorContext | null,
@@ -707,6 +1029,51 @@ export class ProjectsService {
     });
   }
 
+  private expirePendingInvitesForProject(projectId: string, now: Date) {
+    return this.prisma.client.projectMemberInvite.updateMany({
+      where: {
+        projectId,
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { lte: now },
+      },
+      data: { status: ProjectMemberInviteStatus.EXPIRED },
+    });
+  }
+
+  private expirePendingInvitesByEmail(
+    projectId: string,
+    email: string,
+    now: Date,
+  ) {
+    return this.prisma.client.projectMemberInvite.updateMany({
+      where: {
+        projectId,
+        email,
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { lte: now },
+      },
+      data: { status: ProjectMemberInviteStatus.EXPIRED },
+    });
+  }
+
+  private actorOrUser(
+    actor: ActorContext | null | undefined,
+    userId: string,
+  ): ActorContext {
+    return (
+      actor ?? {
+        actorType: "user",
+        userId,
+        clerkOrgPermissions: [],
+        scopes: [],
+      }
+    );
+  }
+
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
   private createDefaultPublicSurfaceHosts(
     tx: Prisma.TransactionClient,
     projectId: string,
@@ -869,6 +1236,24 @@ export class ProjectsService {
       role: member.role,
       createdAt: member.createdAt,
       user: member.user,
+    };
+  }
+
+  private toProjectMemberInviteResponse(
+    invite: ProjectMemberInviteRow,
+  ): V2ProjectMemberInviteDTO {
+    return {
+      id: invite.id,
+      projectId: invite.projectId,
+      email: invite.email,
+      role: invite.role as V2ProjectMemberInviteDTO["role"],
+      status: invite.status as V2ProjectMemberInviteDTO["status"],
+      invitedByUserId: invite.invitedByUserId,
+      acceptedByUserId: invite.acceptedByUserId,
+      acceptedAt: invite.acceptedAt?.toISOString() ?? null,
+      expiresAt: invite.expiresAt.toISOString(),
+      createdAt: invite.createdAt.toISOString(),
+      updatedAt: invite.updatedAt.toISOString(),
     };
   }
 

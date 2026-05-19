@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ForbiddenException, NotFoundException } from "@nestjs/common";
-import { MemberRole } from "@workspace/database/prisma";
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import {
+  MemberRole,
+  NotificationType,
+  ProjectMemberInviteStatus,
+} from "@workspace/database/prisma";
 import { Capability } from "../../common/authz/capabilities.js";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import { ProjectsService } from "./projects.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
@@ -12,12 +22,24 @@ const mockProjectCount = vi.fn();
 const mockProjectUpdate = vi.fn();
 const mockProjectCreate = vi.fn();
 const mockProjectMemberCreate = vi.fn();
+const mockProjectMemberFindUnique = vi.fn();
 const mockProjectMemberFindMany = vi.fn();
+const mockProjectMemberUpsert = vi.fn();
 const mockProjectTrustedOriginFindMany = vi.fn();
+const mockProjectMemberInviteCreate = vi.fn();
+const mockProjectMemberInviteFindFirst = vi.fn();
+const mockProjectMemberInviteFindMany = vi.fn();
+const mockProjectMemberInviteFindUnique = vi.fn();
+const mockProjectMemberInviteUpdate = vi.fn();
+const mockProjectMemberInviteUpdateMany = vi.fn();
 const mockPublicSurfaceHostCreateMany = vi.fn();
 const mockPublicSurfaceHostFindMany = vi.fn();
 const mockTestimonialGroupBy = vi.fn();
 const mockTestimonialCount = vi.fn();
+const mockUserFindFirst = vi.fn();
+const mockUserFindUnique = vi.fn();
+const mockNotificationCreate = vi.fn();
+const mockProjectActionAuditCreate = vi.fn();
 const mockTransaction = vi.fn();
 const mockEnsureOrganizationForActor = vi.fn();
 
@@ -37,10 +59,30 @@ const prismaMock = {
     },
     projectMember: {
       create: mockProjectMemberCreate,
+      findUnique: mockProjectMemberFindUnique,
       findMany: mockProjectMemberFindMany,
+      upsert: mockProjectMemberUpsert,
+    },
+    projectMemberInvite: {
+      create: mockProjectMemberInviteCreate,
+      findFirst: mockProjectMemberInviteFindFirst,
+      findMany: mockProjectMemberInviteFindMany,
+      findUnique: mockProjectMemberInviteFindUnique,
+      update: mockProjectMemberInviteUpdate,
+      updateMany: mockProjectMemberInviteUpdateMany,
     },
     projectTrustedOrigin: {
       findMany: mockProjectTrustedOriginFindMany,
+    },
+    user: {
+      findFirst: mockUserFindFirst,
+      findUnique: mockUserFindUnique,
+    },
+    notification: {
+      create: mockNotificationCreate,
+    },
+    projectActionAudit: {
+      create: mockProjectActionAuditCreate,
     },
     publicSurfaceHost: {
       createMany: mockPublicSurfaceHostCreateMany,
@@ -57,13 +99,18 @@ describe("ProjectsService allowed origins", () => {
   let service: ProjectsService;
 
   beforeEach(() => {
-    service = new ProjectsService(prismaMock, organizationsServiceMock);
+    service = new ProjectsService(
+      prismaMock,
+      organizationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+    );
     vi.clearAllMocks();
     mockTransaction.mockImplementation(
       async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(prismaMock.client),
     );
     mockProjectMemberFindMany.mockResolvedValue([]);
+    mockProjectMemberInviteUpdateMany.mockResolvedValue({ count: 0 });
     mockTestimonialCount.mockResolvedValue(0);
   });
 
@@ -514,6 +561,323 @@ describe("ProjectsService allowed origins", () => {
 
     expect(mockProjectCreate).not.toHaveBeenCalled();
   });
+
+  it("rejects OWNER role when creating a project member invite", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+
+    await expect(
+      service.createMemberInvite(
+        "admin_1",
+        { slug: "acme" },
+        { email: "invitee@example.com", role: MemberRole.OWNER },
+      ),
+    ).rejects.toThrow(UnprocessableEntityException);
+
+    expect(mockProjectMemberInviteCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate pending project member invites", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockUserFindFirst.mockResolvedValue(null);
+    mockProjectMemberInviteFindFirst.mockResolvedValue({ id: "invite_1" });
+
+    await expect(
+      service.createMemberInvite(
+        "admin_1",
+        { slug: "acme" },
+        {
+          email: "invitee@example.com",
+          role: MemberRole.EDITOR,
+        },
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockProjectMemberInviteCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects invites for emails that already belong to project members", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockUserFindFirst.mockResolvedValue({
+      id: "member_1",
+      email: "member@example.com",
+    });
+    mockProjectMemberFindUnique.mockResolvedValue({ id: "membership_1" });
+
+    await expect(
+      service.createMemberInvite(
+        "admin_1",
+        { slug: "acme" },
+        {
+          email: "member@example.com",
+          role: MemberRole.VIEWER,
+        },
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockProjectMemberInviteCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates normalized email invites, records audit, and notifies existing users", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockUserFindFirst.mockResolvedValue({
+      id: "invitee_1",
+      email: "Invitee@Example.com",
+    });
+    mockProjectMemberFindUnique.mockResolvedValue(null);
+    mockProjectMemberInviteFindFirst.mockResolvedValue(null);
+    mockProjectMemberInviteCreate.mockResolvedValue(
+      inviteRecord({
+        email: "invitee@example.com",
+        role: MemberRole.ADMIN,
+      }),
+    );
+
+    const invite = await service.createMemberInvite(
+      "admin_1",
+      { slug: "acme" },
+      { email: "  Invitee@Example.com  ", role: MemberRole.ADMIN },
+    );
+
+    expect(mockProjectMemberInviteUpdateMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        email: "invitee@example.com",
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { lte: expect.any(Date) },
+      },
+      data: { status: ProjectMemberInviteStatus.EXPIRED },
+    });
+    expect(mockProjectMemberInviteCreate).toHaveBeenCalledWith({
+      data: {
+        projectId: "project_1",
+        email: "invitee@example.com",
+        role: MemberRole.ADMIN,
+        invitedByUserId: "admin_1",
+      },
+      select: expect.any(Object),
+    });
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        actorType: "user",
+        actorId: "admin_1",
+        action: "member.invite_sent",
+        targetType: "project_member_invite",
+        targetId: "invite_1",
+      }),
+    });
+    expect(mockNotificationCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: "invitee_1",
+        type: NotificationType.PROJECT_INVITE_RECEIVED,
+        metadata: expect.objectContaining({ inviteId: "invite_1" }),
+      }),
+    });
+    expect(invite).toMatchObject({
+      id: "invite_1",
+      email: "invitee@example.com",
+      role: MemberRole.ADMIN,
+      status: ProjectMemberInviteStatus.PENDING,
+    });
+  });
+
+  it("lists only active pending project member invites ordered newest first", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockProjectMemberInviteFindMany.mockResolvedValue([
+      inviteRecord({ id: "invite_new", createdAt: date("2026-05-03") }),
+      inviteRecord({ id: "invite_old", createdAt: date("2026-05-02") }),
+    ]);
+
+    const invites = await service.listMemberInvites("user_1", {
+      slug: "acme",
+    });
+
+    expect(mockProjectMemberInviteUpdateMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { lte: expect.any(Date) },
+      },
+      data: { status: ProjectMemberInviteStatus.EXPIRED },
+    });
+    expect(mockProjectMemberInviteFindMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        status: ProjectMemberInviteStatus.PENDING,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      orderBy: { createdAt: "desc" },
+      select: expect.any(Object),
+    });
+    expect(invites.map((invite) => invite.id)).toEqual([
+      "invite_new",
+      "invite_old",
+    ]);
+  });
+
+  it("revokes pending project member invites and records audit", async () => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockProjectMemberInviteFindFirst.mockResolvedValue(inviteRecord());
+    mockProjectMemberInviteUpdate.mockResolvedValue(
+      inviteRecord({ status: ProjectMemberInviteStatus.REVOKED }),
+    );
+
+    const invite = await service.revokeMemberInvite(
+      "admin_1",
+      { slug: "acme", inviteId: "invite_1" },
+      {
+        actorType: "user",
+        userId: "admin_1",
+        clerkOrgPermissions: [],
+        scopes: [],
+      },
+    );
+
+    expect(mockProjectMemberInviteUpdate).toHaveBeenCalledWith({
+      where: { id: "invite_1" },
+      data: { status: ProjectMemberInviteStatus.REVOKED },
+      select: expect.any(Object),
+    });
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "member.invite_revoked",
+        targetId: "invite_1",
+      }),
+    });
+    expect(invite.status).toBe(ProjectMemberInviteStatus.REVOKED);
+  });
+
+  it.each([
+    ProjectMemberInviteStatus.REVOKED,
+    ProjectMemberInviteStatus.EXPIRED,
+  ])("treats %s project member invite revoke as idempotent", async (status) => {
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockProjectMemberInviteFindFirst.mockResolvedValue(
+      inviteRecord({ status }),
+    );
+
+    const invite = await service.revokeMemberInvite("admin_1", {
+      slug: "acme",
+      inviteId: "invite_1",
+    });
+
+    expect(mockProjectMemberInviteUpdate).not.toHaveBeenCalled();
+    expect(mockProjectActionAuditCreate).not.toHaveBeenCalled();
+    expect(invite.status).toBe(status);
+  });
+
+  it("accepts matching pending invites and creates project membership", async () => {
+    mockUserFindUnique.mockResolvedValue({
+      id: "invitee_1",
+      email: "Invitee@Example.com",
+    });
+    mockProjectMemberInviteFindUnique.mockResolvedValue(inviteRecord());
+    mockProjectMemberInviteUpdate.mockResolvedValue(
+      inviteRecord({
+        status: ProjectMemberInviteStatus.ACCEPTED,
+        acceptedByUserId: "invitee_1",
+        acceptedAt: date("2026-05-04"),
+      }),
+    );
+    mockProjectMemberUpsert.mockResolvedValue(
+      projectMemberRecord({
+        id: "membership_1",
+        userId: "invitee_1",
+        role: MemberRole.EDITOR,
+      }),
+    );
+
+    const result = await service.acceptMemberInvite("invitee_1", {
+      inviteId: "invite_1",
+    });
+
+    expect(mockProjectMemberInviteUpdate).toHaveBeenCalledWith({
+      where: { id: "invite_1" },
+      data: {
+        status: ProjectMemberInviteStatus.ACCEPTED,
+        acceptedByUserId: "invitee_1",
+        acceptedAt: expect.any(Date),
+      },
+      select: expect.any(Object),
+    });
+    expect(mockProjectMemberUpsert).toHaveBeenCalledWith({
+      where: {
+        projectId_userId: {
+          projectId: "project_1",
+          userId: "invitee_1",
+        },
+      },
+      update: { role: MemberRole.EDITOR },
+      create: {
+        projectId: "project_1",
+        userId: "invitee_1",
+        role: MemberRole.EDITOR,
+      },
+      select: expect.any(Object),
+    });
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "member.invite_accepted",
+        actorId: "invitee_1",
+        targetId: "invite_1",
+      }),
+    });
+    expect(result).toMatchObject({
+      invite: { status: ProjectMemberInviteStatus.ACCEPTED },
+      member: { id: "membership_1", userId: "invitee_1" },
+    });
+  });
+
+  it("rejects invite accept when the current user email does not match", async () => {
+    mockUserFindUnique.mockResolvedValue({
+      id: "wrong_user",
+      email: "wrong@example.com",
+    });
+    mockProjectMemberInviteFindUnique.mockResolvedValue(inviteRecord());
+
+    await expect(
+      service.acceptMemberInvite("wrong_user", { inviteId: "invite_1" }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(mockProjectMemberUpsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-pending invite accept attempts", async () => {
+    mockUserFindUnique.mockResolvedValue({
+      id: "invitee_1",
+      email: "invitee@example.com",
+    });
+    mockProjectMemberInviteFindUnique.mockResolvedValue(
+      inviteRecord({ status: ProjectMemberInviteStatus.REVOKED }),
+    );
+
+    await expect(
+      service.acceptMemberInvite("invitee_1", { inviteId: "invite_1" }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockProjectMemberUpsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects expired invite accept attempts and marks the invite expired", async () => {
+    mockUserFindUnique.mockResolvedValue({
+      id: "invitee_1",
+      email: "invitee@example.com",
+    });
+    mockProjectMemberInviteFindUnique.mockResolvedValue(
+      inviteRecord({ expiresAt: date("2000-01-01") }),
+    );
+
+    await expect(
+      service.acceptMemberInvite("invitee_1", { inviteId: "invite_1" }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockProjectMemberInviteUpdate).toHaveBeenCalledWith({
+      where: { id: "invite_1" },
+      data: { status: ProjectMemberInviteStatus.EXPIRED },
+      select: { id: true },
+    });
+    expect(mockProjectMemberUpsert).not.toHaveBeenCalled();
+  });
 });
 
 function projectRecord(overrides: Partial<Record<string, unknown>> = {}) {
@@ -550,6 +914,40 @@ function projectRecord(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+function projectMemberRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "membership_1",
+    userId: "invitee_1",
+    role: MemberRole.EDITOR,
+    createdAt: date("2026-05-04"),
+    user: {
+      id: "invitee_1",
+      firstName: "Invited",
+      lastName: "User",
+      email: "invitee@example.com",
+      avatar: null,
+    },
+    ...overrides,
+  };
+}
+
+function inviteRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "invite_1",
+    projectId: "project_1",
+    email: "invitee@example.com",
+    role: MemberRole.EDITOR,
+    status: ProjectMemberInviteStatus.PENDING,
+    invitedByUserId: "admin_1",
+    acceptedByUserId: null,
+    acceptedAt: null,
+    expiresAt: date("2999-01-01"),
+    createdAt: date("2026-05-02"),
+    updatedAt: date("2026-05-02"),
+    ...overrides,
+  };
+}
+
 function publicSurfaceHostRecord(
   overrides: Partial<Record<string, unknown>> = {},
 ) {
@@ -567,4 +965,8 @@ function publicSurfaceHostRecord(
     updatedAt: new Date("2026-05-02T00:00:00.000Z"),
     ...overrides,
   };
+}
+
+function date(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
 }

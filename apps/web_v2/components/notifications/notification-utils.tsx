@@ -7,6 +7,7 @@ import {
   CheckCircle as CircleCheckIcon,
   Export as ExportIcon,
   Robot as RobotIcon,
+  EnvelopeSimple as EnvelopeSimpleIcon,
 } from "@phosphor-icons/react";
 import type { V2NotificationType } from "@workspace/types";
 
@@ -44,6 +45,10 @@ export const notificationIcon: Record<
   },
   AGENT_ACTION_CREATED: {
     Icon: RobotIcon,
+    tone: "text-brand bg-brand/12",
+  },
+  PROJECT_INVITE_RECEIVED: {
+    Icon: EnvelopeSimpleIcon,
     tone: "text-brand bg-brand/12",
   },
   SECURITY_ALERT: {

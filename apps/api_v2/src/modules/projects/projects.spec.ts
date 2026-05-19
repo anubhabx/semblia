@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RequestMethod } from "@nestjs/common";
+import { ProjectInvitesController } from "./project-invites.controller.js";
 import { ProjectsController } from "./projects.controller.js";
 import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
@@ -146,6 +147,47 @@ describe("ProjectsController", () => {
     ).toBe(RequestMethod.POST);
   });
 
+  it("declares member invite routes", () => {
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.listMemberInvites,
+      ),
+    ).toBe(":slug/members/invites");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.listMemberInvites,
+      ),
+    ).toBe(RequestMethod.GET);
+
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.createMemberInvite,
+      ),
+    ).toBe(":slug/members/invites");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.createMemberInvite,
+      ),
+    ).toBe(RequestMethod.POST);
+
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.revokeMemberInvite,
+      ),
+    ).toBe(":slug/members/invites/:inviteId");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.revokeMemberInvite,
+      ),
+    ).toBe(RequestMethod.DELETE);
+  });
+
   it("declares member update and delete routes", () => {
     expect(
       Reflect.getMetadata(
@@ -207,7 +249,25 @@ describe("ProjectsController", () => {
     expect(
       Reflect.getMetadata(
         REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.listMemberInvites,
+      ),
+    ).toEqual([Capability.VIEW_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
         ProjectsController.prototype.addMember,
+      ),
+    ).toEqual([Capability.MANAGE_MEMBERS]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.createMemberInvite,
+      ),
+    ).toEqual([Capability.MANAGE_MEMBERS]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.revokeMemberInvite,
       ),
     ).toEqual([Capability.MANAGE_MEMBERS]);
     expect(
@@ -246,5 +306,37 @@ describe("ProjectsController", () => {
         ProjectsController.prototype.clearSigningSecret,
       ),
     ).toEqual([Capability.MANAGE_PROJECT]);
+  });
+});
+
+describe("ProjectInvitesController", () => {
+  it("declares the authenticated self-service accept route", () => {
+    expect(Reflect.getMetadata(PATH_METADATA, ProjectInvitesController)).toBe(
+      "me/project-invites",
+    );
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectInvitesController.prototype.accept,
+      ),
+    ).toBe(":inviteId/accept");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectInvitesController.prototype.accept,
+      ),
+    ).toBe(RequestMethod.POST);
+    expect(
+      Reflect.getMetadata(
+        GUARDS_METADATA,
+        ProjectInvitesController.prototype.accept,
+      ),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ProjectInvitesController.prototype.accept,
+      ),
+    ).toBeUndefined();
   });
 });

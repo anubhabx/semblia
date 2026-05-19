@@ -5,10 +5,11 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider      = "prisma-client-js"
-  output        = "../src/generated/prisma"
-  engineType    = "binary"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  engineType      = "binary"
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -22,13 +23,15 @@ model User {
   lastName  String?
   avatar    String? @db.VarChar(1000) // Avatar URL from Azure Blob Storage
 
-  plan                 UserPlan              @default(FREE)
-  projects             Project[]
-  projectMemberships   ProjectMember[]
-  testimonials         Testimonial[]
-  apiKeys              ApiKey[]
-  subscription         Subscription? // null for free tier users
-  subscriptionPayments SubscriptionPayment[]
+  plan                   UserPlan              @default(FREE)
+  projects               Project[]
+  projectMemberships     ProjectMember[]
+  projectInvitesSent     ProjectMemberInvite[] @relation("ProjectMemberInviteInvitedBy")
+  projectInvitesAccepted ProjectMemberInvite[] @relation("ProjectMemberInviteAcceptedBy")
+  testimonials           Testimonial[]
+  apiKeys                ApiKey[]
+  subscription           Subscription? // null for free tier users
+  subscriptionPayments   SubscriptionPayment[]
 
   // Notification system relations
   notifications           Notification[]
@@ -118,6 +121,7 @@ model Project {
   testimonials                Testimonial[]
   widgets                     Widget[]
   members                     ProjectMember[]
+  memberInvites               ProjectMemberInvite[]
   publicSubmitIdempotencies   PublicSubmitIdempotency[]
   collectionForms             CollectionForm[]
   apiKeys                     ApiKey[]
@@ -166,6 +170,37 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+}
+
+model ProjectMemberInvite {
+  id               String                    @id @default(cuid())
+  projectId        String
+  email            String                    @db.VarChar(320)
+  role             MemberRole
+  status           ProjectMemberInviteStatus @default(PENDING)
+  invitedByUserId  String?
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  expiresAt        DateTime                  @default(dbgenerated("(now() + interval '14 days')"))
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy  User?   @relation("ProjectMemberInviteInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  acceptedBy User?   @relation("ProjectMemberInviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, email], map: "ProjectMemberInvite_pending_project_email_key", where: raw("\"status\" = 'PENDING'::\"ProjectMemberInviteStatus\""))
+  @@index([email, status])
+  @@index([projectId])
+  @@index([invitedByUserId])
+  @@index([acceptedByUserId])
+}
+
+enum ProjectMemberInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
 }
 
 enum TrustedOriginKind {
@@ -1079,6 +1114,7 @@ enum NotificationType {
   TESTIMONIAL_REJECTED
   EXPORT_DELIVERY_FAILED
   AGENT_ACTION_CREATED
+  PROJECT_INVITE_RECEIVED
   SECURITY_ALERT
 }
 
