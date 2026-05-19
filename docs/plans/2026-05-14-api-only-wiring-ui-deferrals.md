@@ -61,3 +61,7 @@ Surfaces with no existing first-class page yet:
 ## Next Safe Step
 
 Testimonials inbox and settings are now live-wired. The next safest surface is **analytics dashboard** (`useAnalyticsSummary` hook is ready, chart mapping is bounded). After that, the **testimonial list/detail** components can be migrated to V2 hooks. Widget studio internals and billing remain deliberately out of scope.
+
+## 2026-05-19 Settings rebuild
+
+The project Settings area was rebuilt as sub-routes (General / Branding / Visibility / Social / Hosts / Trust / Members / Danger) under a shared `SettingsShell`. Trust now consumes the previously unrendered `useAllowedOrigins`, `useReplaceAllowedOrigins`, `useGenerateSigningSecret`, and `useClearSigningSecret` hooks. Members consumes `useProjectMembers` plus three newly added mutation hooks (`useAddProjectMember`, `useUpdateProjectMember`, `useRemoveProjectMember`). Hosts derives the deterministic `<slug>.testimonials.tresta.app` / `<slug>.walls.tresta.app` hostnames client-side. Two backend gaps remain for Codex delegation: `GET /v2/projects/:slug/public-surface-hosts` (so Hosts can swap derivation for live data) and an email-keyed invite path for `addProjectMember` (so Members can replace its "Coming soon" affordance).

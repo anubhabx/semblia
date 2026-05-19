@@ -17,6 +17,7 @@ import type {
   V2UserDTO,
   V2ProjectDTO,
   V2ProjectMemberDTO,
+  V2ProjectMemberRole,
   V2TestimonialDTO,
   V2SubmissionDTO,
   V2SubmissionAnnotationDTO,
@@ -326,7 +327,7 @@ export function fetchProjectMembers(token: string | null, slug: string) {
 export function addProjectMember(
   token: string | null,
   slug: string,
-  body: { email: string; role?: string },
+  body: { userId: string; role?: V2ProjectMemberRole },
 ) {
   return post<V2ProjectMemberDTO>(
     `/projects/${encodeURIComponent(slug)}/members`,
@@ -339,7 +340,7 @@ export function updateProjectMember(
   token: string | null,
   slug: string,
   userId: string,
-  body: { role: string },
+  body: { role: V2ProjectMemberRole },
 ) {
   return patch<V2ProjectMemberDTO>(
     `/projects/${encodeURIComponent(slug)}/members/${encodeURIComponent(userId)}`,

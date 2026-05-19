@@ -901,7 +901,7 @@ export interface V2StudioDraftDTO {
 
 // ── Project members ────────────────────────────────────────────────────────
 
-export type V2ProjectMemberRole = "OWNER" | "ADMIN" | "MEMBER";
+export type V2ProjectMemberRole = "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 
 export interface V2ProjectMemberDTO {
   id: string;

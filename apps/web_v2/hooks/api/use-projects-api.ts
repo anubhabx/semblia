@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
+import type { V2ProjectMemberRole } from "@workspace/types";
 import {
   fetchProjects,
   fetchProjectBySlug,
@@ -9,6 +10,9 @@ import {
   updateProject,
   deleteProject,
   fetchProjectMembers,
+  addProjectMember,
+  updateProjectMember,
+  removeProjectMember,
   fetchAllowedOrigins,
   replaceAllowedOrigins,
   generateSigningSecret,
@@ -112,6 +116,54 @@ export function useProjectMembers(slug: string, options?: ApiQueryOptions) {
     },
     enabled: isSignedIn === true && !!slug,
     ...liveQueryOptions(options),
+  });
+}
+
+export function useAddProjectMember(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: {
+      userId: string;
+      role?: V2ProjectMemberRole;
+    }) => {
+      const token = await getToken();
+      return addProjectMember(token, slug, body);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.members(slug) });
+    },
+  });
+}
+
+export function useUpdateProjectMember(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (vars: { userId: string; role: V2ProjectMemberRole }) => {
+      const token = await getToken();
+      return updateProjectMember(token, slug, vars.userId, { role: vars.role });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.members(slug) });
+    },
+  });
+}
+
+export function useRemoveProjectMember(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const token = await getToken();
+      return removeProjectMember(token, slug, userId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.members(slug) });
+    },
   });
 }
 
