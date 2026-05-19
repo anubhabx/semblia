@@ -1,4 +1,7 @@
-import { ModerationStatus, PublicSubmitTrustMode } from "@workspace/database/prisma";
+import {
+  ModerationStatus,
+  PublicSubmitTrustMode,
+} from "@workspace/database/prisma";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import type { ActorContext } from "../../common/authz/actor-context.js";

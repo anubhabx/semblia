@@ -861,7 +861,9 @@ export class TestimonialsService {
 
   private assertSuggestedRevision(revision: DisplayRevisionRecord) {
     if (revision.status !== DisplayRevisionStatus.SUGGESTED) {
-      throw new ConflictException("Display suggestion has already been decided");
+      throw new ConflictException(
+        "Display suggestion has already been decided",
+      );
     }
   }
 

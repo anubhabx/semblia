@@ -276,115 +276,6 @@ function InviteMemberForm({
   );
 }
 
-function AddByUserIdForm({
-  slug,
-  disabled,
-}: {
-  slug: string;
-  disabled?: boolean;
-}) {
-  const addMut = useAddProjectMember(slug);
-  const [open, setOpen] = React.useState(false);
-  const [userId, setUserId] = React.useState("");
-  const [role, setRole] = React.useState<V2ProjectMemberRole>("EDITOR");
-
-  async function handleAdd() {
-    const trimmed = userId.trim();
-    if (!trimmed) return;
-    try {
-      await addMut.mutateAsync({ userId: trimmed, role });
-      toast.success("Member added");
-      setUserId("");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to add member";
-      toast.error(message);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-border bg-muted/20">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/30"
-      >
-        {open ? (
-          <CaretUpIcon className="size-3" aria-hidden />
-        ) : (
-          <CaretDownIcon className="size-3" aria-hidden />
-        )}
-        Advanced — add by Tresta user ID
-      </button>
-      {open && (
-        <div className="space-y-2 border-t border-border/50 p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="user_abc123…"
-              className="font-mono text-[12.5px]"
-              disabled={disabled || addMut.isPending}
-            />
-            <Select
-              value={role}
-              onValueChange={(v) => setRole(v as V2ProjectMemberRole)}
-              disabled={disabled || addMut.isPending}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleAdd}
-              disabled={disabled || addMut.isPending || !userId.trim()}
-              className="gap-1.5 sm:shrink-0"
-            >
-              {addMut.isPending ? "Adding…" : "Add"}
-            </Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            Bypasses the invite flow for users you already have IDs for.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RoleLegend() {
-  return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-        Roles
-      </p>
-      <dl className="mt-2 space-y-1.5">
-        {ROLE_OPTIONS.map((opt) => (
-          <div key={opt.value} className="flex items-start gap-2 text-[12px]">
-            <dt className="w-16 shrink-0 font-medium text-foreground">
-              {opt.label}
-            </dt>
-            <dd className="text-muted-foreground">
-              {ROLE_DESCRIPTION[opt.value]}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
 export function MembersClient({ project }: { project: V2ProjectDTO }) {
   const slug = project.slug;
   const members = useProjectMembers(slug);
@@ -519,11 +410,10 @@ export function MembersClient({ project }: { project: V2ProjectDTO }) {
             description="Invite by email. The invitee accepts on their next sign-in."
           >
             <InviteMemberForm slug={slug} disabled={!canManage} />
-            <AddByUserIdForm slug={slug} disabled={!canManage} />
           </SettingsSection>
         )}
 
-        <RoleLegend />
+        {/* <RoleLegend /> */}
       </div>
     </PageBody>
   );

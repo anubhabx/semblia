@@ -293,7 +293,9 @@ describe("FormsService", () => {
 
   it("duplicate truncates the copy suffix to the collection form name limit", async () => {
     const sourceName = "x".repeat(255);
-    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ name: sourceName }));
+    mockCollectionFormFindFirst.mockResolvedValue(
+      makeForm({ name: sourceName }),
+    );
     mockCollectionFormCreate.mockResolvedValue(
       makeForm({
         id: "form_copy",

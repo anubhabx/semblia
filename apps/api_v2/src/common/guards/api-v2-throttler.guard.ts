@@ -45,10 +45,7 @@ export class ApiV2ThrottlerGuard extends ThrottlerGuard {
       return true;
     }
 
-    return !this.hasRouteThrottleMetadata(
-      requestProps.context,
-      throttlerName,
-    );
+    return !this.hasRouteThrottleMetadata(requestProps.context, throttlerName);
   }
 
   private hasRouteThrottleMetadata(
@@ -62,8 +59,10 @@ export class ApiV2ThrottlerGuard extends ThrottlerGuard {
         THROTTLER_LIMIT + throttlerName,
         targets,
       ) !== undefined ||
-      this.reflector.getAllAndOverride(THROTTLER_TTL + throttlerName, targets) !==
-        undefined
+      this.reflector.getAllAndOverride(
+        THROTTLER_TTL + throttlerName,
+        targets,
+      ) !== undefined
     );
   }
 }

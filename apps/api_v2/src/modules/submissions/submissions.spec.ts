@@ -19,7 +19,10 @@ describe("SubmissionsController", () => {
       Reflect.getMetadata(PATH_METADATA, SubmissionsController.prototype.list),
     ).toBe("/");
     expect(
-      Reflect.getMetadata(METHOD_METADATA, SubmissionsController.prototype.list),
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        SubmissionsController.prototype.list,
+      ),
     ).toBe(RequestMethod.GET);
 
     expect(

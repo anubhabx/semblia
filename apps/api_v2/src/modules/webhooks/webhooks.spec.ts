@@ -45,7 +45,9 @@ function createController(params?: {
   } as unknown as WebhooksService;
   const configService = {
     get: vi.fn((key: string) =>
-      key === "CLERK_WEBHOOK_SIGNING_SECRET" ? params?.signingSecret : undefined,
+      key === "CLERK_WEBHOOK_SIGNING_SECRET"
+        ? params?.signingSecret
+        : undefined,
     ),
   } as unknown as ConfigService;
 

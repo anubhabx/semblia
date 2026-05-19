@@ -42,8 +42,9 @@ export class PublicSubmitThrottlerGuard extends ThrottlerGuard {
   }
 
   async canActivate(context: ExecutionContext) {
-    const request =
-      context.switchToHttp().getRequest<PublicSubmitThrottlerRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<PublicSubmitThrottlerRequest>();
     this.clearPublicSubmitState(request);
 
     const allowed = await super.canActivate(context);
@@ -60,8 +61,9 @@ export class PublicSubmitThrottlerGuard extends ThrottlerGuard {
       return true;
     }
 
-    const request =
-      context.switchToHttp().getRequest<PublicSubmitThrottlerRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<PublicSubmitThrottlerRequest>();
 
     if (request.method === "GET") {
       return false;
@@ -77,18 +79,19 @@ export class PublicSubmitThrottlerGuard extends ThrottlerGuard {
         await this.publicSubmitTrustService.evaluate(request, slug);
     } catch (error: unknown) {
       request.trestaPublicSubmitTrustError = error;
-      request.trestaPublicSubmitRateLimitTracker =
-        this.getInvalidSubmitTracker(request, slug);
+      request.trestaPublicSubmitRateLimitTracker = this.getInvalidSubmitTracker(
+        request,
+        slug,
+      );
     }
 
     return false;
   }
 
   protected async handleRequest(requestProps: ThrottlerRequest) {
-    const request =
-      requestProps.context
-        .switchToHttp()
-        .getRequest<PublicSubmitThrottlerRequest>();
+    const request = requestProps.context
+      .switchToHttp()
+      .getRequest<PublicSubmitThrottlerRequest>();
 
     if (this.shouldSkipPublicBucket(request, requestProps.throttler.name)) {
       return true;

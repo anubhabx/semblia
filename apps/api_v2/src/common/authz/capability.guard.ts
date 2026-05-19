@@ -10,10 +10,7 @@ import { Reflector } from "@nestjs/core";
 import { ProjectAccessService } from "./project-access.service.js";
 import { Capability } from "./capabilities.js";
 import { REQUIRED_CAPABILITIES_KEY } from "./require-capability.decorator.js";
-import {
-  actorFromRequest,
-  type ActorContext,
-} from "./actor-context.js";
+import { actorFromRequest, type ActorContext } from "./actor-context.js";
 import type { ProjectAccessRole } from "./project-access.service.js";
 
 type RequestWithAuth = {

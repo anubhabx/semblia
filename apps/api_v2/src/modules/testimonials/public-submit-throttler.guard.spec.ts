@@ -146,9 +146,7 @@ describe("PublicSubmitThrottlerGuard", () => {
     ).resolves.toBe(true);
 
     expect(mockStorageIncrement).toHaveBeenCalledTimes(1);
-    expect(mockStorageIncrement.mock.calls[0]?.[4]).toBe(
-      "public-submit-hmac",
-    );
+    expect(mockStorageIncrement.mock.calls[0]?.[4]).toBe("public-submit-hmac");
   });
 
   it("uses only the public-list bucket for public GET requests", async () => {
