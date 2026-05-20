@@ -32,13 +32,11 @@ const NAV: AccountNavItem[] = [
     label: "Notifications",
     href: "/account/notifications",
     icon: BellIcon,
-    disabled: true,
   },
   {
     label: "Defaults",
     href: "/account/defaults",
     icon: SlidersHorizontalIcon,
-    disabled: true,
   },
 ];
 
