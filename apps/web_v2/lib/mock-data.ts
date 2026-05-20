@@ -28,13 +28,6 @@ export type NotificationType =
   | "TESTIMONIAL_APPROVED"
   | "TESTIMONIAL_REJECTED"
   | "SECURITY_ALERT";
-export type SubscriptionStatus =
-  | "ACTIVE"
-  | "CANCELED"
-  | "PAST_DUE"
-  | "PAUSED"
-  | "INCOMPLETE"
-  | "TRIALING";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -238,19 +231,6 @@ export interface MockNotification {
   metadata: Record<string, string> | null;
   isRead: boolean;
   createdAt: Date;
-}
-
-export interface MockSubscription {
-  id: string;
-  userId: string;
-  status: SubscriptionStatus;
-  userPlan: UserPlan;
-  currentPeriodStart: Date | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  amount: number | null;
-  currency: string | null;
-  interval: string | null;
 }
 
 // ── Seed Data ──────────────────────────────────────────────────────────────────
@@ -926,19 +906,6 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
     createdAt: new Date("2024-12-09T08:01:00Z"),
   },
 ];
-
-export const MOCK_SUBSCRIPTION: MockSubscription = {
-  id: "sub_xyz789",
-  userId: "user_2abc123def456",
-  status: "ACTIVE",
-  userPlan: "PRO",
-  currentPeriodStart: new Date("2024-12-01T00:00:00Z"),
-  currentPeriodEnd: new Date("2025-01-01T00:00:00Z"),
-  cancelAtPeriodEnd: false,
-  amount: 79900, // paise = ₹799
-  currency: "INR",
-  interval: "month",
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

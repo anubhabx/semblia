@@ -82,6 +82,12 @@ export {
   useInvoices,
   usePaymentMethods,
   useBillingProfile,
+  useBillingUsage,
+  useCancelSubscription,
+  useSwitchPlan,
+  useDeletePaymentMethod,
+  useSetDefaultPaymentMethod,
+  useUpdateBillingProfile,
 } from "./use-billing-api";
 
 export {

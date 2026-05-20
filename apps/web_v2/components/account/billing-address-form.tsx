@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { V2BillingProfileDTO } from "@workspace/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,9 +14,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { apiUpdateBillingProfile, type BillingProfile } from "@/lib/api";
-import { billingQueryKeys, useBillingProfile } from "@/hooks/api";
+import { useBillingProfile, useUpdateBillingProfile } from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
+
+type BillingProfileForm = {
+  name: string;
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  gstin: string;
+};
 
 // ── Country list (abbreviated) ─────────────────────────────────────────────────
 
@@ -36,15 +46,13 @@ const COUNTRIES = [
 // ── Billing address form ───────────────────────────────────────────────────────
 
 export function BillingAddressForm() {
-  const qc = useQueryClient();
-
   const profileQuery = useBillingProfile({ freshOnMount: true });
   const liveState = useLiveQueryState(profileQuery, {
     requireFreshOnMount: true,
   });
   const profile = profileQuery.data;
 
-  const [form, setForm] = React.useState<BillingProfile>({
+  const [form, setForm] = React.useState<BillingProfileForm>({
     name: "",
     line1: "",
     line2: "",
@@ -55,7 +63,8 @@ export function BillingAddressForm() {
     gstin: "",
   });
 
-  const [initialForm, setInitialForm] = React.useState<BillingProfile>(form);
+  const [initialForm, setInitialForm] =
+    React.useState<BillingProfileForm>(form);
   const initialFormRef = React.useRef(initialForm);
   const dirty = React.useMemo(
     () => JSON.stringify(form) !== JSON.stringify(initialForm),
@@ -68,7 +77,7 @@ export function BillingAddressForm() {
 
   React.useEffect(() => {
     if (profile) {
-      const seeded: BillingProfile = {
+      const seeded: BillingProfileForm = {
         name: profile.name ?? "",
         line1: profile.line1 ?? "",
         line2: profile.line2 ?? "",
@@ -87,23 +96,35 @@ export function BillingAddressForm() {
     }
   }, [profile]);
 
-  const { mutate: save, isPending: saving } = useMutation({
-    mutationFn: () => apiUpdateBillingProfile(form),
-    onSuccess: (updated) => {
-      qc.setQueryData(billingQueryKeys.profile, updated);
-      setInitialForm(form);
-      toast.success("Billing address saved.");
-    },
-    onError: () => toast.error("Failed to save billing address."),
-  });
+  const updateMutation = useUpdateBillingProfile();
+  const saving = updateMutation.isPending;
+  const save = () => {
+    const payload: Partial<V2BillingProfileDTO> = {
+      name: form.name,
+      line1: form.line1,
+      line2: form.line2,
+      city: form.city,
+      state: form.state,
+      postalCode: form.postalCode,
+      country: form.country,
+      gstin: form.country === "IN" ? form.gstin : "",
+    };
+    updateMutation.mutate(payload, {
+      onSuccess: () => {
+        setInitialForm(form);
+        toast.success("Billing address saved.");
+      },
+      onError: () => toast.error("Failed to save billing address."),
+    });
+  };
 
   function discard() {
     setForm(initialForm);
   }
 
-  function field(key: keyof BillingProfile) {
+  function field(key: keyof BillingProfileForm) {
     return {
-      value: form[key] as string,
+      value: form[key],
       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((prev) => ({ ...prev, [key]: e.target.value })),
     };

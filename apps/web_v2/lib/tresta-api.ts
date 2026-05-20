@@ -32,7 +32,13 @@ import type {
   V2CreatedApiKeyDTO,
   V2ApiKeyEventDTO,
   V2AgentAccessOverviewDTO,
+  V2BillingProfileDTO,
   V2CurrentOrganizationDTO,
+  V2InvoiceDTO,
+  V2PaymentMethodDTO,
+  V2SubscriptionDTO,
+  V2UsageDTO,
+  V2UserPlan,
   V2NotificationDTO,
   V2NotificationPreferencesDTO,
   V2NotificationType,
@@ -1240,6 +1246,62 @@ export function fetchAgentActions(token: string | null, slug: string) {
     `/projects/${encodeURIComponent(slug)}/agent-access/actions`,
     token,
   );
+}
+
+// ── Account billing ─────────────────────────────────────────────────────────
+
+export function fetchSubscription(token: string | null) {
+  return api<V2SubscriptionDTO>("/account/subscription", token);
+}
+
+export function cancelSubscription(token: string | null) {
+  return post<V2SubscriptionDTO>("/account/subscription/cancel", token);
+}
+
+export function switchSubscriptionPlan(
+  token: string | null,
+  planId: V2UserPlan,
+) {
+  return post<V2SubscriptionDTO>("/account/subscription/switch", token, {
+    planId,
+  });
+}
+
+export function fetchPaymentMethods(token: string | null) {
+  return api<V2PaymentMethodDTO[]>("/account/payment-methods", token);
+}
+
+export function deletePaymentMethodApi(token: string | null, id: string) {
+  return del<{ success: true }>(
+    `/account/payment-methods/${encodeURIComponent(id)}`,
+    token,
+  );
+}
+
+export function setDefaultPaymentMethodApi(token: string | null, id: string) {
+  return post<V2PaymentMethodDTO[]>(
+    `/account/payment-methods/${encodeURIComponent(id)}/default`,
+    token,
+  );
+}
+
+export function fetchInvoicesApi(token: string | null) {
+  return api<V2InvoiceDTO[]>("/account/invoices", token);
+}
+
+export function fetchBillingProfile(token: string | null) {
+  return api<V2BillingProfileDTO>("/account/billing-profile", token);
+}
+
+export function updateBillingProfile(
+  token: string | null,
+  body: Partial<V2BillingProfileDTO>,
+) {
+  return patch<V2BillingProfileDTO>("/account/billing-profile", token, body);
+}
+
+export function fetchBillingUsage(token: string | null) {
+  return api<V2UsageDTO>("/account/usage", token);
 }
 
 // ── Re-exports for convenience ──────────────────────────────────────────────

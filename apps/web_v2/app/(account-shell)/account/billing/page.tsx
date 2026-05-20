@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -22,8 +21,13 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { apiCancelSubscription, type Invoice } from "@/lib/api";
-import { billingQueryKeys, useInvoices, useSubscription } from "@/hooks/api";
+import type { V2InvoiceDTO } from "@workspace/types";
+import {
+  useBillingUsage,
+  useCancelSubscription,
+  useInvoices,
+  useSubscription,
+} from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { PlanSwitcher } from "@/components/account/plan-switcher";
@@ -41,7 +45,7 @@ function formatINR(paise: number) {
 }
 
 function statusVariant(
-  status: Invoice["status"],
+  status: V2InvoiceDTO["status"],
 ): "success" | "destructive" | "outline" {
   return status === "paid"
     ? "success"
@@ -53,26 +57,24 @@ function statusVariant(
 // ── Plan card ──────────────────────────────────────────────────────────────────
 
 function PlanCard() {
-  const qc = useQueryClient();
-
   const subscriptionQuery = useSubscription({ freshOnMount: true });
   const liveState = useLiveQueryState(subscriptionQuery, {
     requireFreshOnMount: true,
   });
   const sub = subscriptionQuery.data;
 
-  const { mutate: toggleCancel, isPending: cancelling } = useMutation({
-    mutationFn: apiCancelSubscription,
-    onSuccess: (updated) => {
-      qc.setQueryData(billingQueryKeys.subscription, updated);
-      toast.success(
-        updated.cancelAtPeriodEnd
-          ? "Subscription will cancel at period end."
-          : "Subscription renewal restored.",
-      );
-    },
-    onError: () => toast.error("Failed to update subscription."),
-  });
+  const cancelMutation = useCancelSubscription();
+  const cancelling = cancelMutation.isPending;
+  const toggleCancel = () =>
+    cancelMutation.mutate(undefined, {
+      onSuccess: (updated) =>
+        toast.success(
+          updated.cancelAtPeriodEnd
+            ? "Subscription will cancel at period end."
+            : "Subscription renewal restored.",
+        ),
+      onError: () => toast.error("Failed to update subscription."),
+    });
 
   if (liveState.isWaitingForLiveData || !sub) {
     return (
@@ -97,8 +99,8 @@ function PlanCard() {
               {sub.userPlan} Plan
             </span>
             <Badge
-              variant={sub.status === "ACTIVE" ? "success" : "destructive"}
-              className="text-[10px]"
+              variant={sub.status === "active" ? "success" : "destructive"}
+              className="text-[10px] capitalize"
             >
               {sub.status}
             </Badge>
@@ -109,9 +111,9 @@ function PlanCard() {
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            {sub.amount != null && sub.currency
+            {sub.amount > 0
               ? `${formatINR(sub.amount)} / ${sub.interval}`
-              : "No active billing"}{" "}
+              : "Free plan"}{" "}
             {!sub.cancelAtPeriodEnd && periodEnd && (
               <span>· renews {periodEnd}</span>
             )}
@@ -142,17 +144,38 @@ function PlanCard() {
 
 // ── Usage meter ────────────────────────────────────────────────────────────────
 
-const USAGE_ITEMS = [
-  { label: "Testimonials collected", used: 847, limit: 5000 },
-  { label: "Widgets published", used: 12, limit: 50 },
-  { label: "Projects", used: 3, limit: 10 },
-];
-
 function UsageMeter() {
+  const usageQuery = useBillingUsage({ freshOnMount: true });
+  const liveState = useLiveQueryState(usageQuery, {
+    requireFreshOnMount: true,
+  });
+  const usage = usageQuery.data;
+
+  if (liveState.isWaitingForLiveData || !usage) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="space-y-2 px-4 py-3">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-2 w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const rows = [
+    { label: "Testimonials collected", value: usage.testimonials },
+    { label: "Widgets published", value: usage.widgets },
+    { label: "Projects", value: usage.projects },
+  ];
+
   return (
     <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
-      {USAGE_ITEMS.map(({ label, used, limit }) => {
-        const pct = Math.min(100, Math.round((used / limit) * 100));
+      {rows.map(({ label, value }) => {
+        const { used, limit } = value;
+        const pct =
+          limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
         return (
           <div key={label} className="space-y-2 px-4 py-3">
             <div className="flex items-center justify-between text-xs">
@@ -253,13 +276,25 @@ function InvoiceTable() {
                     variant="ghost"
                     size="icon"
                     className="size-7"
-                    disabled
-                    title="Download (mock)"
-                    onClick={() =>
-                      toast.info("Download not available in mock mode.")
+                    disabled={!inv.downloadUrl}
+                    title={
+                      inv.downloadUrl
+                        ? "Download invoice"
+                        : "Download unavailable"
                     }
+                    asChild={!!inv.downloadUrl}
                   >
-                    <DownloadSimpleIcon className="size-3.5" />
+                    {inv.downloadUrl ? (
+                      <a
+                        href={inv.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <DownloadSimpleIcon className="size-3.5" />
+                      </a>
+                    ) : (
+                      <DownloadSimpleIcon className="size-3.5" />
+                    )}
                   </Button>
                 </TableCell>
               </TableRow>

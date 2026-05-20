@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { V2PaymentMethodDTO } from "@workspace/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,19 +20,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  apiDeletePaymentMethod,
-  apiSetDefaultPaymentMethod,
-  type PaymentMethod,
-} from "@/lib/api";
 import { RefreshingDataBadge } from "@/components/shared";
-import { billingQueryKeys, usePaymentMethods } from "@/hooks/api";
+import {
+  useDeletePaymentMethod,
+  usePaymentMethods,
+  useSetDefaultPaymentMethod,
+} from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { DotsThreeIcon, PlusIcon } from "@phosphor-icons/react";
 
 // ── Brand label ────────────────────────────────────────────────────────────────
 
-const BRAND_LABELS: Record<PaymentMethod["brand"], string> = {
+const BRAND_LABELS: Record<V2PaymentMethodDTO["brand"], string> = {
   visa: "Visa",
   mastercard: "Mastercard",
   rupay: "RuPay",
@@ -46,7 +45,7 @@ function PaymentRow({
   onDelete,
   onMakeDefault,
 }: {
-  method: PaymentMethod;
+  method: V2PaymentMethodDTO;
   onDelete: () => void;
   onMakeDefault: () => void;
 }) {
@@ -105,34 +104,30 @@ function PaymentRow({
 // ── Payment methods section ────────────────────────────────────────────────────
 
 export function PaymentMethodsSection() {
-  const qc = useQueryClient();
-
   const methodsQuery = usePaymentMethods({ freshOnMount: true });
   const liveState = useLiveQueryState(methodsQuery);
   const methods = methodsQuery.data;
 
-  const [deleteTarget, setDeleteTarget] = React.useState<PaymentMethod | null>(
-    null,
-  );
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<V2PaymentMethodDTO | null>(null);
 
-  const { mutate: deleteMethod, isPending: deleting } = useMutation({
-    mutationFn: (id: string) => apiDeletePaymentMethod(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: billingQueryKeys.paymentMethods });
-      toast.success("Payment method removed.");
-      setDeleteTarget(null);
-    },
-    onError: () => toast.error("Failed to remove payment method."),
-  });
+  const deleteMutation = useDeletePaymentMethod();
+  const deleting = deleteMutation.isPending;
+  const deleteMethod = (id: string) =>
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success("Payment method removed.");
+        setDeleteTarget(null);
+      },
+      onError: () => toast.error("Failed to remove payment method."),
+    });
 
-  const { mutate: makeDefault } = useMutation({
-    mutationFn: (id: string) => apiSetDefaultPaymentMethod(id),
-    onSuccess: (updated) => {
-      qc.setQueryData(billingQueryKeys.paymentMethods, updated);
-      toast.success("Default payment method updated.");
-    },
-    onError: () => toast.error("Failed to update default payment method."),
-  });
+  const defaultMutation = useSetDefaultPaymentMethod();
+  const makeDefault = (id: string) =>
+    defaultMutation.mutate(id, {
+      onSuccess: () => toast.success("Default payment method updated."),
+      onError: () => toast.error("Failed to update default payment method."),
+    });
 
   return (
     <>

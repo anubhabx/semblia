@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { V2UserPlan } from "@workspace/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { apiSwitchPlan } from "@/lib/api";
-import { billingQueryKeys, useSubscription } from "@/hooks/api";
+import { useSubscription, useSwitchPlan } from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { CheckIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -16,7 +15,7 @@ import { cn } from "@/lib/utils";
 // ── Plan definitions ───────────────────────────────────────────────────────────
 
 interface PlanDef {
-  id: string;
+  id: V2UserPlan;
   name: string;
   price: string;
   interval: string;
@@ -30,12 +29,7 @@ const PLANS: PlanDef[] = [
     name: "Free",
     price: "₹0",
     interval: "/month",
-    features: [
-      "1 project",
-      "50 testimonials",
-      "5 widgets",
-      "Community support",
-    ],
+    features: ["1 project", "25 testimonials", "1 widget", "Community support"],
   },
   {
     id: "PRO",
@@ -43,9 +37,9 @@ const PLANS: PlanDef[] = [
     price: "₹799",
     interval: "/month",
     features: [
-      "10 projects",
-      "5,000 testimonials",
-      "50 widgets",
+      "5 projects",
+      "1,000 testimonials",
+      "10 widgets",
       "Priority support",
       "Custom branding",
     ],
@@ -57,9 +51,9 @@ const PLANS: PlanDef[] = [
     price: "₹2,499",
     interval: "/month",
     features: [
-      "Unlimited projects",
-      "Unlimited testimonials",
-      "Unlimited widgets",
+      "25 projects",
+      "10,000 testimonials",
+      "100 widgets",
       "Dedicated support",
       "Custom branding",
       "SSO & SAML",
@@ -70,8 +64,6 @@ const PLANS: PlanDef[] = [
 // ── Plan switcher ──────────────────────────────────────────────────────────────
 
 export function PlanSwitcher() {
-  const qc = useQueryClient();
-
   const subscriptionQuery = useSubscription({ freshOnMount: true });
   const liveState = useLiveQueryState(subscriptionQuery, {
     requireFreshOnMount: true,
@@ -80,15 +72,16 @@ export function PlanSwitcher() {
 
   const [confirmPlan, setConfirmPlan] = React.useState<PlanDef | null>(null);
 
-  const { mutate: switchPlan, isPending: switching } = useMutation({
-    mutationFn: (planId: string) => apiSwitchPlan(planId),
-    onSuccess: (updated) => {
-      qc.setQueryData(billingQueryKeys.subscription, updated);
-      toast.success(`Switched to ${updated.userPlan} plan.`);
-      setConfirmPlan(null);
-    },
-    onError: () => toast.error("Failed to switch plan."),
-  });
+  const switchMutation = useSwitchPlan();
+  const switching = switchMutation.isPending;
+  const switchPlan = (planId: V2UserPlan) =>
+    switchMutation.mutate(planId, {
+      onSuccess: (updated) => {
+        toast.success(`Switched to ${updated.userPlan} plan.`);
+        setConfirmPlan(null);
+      },
+      onError: () => toast.error("Failed to switch plan."),
+    });
 
   if (liveState.isWaitingForLiveData || !sub) {
     return (
