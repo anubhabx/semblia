@@ -81,17 +81,23 @@ function NavRow({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium outline-none transition-all",
+        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium outline-none transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring/50",
         active
           ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
     >
+      {active && (
+        <span
+          className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-brand"
+          aria-hidden
+        />
+      )}
       <Icon
         className={cn(
-          "size-4 shrink-0 transition-colors",
-          active ? "text-brand" : "text-muted-foreground/70",
+          "size-3.5 shrink-0 transition-colors",
+          active ? "text-foreground" : "text-muted-foreground/80",
         )}
       />
       <span className="flex-1 truncate">{item.label}</span>
@@ -131,7 +137,7 @@ export function ProjectSidebarNav({
   return (
     <div className="flex h-full flex-col">
       {/* Project identity header */}
-      <div className="px-4 pt-6 pb-4">
+      <div className="px-3 pt-5 pb-4">
         <div className="flex items-center gap-2.5">
           <span
             className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
@@ -157,7 +163,7 @@ export function ProjectSidebarNav({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-0.5 px-3" aria-label="Project navigation">
+      <nav className="flex-1 space-y-0.5 px-2" aria-label="Project navigation">
         {nav.map((item) => (
           <NavRow
             key={item.href}
@@ -169,7 +175,7 @@ export function ProjectSidebarNav({
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto border-t border-border/50 px-4 py-3">
+      <div className="mt-auto border-t border-border px-3 py-3">
         <p className="text-[10px] font-mono uppercase tracking-[0.1em] text-muted-foreground/50">
           {project.name}
         </p>
