@@ -85,7 +85,7 @@ describe("project shell navigation", () => {
     render(<ProjectSidebarNav slug="launchpad" project={makeProject()} />);
 
     expect(screen.getAllByText("Launchpad").length).toBeGreaterThan(0);
-    expect(screen.getByText("Public project")).toBeTruthy();
+    expect(screen.getByText("Public")).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: /testimonials/i })
