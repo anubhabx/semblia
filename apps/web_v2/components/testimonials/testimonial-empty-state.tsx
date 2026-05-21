@@ -9,9 +9,9 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { ModerationStatus } from "@/lib/mock-data";
+import type { V2ModerationStatus } from "@workspace/types";
 
-type StatusFilter = ModerationStatus | "ALL";
+type StatusFilter = V2ModerationStatus | "ALL";
 
 // ── Public component ─────────────────────────────────────────────────────────
 //

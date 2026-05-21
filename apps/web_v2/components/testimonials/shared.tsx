@@ -16,17 +16,14 @@ import {
   X as XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  timeAgo,
-  type MockTestimonial,
-  type ModerationStatus,
-} from "@/lib/mock-data";
+import { timeAgo } from "@/lib/format";
+import type { V2TestimonialDTO, V2ModerationStatus } from "@workspace/types";
 import { ActionButton } from "@/components/ui/action-button";
 
 // ── Status config (single source of truth) ────────────────────────────────────
 
 export const STATUS_CONFIG: Record<
-  ModerationStatus,
+  V2ModerationStatus,
   {
     label: string;
     icon: React.ComponentType<{ className?: string }>;
@@ -57,7 +54,7 @@ export const STATUS_CONFIG: Record<
 
 // ── StatusPill ────────────────────────────────────────────────────────────────
 
-export function StatusPill({ status }: { status: ModerationStatus }) {
+export function StatusPill({ status }: { status: V2ModerationStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
     <span
@@ -114,7 +111,7 @@ export function Stars({
 // ── FeedRow — testimonial list row used on overview + testimonials page ──────
 
 export interface FeedRowProps {
-  t: MockTestimonial;
+  t: V2TestimonialDTO;
   slug: string;
   index: number;
   animate?: boolean;
@@ -189,7 +186,7 @@ export function FeedRow({ t, slug, index, animate = true }: FeedRowProps) {
 // ── ModerationItem — inline approve/reject row ──────────────────────────────
 
 export interface ModerationItemProps {
-  t: MockTestimonial;
+  t: V2TestimonialDTO;
   slug: string;
   index: number;
   onApprove: (id: string) => void;

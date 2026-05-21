@@ -12,13 +12,13 @@ import { ActionButton } from "@/components/ui/action-button";
 import { ItemShell } from "@/components/shared";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/format";
-import type { MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 import { Stars, StatusPill } from "@/components/testimonials/shared";
 
 // ── Testimonial row (with inline actions on hover) ────────────────────────
 
 export interface TestimonialRowProps {
-  t: MockTestimonial;
+  t: V2TestimonialDTO;
   isSelected?: boolean;
   isBulkSelected?: boolean;
   bulkMode?: boolean;

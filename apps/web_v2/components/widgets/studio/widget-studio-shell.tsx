@@ -24,10 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import {
-  getApprovedTestimonialsByProject,
-  getProjectBySlug,
-} from "@/lib/mock-data";
+import { useProject, useTestimonialsList } from "@/hooks/api";
 import { selectPreviewTestimonials } from "@/lib/widgets/widget-fallback-testimonials";
 import {
   useWidgetStudioStore,
@@ -98,7 +95,12 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   const pendingNavRef = React.useRef<string | null>(null);
 
   // ── Project hydration / preview testimonials ────────────────
-  const project = React.useMemo(() => getProjectBySlug(slug), [slug]);
+  const projectQuery = useProject(slug);
+  const project = projectQuery.data ?? null;
+  const approvedQuery = useTestimonialsList(slug, {
+    status: "APPROVED",
+    pageSize: 200,
+  });
 
   // Gate render until persist has had a chance to rehydrate. zustand persist
   // does not block first render, so a direct deep link can race the store
@@ -110,11 +112,10 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   }, [slug, project?.brandColorPrimary, ensureProject]);
 
   const previewItems = React.useMemo(() => {
-    if (!project) return [];
-    const real = getApprovedTestimonialsByProject(project.id);
+    const real = approvedQuery.data?.items ?? [];
     const { items } = selectPreviewTestimonials(real, 12);
     return items;
-  }, [project]);
+  }, [approvedQuery.data]);
 
   // ── Initial focus ───────────────────────────────────────────
   React.useEffect(() => {

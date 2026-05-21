@@ -4,7 +4,7 @@
  * inside `WidgetStudioPreview` only — never persisted, never sent to api_v2.
  */
 
-import type { MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 
 const PLACEHOLDER_AVATAR = (seed: string) =>
   `https://api.dicebear.com/8.x/notionists-neutral/svg?seed=${encodeURIComponent(
@@ -21,10 +21,12 @@ function makeTestimonial(
   content: string,
   rating: number,
   daysAgo: number,
-): MockTestimonial {
+): V2TestimonialDTO {
+  const iso = new Date(NOW - daysAgo * 86_400_000).toISOString();
   return {
     id: `demo_${id}`,
     projectId: "demo",
+    formId: null,
     authorName,
     authorEmail: null,
     authorRole,
@@ -45,13 +47,13 @@ function makeTestimonial(
     moderationScore: 0.02,
     moderationFlags: null,
     autoPublished: false,
-    createdAt: new Date(NOW - daysAgo * 86_400_000),
-    updatedAt: new Date(NOW - daysAgo * 86_400_000),
+    createdAt: iso,
+    updatedAt: iso,
     tags: [],
   };
 }
 
-export const FALLBACK_TESTIMONIALS: MockTestimonial[] = [
+export const FALLBACK_TESTIMONIALS: V2TestimonialDTO[] = [
   makeTestimonial(
     "1",
     "Hana Mizuki",
@@ -167,10 +169,10 @@ export const FALLBACK_TESTIMONIALS: MockTestimonial[] = [
  * Always returns ≥ 1 unless both arrays are empty.
  */
 export function selectPreviewTestimonials(
-  real: MockTestimonial[],
+  real: V2TestimonialDTO[],
   count: number,
   minRealForExclusive = 3,
-): { items: MockTestimonial[]; usedFallback: boolean } {
+): { items: V2TestimonialDTO[]; usedFallback: boolean } {
   if (real.length >= minRealForExclusive) {
     return { items: real.slice(0, count), usedFallback: false };
   }

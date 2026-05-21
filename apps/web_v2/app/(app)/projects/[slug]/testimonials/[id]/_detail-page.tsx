@@ -5,7 +5,6 @@ import { notFound, useRouter } from "next/navigation";
 import { TestimonialDetail } from "@/components/testimonials/testimonial-detail";
 import { useTestimonial } from "@/hooks/api";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
-import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 
 interface Props {
   slug: string;
@@ -17,7 +16,7 @@ export function TestimonialDetailPage({ slug, testimonialId }: Props) {
   const detailQuery = useTestimonial(slug, testimonialId);
 
   const testimonial = React.useMemo(
-    () => (detailQuery.data ? dtoToMockTestimonial(detailQuery.data) : null),
+    () => detailQuery.data ?? null,
     [detailQuery.data],
   );
 

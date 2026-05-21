@@ -20,7 +20,7 @@ import {
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
-import type { MockProject } from "@/lib/mock-data";
+import type { V2ProjectDTO } from "@workspace/types";
 import {
   useWidgetsList,
   useCreateWidget,
@@ -39,7 +39,7 @@ import { WidgetKindPicker } from "./widget-kind-picker";
 type Filter = "all" | "embed" | "wall";
 
 interface WidgetListProps {
-  project: MockProject;
+  project: V2ProjectDTO;
 }
 
 function GalleryGridSkeleton() {

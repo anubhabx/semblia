@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Kbd } from "@/components/kbd-shortcuts-dialog";
 import { cn } from "@/lib/utils";
-import { type MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 import { Stars, STATUS_CONFIG } from "@/components/testimonials/shared";
 import {
   DetailEmpty,
@@ -33,7 +33,7 @@ import {
 // ── Main detail component ─────────────────────────────────────────────────────
 
 interface TestimonialDetailProps {
-  testimonial: MockTestimonial | null;
+  testimonial: V2TestimonialDTO | null;
   loading?: boolean;
   onClose?: () => void;
   onApprove?: (id: string) => void;
@@ -256,7 +256,7 @@ export function TestimonialDetail({
                 <MetaRow
                   icon={CalendarIcon}
                   label="Submitted"
-                  value={t.createdAt.toLocaleDateString("en-US", {
+                  value={new Date(t.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",

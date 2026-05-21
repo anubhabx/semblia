@@ -11,13 +11,13 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import type { MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 import type { WidgetStudioConfig } from "@/lib/widgets/widget-types";
 import { WidgetRenderer } from "./preview-renderers/widget-renderer";
 
 interface WidgetCardMiniPreviewProps {
   config: WidgetStudioConfig;
-  items: MockTestimonial[];
+  items: V2TestimonialDTO[];
   /** Visual padding inside the preview box (tweak per use). Defaults to 10px. */
   padding?: number;
   className?: string;

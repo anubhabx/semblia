@@ -12,7 +12,7 @@
 import * as React from "react";
 import { Lightning as LightningIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import type { MockTestimonial, MockProject } from "@/lib/mock-data";
+import type { V2TestimonialDTO, V2ProjectDTO } from "@workspace/types";
 import { useWidgetStudioStore } from "@/lib/widgets/widget-studio-store";
 import type { WidgetDevice } from "@/lib/widgets/widget-types";
 import { getResolvedTheme } from "@/lib/widgets/widget-token-css";
@@ -22,8 +22,8 @@ import { HostPageChrome } from "../preview-renderers/host-page-chrome";
 
 interface WidgetStudioPreviewProps {
   widgetId: string;
-  items: MockTestimonial[];
-  project: MockProject;
+  items: V2TestimonialDTO[];
+  project: V2ProjectDTO;
 }
 
 const DEVICE_DIMS: Record<WidgetDevice, { w: number; h: number }> = {
@@ -230,7 +230,7 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
     const map = new Map(items.map((t) => [t.id, t]));
     const ordered = draft.content.pickedIds
       .map((id) => map.get(id))
-      .filter((t): t is MockTestimonial => Boolean(t));
+      .filter((t): t is V2TestimonialDTO => Boolean(t));
     return ordered.length > 0 ? ordered : items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, contentMode, pickedIdsKey, draft]);

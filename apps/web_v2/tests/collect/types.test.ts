@@ -8,7 +8,7 @@ import {
   isFieldRequired,
   migrateLegacy,
 } from "@/lib/collect/types";
-import type { FormConfig as LegacyFormConfig } from "@/lib/mock-data";
+import type { LegacyFormConfig } from "@/lib/collect/types";
 import { makeProject } from "../helpers/fixtures";
 
 describe("lib/collect/types — deepMerge", () => {

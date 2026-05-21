@@ -15,11 +15,8 @@ import {
   Check as CheckIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  getApprovedTestimonialsByProject,
-  getProjectBySlug,
-  type MockTestimonial,
-} from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
+import { useTestimonialsList } from "@/hooks/api";
 import { useWidgetStudioStore } from "@/lib/widgets/widget-studio-store";
 import { Pills, SectionCollapsible } from "./studio-primitives";
 
@@ -36,13 +33,13 @@ export function ContentSection({ widgetId, projectSlug }: ContentSectionProps) {
     (s) => s.reorderContentPicks,
   );
 
-  const project = React.useMemo(
-    () => getProjectBySlug(projectSlug),
-    [projectSlug],
-  );
-  const approved = React.useMemo<MockTestimonial[]>(
-    () => (project ? getApprovedTestimonialsByProject(project.id) : []),
-    [project],
+  const approvedQuery = useTestimonialsList(projectSlug, {
+    status: "APPROVED",
+    pageSize: 200,
+  });
+  const approved = React.useMemo<V2TestimonialDTO[]>(
+    () => approvedQuery.data?.items ?? [],
+    [approvedQuery.data],
   );
 
   if (!draft) return null;

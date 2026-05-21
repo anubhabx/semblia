@@ -18,7 +18,7 @@ import {
   RefreshingDataBadge,
   SearchField,
 } from "@/components/shared";
-import { type ModerationStatus } from "@/lib/mock-data";
+import type { V2ModerationStatus } from "@workspace/types";
 
 // ── Compact result summary the filter bar needs from its consumer ─────────────
 export interface FilterBarResultSummary {
@@ -27,7 +27,7 @@ export interface FilterBarResultSummary {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type StatusFilter = ModerationStatus | "ALL";
+export type StatusFilter = V2ModerationStatus | "ALL";
 export type SortOption = "newest" | "oldest" | "rating_desc" | "rating_asc";
 
 // ── Config ───────────────────────────────────────────────────────────────────

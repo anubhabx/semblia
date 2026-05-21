@@ -8,7 +8,6 @@ import { TestimonialDetail } from "@/components/testimonials/testimonial-detail"
 import { KbdShortcutsDialog } from "@/components/kbd-shortcuts-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 import { cn } from "@/lib/utils";
 import { useTestimonialModeration } from "@/hooks/use-testimonial-moderation";
 import { useProject, useTestimonial } from "@/hooks/api";
@@ -52,7 +51,7 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
   // Detail query — only fetches when a row is selected
   const detailQuery = useTestimonial(slug, selectedId ?? "");
   const detail = React.useMemo(
-    () => (detailQuery.data ? dtoToMockTestimonial(detailQuery.data) : null),
+    () => detailQuery.data ?? null,
     [detailQuery.data],
   );
   const detailLoading = !!selectedId && detailQuery.isPending;

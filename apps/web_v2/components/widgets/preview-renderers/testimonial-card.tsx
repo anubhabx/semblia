@@ -10,11 +10,11 @@
  */
 
 import * as React from "react";
-import type { MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 import type { WidgetVisibility } from "@/lib/widgets/widget-types";
 
 interface TestimonialCardProps {
-  testimonial: MockTestimonial;
+  testimonial: V2TestimonialDTO;
   visibility: WidgetVisibility;
   /** Render at reduced size — used by the wall layout & mini-preview. */
   scale?: "default" | "dense" | "mini";
@@ -47,8 +47,11 @@ const SCALE_PAD_Y: Record<
   mini: "8px",
 };
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function StarRow({ rating }: { rating: number }) {

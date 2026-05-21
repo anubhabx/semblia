@@ -13,7 +13,6 @@ import {
   useRejectTestimonial,
 } from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
-import { dtoToMockTestimonial } from "@/lib/testimonials/dto-adapter";
 import { PageBody } from "@/components/shared";
 import { useDebounce } from "@/hooks/use-debounce";
 import { TestimonialRow } from "./testimonial-row";
@@ -78,7 +77,7 @@ export function TestimonialsClient({
     useLiveQueryState(listQuery);
 
   const items = React.useMemo(
-    () => (listQuery.data?.items ?? []).map(dtoToMockTestimonial),
+    () => listQuery.data?.items ?? [],
     [listQuery.data],
   );
 

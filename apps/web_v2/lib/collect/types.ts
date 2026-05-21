@@ -1,7 +1,30 @@
-import type {
-  FormConfig as LegacyFormConfig,
-  MockProject,
-} from "@/lib/mock-data";
+import type { V2ProjectDTO } from "@workspace/types";
+
+/**
+ * Legacy form-config shape stored on `Project.formConfig` in older records.
+ * Newer projects use the structured `FormConfig` below; `migrateLegacy` lifts
+ * legacy records into the new shape.
+ */
+export interface LegacyFormConfig {
+  headerTitle: string;
+  headerDescription: string;
+  thankYouMessage: string;
+  enableRating: boolean;
+  enableJobTitle: boolean;
+  enableCompany: boolean;
+  enableAvatar: boolean;
+  enableVideoUrl: boolean;
+  enableGoogleVerification: boolean;
+  requireRating: boolean;
+  requireJobTitle: boolean;
+  requireCompany: boolean;
+  requireAvatar: boolean;
+  requireVideoUrl: boolean;
+  requireGoogleVerification: boolean;
+  allowAnonymousSubmissions: boolean;
+  notifyOnSubmission: boolean;
+  allowFingerprintOptOut: boolean;
+}
 
 export type FieldKey =
   | "name"
@@ -148,13 +171,13 @@ export const DEFAULT_CONFIG: FormConfig = {
   },
 };
 
-export function buildInitialConfig(project: MockProject): FormConfig {
+export function buildInitialConfig(project: V2ProjectDTO): FormConfig {
   const primary =
     project.brandColorPrimary ?? DEFAULT_CONFIG.branding.colors.primary;
   const accent =
     project.brandColorSecondary ?? DEFAULT_CONFIG.branding.colors.accent;
 
-  const legacy = project.formConfig;
+  const legacy = project.formConfig as LegacyFormConfig | null;
   const base: FormConfig = legacy
     ? migrateLegacy(legacy)
     : structuredClone(DEFAULT_CONFIG);

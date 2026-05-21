@@ -1,9 +1,12 @@
-import type { MockProject } from "@/lib/mock-data";
+import type { V2ProjectDTO } from "@workspace/types";
 
-export function makeProject(overrides: Partial<MockProject> = {}): MockProject {
+export function makeProject(
+  overrides: Partial<V2ProjectDTO> = {},
+): V2ProjectDTO {
   return {
     id: "proj_test",
     userId: "user_test",
+    organizationId: null,
     name: "Test Project",
     shortDescription: null,
     description: null,
@@ -22,13 +25,18 @@ export function makeProject(overrides: Partial<MockProject> = {}): MockProject {
     autoApproveVerified: false,
     profanityFilterLevel: null,
     formConfig: null,
-    createdAt: new Date("2026-01-01"),
-    updatedAt: new Date("2026-01-01"),
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
     _count: {
       testimonials: 0,
       pendingModeration: 0,
       widgets: 0,
+      apiKeys: 0,
+    },
+    access: {
+      role: "OWNER",
+      capabilities: [],
     },
     ...overrides,
-  } as MockProject;
+  };
 }

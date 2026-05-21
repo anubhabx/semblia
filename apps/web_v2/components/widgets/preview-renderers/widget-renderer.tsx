@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import type { MockTestimonial } from "@/lib/mock-data";
+import type { V2TestimonialDTO } from "@workspace/types";
 import type { WidgetStudioConfig } from "@/lib/widgets/widget-types";
 import {
   widgetTokensToCss,
@@ -92,7 +92,7 @@ function useStaggerIndex(
 
 interface WidgetRendererProps {
   config: WidgetStudioConfig;
-  items: MockTestimonial[];
+  items: V2TestimonialDTO[];
   /** Forces auto-rotate off (mini previews / static thumbnails). */
   staticMode?: boolean;
   /** Lower-fidelity scale used inside ~280px gallery cards & rail dots. */
