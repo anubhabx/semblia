@@ -9,6 +9,7 @@ export interface SettingsFooterProps {
   saving: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  canSave?: boolean;
 }
 
 export function SettingsFooter({
@@ -16,7 +17,9 @@ export function SettingsFooter({
   saving,
   onSave,
   onDiscard,
+  canSave,
 }: SettingsFooterProps) {
+  const saveEnabled = (canSave ?? dirty) && !saving;
   return (
     <div
       className="sticky bottom-0 z-10 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:px-6"
@@ -35,7 +38,7 @@ export function SettingsFooter({
         </Button>
         <Button
           size="sm"
-          disabled={!dirty || saving}
+          disabled={!saveEnabled}
           onClick={onSave}
           className="min-w-[7rem] tactile"
         >

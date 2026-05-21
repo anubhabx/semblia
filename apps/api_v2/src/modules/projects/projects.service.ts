@@ -1200,6 +1200,7 @@ export class ProjectsService {
     }
     if (body.tags !== undefined) data.tags = body.tags;
     if (body.visibility !== undefined) data.visibility = body.visibility;
+    if (body.isActive !== undefined) data.isActive = body.isActive;
     if (body.autoModeration !== undefined) {
       data.autoModeration = body.autoModeration;
     }

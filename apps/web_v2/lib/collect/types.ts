@@ -171,26 +171,52 @@ export const DEFAULT_CONFIG: FormConfig = {
   },
 };
 
+function isNewFormConfigShape(value: unknown): value is FormConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.content === "object" &&
+    record.content !== null &&
+    typeof record.fields === "object" &&
+    record.fields !== null &&
+    typeof record.branding === "object" &&
+    record.branding !== null
+  );
+}
+
 export function buildInitialConfig(project: V2ProjectDTO): FormConfig {
   const primary =
     project.brandColorPrimary ?? DEFAULT_CONFIG.branding.colors.primary;
   const accent =
     project.brandColorSecondary ?? DEFAULT_CONFIG.branding.colors.accent;
 
-  const legacy = project.formConfig as LegacyFormConfig | null;
-  const base: FormConfig = legacy
-    ? migrateLegacy(legacy)
-    : structuredClone(DEFAULT_CONFIG);
+  const raw = project.formConfig as unknown;
+  const isNew = isNewFormConfigShape(raw);
+  const legacy = !isNew ? (raw as LegacyFormConfig | null) : null;
+  const fromConfig = isNew ? (raw as FormConfig) : null;
+
+  const base: FormConfig = fromConfig
+    ? fromConfig
+    : legacy
+      ? migrateLegacy(legacy)
+      : structuredClone(DEFAULT_CONFIG);
 
   return {
     ...base,
     content: {
       ...base.content,
       headerTitle:
-        legacy?.headerTitle ?? `Share your ${project.name} experience`,
+        fromConfig?.content.headerTitle ??
+        legacy?.headerTitle ??
+        `Share your ${project.name} experience`,
       headerDescription:
-        legacy?.headerDescription ?? `Tell us how ${project.name} helped you.`,
-      thankYouMessage: legacy?.thankYouMessage ?? base.content.thankYouMessage,
+        fromConfig?.content.headerDescription ??
+        legacy?.headerDescription ??
+        `Tell us how ${project.name} helped you.`,
+      thankYouMessage:
+        fromConfig?.content.thankYouMessage ??
+        legacy?.thankYouMessage ??
+        base.content.thankYouMessage,
     },
     branding: {
       ...base.branding,

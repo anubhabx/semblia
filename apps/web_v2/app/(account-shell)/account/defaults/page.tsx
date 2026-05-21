@@ -635,7 +635,8 @@ export default function DefaultsPage() {
       </PageBody>
 
       <SettingsFooter
-        dirty={canSave}
+        dirty={dirty}
+        canSave={canSave}
         saving={updateDefaults.isPending}
         onSave={save}
         onDiscard={discard}

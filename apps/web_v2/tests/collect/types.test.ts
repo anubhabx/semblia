@@ -11,6 +11,16 @@ import {
 import type { LegacyFormConfig } from "@/lib/collect/types";
 import { makeProject } from "../helpers/fixtures";
 
+const NEW_SHAPE_CONFIG = {
+  ...structuredClone(DEFAULT_CONFIG),
+  content: {
+    ...DEFAULT_CONFIG.content,
+    headerTitle: "Saved from account default",
+    headerDescription: "Saved description",
+    thankYouMessage: "Saved thanks",
+  },
+};
+
 describe("lib/collect/types — deepMerge", () => {
   it("merges nested patches without mutating the target", () => {
     const base = structuredClone(DEFAULT_CONFIG);
@@ -85,6 +95,17 @@ describe("lib/collect/types — buildInitialConfig", () => {
     const project = makeProject({ slug: "acme-widgets" });
     const cfg = buildInitialConfig(project);
     expect(cfg.delivery.pathSuffix).toBe("acme-widgets");
+  });
+
+  it("preserves nested config when formConfig already uses the new shape", () => {
+    const project = makeProject({
+      name: "Defaulted",
+      formConfig: NEW_SHAPE_CONFIG as unknown as Record<string, unknown>,
+    });
+    const cfg = buildInitialConfig(project);
+    expect(cfg.content.headerTitle).toBe("Saved from account default");
+    expect(cfg.content.headerDescription).toBe("Saved description");
+    expect(cfg.content.thankYouMessage).toBe("Saved thanks");
   });
 });
 
