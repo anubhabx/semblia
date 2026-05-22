@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
-import { CameraIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, CameraIcon } from "@phosphor-icons/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -47,8 +47,12 @@ export function AvatarUpload({
     <div className={cn("relative inline-block", className)}>
       <Avatar
         size="lg"
-        className="size-16 cursor-pointer"
-        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "size-16 cursor-pointer",
+          uploading && "cursor-wait opacity-60",
+        )}
+        onClick={() => !uploading && inputRef.current?.click()}
+        aria-busy={uploading}
       >
         {imageUrl && <AvatarImage src={imageUrl} alt="Profile photo" />}
         <AvatarFallback className="text-sm font-semibold">
@@ -56,9 +60,18 @@ export function AvatarUpload({
         </AvatarFallback>
       </Avatar>
 
+      {uploading && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-background/60 backdrop-blur-[1px]"
+          aria-hidden
+        >
+          <ArrowClockwiseIcon className="size-5 animate-spin text-foreground/80" />
+        </div>
+      )}
+
       <button
         type="button"
-        aria-label="Change profile photo"
+        aria-label={uploading ? "Uploading profile photo" : "Change profile photo"}
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
         className={cn(
@@ -66,7 +79,11 @@ export function AvatarUpload({
           uploading ? "opacity-50 pointer-events-none" : "hover:bg-muted",
         )}
       >
-        <CameraIcon className="size-3 text-muted-foreground" />
+        {uploading ? (
+          <ArrowClockwiseIcon className="size-3 animate-spin text-muted-foreground" />
+        ) : (
+          <CameraIcon className="size-3 text-muted-foreground" />
+        )}
       </button>
 
       <input
@@ -74,8 +91,13 @@ export function AvatarUpload({
         type="file"
         accept="image/*"
         className="hidden"
+        disabled={uploading}
         onChange={handleFile}
       />
+
+      <span className="sr-only" role="status" aria-live="polite">
+        {uploading ? "Uploading profile photo" : ""}
+      </span>
     </div>
   );
 }
