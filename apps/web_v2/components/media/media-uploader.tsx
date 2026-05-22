@@ -92,10 +92,13 @@ function isPublicScoped(
   );
 }
 
+// Dropzone shape — card, not banner. Each size pairs a `max-w-` cap with an
+// `aspect-` so the zone is logo-shaped at any container width instead of
+// stretching into a wide strip that dwarfs the asset.
 const SIZE_CLASS: Record<NonNullable<CommonProps["size"]>, string> = {
-  sm: "h-28",
-  md: "h-40",
-  lg: "h-56",
+  sm: "max-w-[14rem] aspect-[4/3]",
+  md: "max-w-[22rem] aspect-[4/3]",
+  lg: "max-w-[28rem] aspect-video",
 };
 
 function formatBytes(bytes: number | null | undefined) {
