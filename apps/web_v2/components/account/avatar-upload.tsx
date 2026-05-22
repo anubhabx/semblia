@@ -71,7 +71,9 @@ export function AvatarUpload({
 
       <button
         type="button"
-        aria-label={uploading ? "Uploading profile photo" : "Change profile photo"}
+        aria-label={
+          uploading ? "Uploading profile photo" : "Change profile photo"
+        }
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
         className={cn(
