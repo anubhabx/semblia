@@ -7,6 +7,7 @@ import {
   ShareNetwork,
   SealCheck,
 } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ── Empty state: no projects yet ─────────────────────────────────────────────
@@ -38,17 +39,13 @@ export function EmptyProjects() {
               aria-hidden
               className="block h-px w-5 shrink-0 rounded-full bg-brand"
             />
-            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/60 uppercase">
+            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
               First project · 0 of 1
             </p>
           </div>
 
-          <h2 className="mt-4 text-[2rem] leading-[1.07] font-semibold tracking-[-0.025em] text-foreground sm:text-[2.45rem]">
-            A studio for trust.
-            <br />
-            <span className="text-muted-foreground/55">
-              Yours starts empty.
-            </span>
+          <h2 className="mt-4 text-[1.85rem] leading-[1.1] font-semibold tracking-[-0.022em] text-foreground sm:text-[2.15rem]">
+            Create your first project to start collecting testimonials.
           </h2>
 
           <p className="mt-5 max-w-[30rem] text-[14.5px] leading-relaxed text-muted-foreground">
@@ -138,14 +135,16 @@ export function EmptySearch({
         Check the spelling or try a broader term — projects match on name and
         description.
       </p>
-      <button
+      <Button
         type="button"
         onClick={onClear}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-card px-2.5 py-1.5 text-[11.5px] font-medium text-foreground transition-colors duration-150 hover:border-foreground/25 hover:bg-muted/50"
+        variant="outline"
+        size="default"
+        className="mt-4"
       >
-        <XIcon className="size-3" />
+        <XIcon className="size-3.5" />
         Clear search
-      </button>
+      </Button>
     </div>
   );
 }

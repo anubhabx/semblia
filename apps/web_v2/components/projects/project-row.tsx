@@ -1,28 +1,10 @@
 import * as React from "react";
-import {
-  ChatText as MessageSquareTextIcon,
-  PuzzlePiece as PuzzleIcon,
-  Globe as GlobeIcon,
-  Lock as LockIcon,
-  Users as UsersIcon,
-  ArrowRight as ArrowRightIcon,
-} from "@phosphor-icons/react";
-import type { V2ProjectDTO, V2ProjectVisibility } from "@workspace/types";
+import { ChatText as MessageSquareTextIcon } from "@phosphor-icons/react";
+import type { V2ProjectDTO } from "@workspace/types";
 import { Badge } from "@/components/ui/badge";
 import { ItemRow } from "@/components/shared";
 import { fmtRelative, projectInitials } from "@/lib/format";
 import { PROJECT_TYPE_LABELS } from "@/lib/format";
-
-// ── Visibility icons ───────────────────────────────────────────────────────────
-
-const VisibilityIcon: Record<
-  V2ProjectVisibility,
-  React.ComponentType<{ className?: string }>
-> = {
-  PUBLIC: GlobeIcon,
-  PRIVATE: LockIcon,
-  INVITE_ONLY: UsersIcon,
-};
 
 // ── Project row (list view) ────────────────────────────────────────────────────
 
@@ -37,7 +19,8 @@ export function ProjectRow({
   const typeLabel = project.projectType
     ? PROJECT_TYPE_LABELS[project.projectType]
     : null;
-  const VisIcon = VisibilityIcon[project.visibility];
+  const pending = project._count.pendingModeration;
+  const testimonials = project._count.testimonials;
 
   return (
     <ItemRow
@@ -81,46 +64,28 @@ export function ProjectRow({
           </p>
         ) : undefined
       }
+      metrics={
+        pending > 0 ? (
+          <span className="flex items-center gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+            {pending} pending
+          </span>
+        ) : testimonials > 0 ? (
+          <span
+            className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"
+            aria-label={`${testimonials} testimonial${testimonials !== 1 ? "s" : ""}`}
+          >
+            <MessageSquareTextIcon className="size-3.5 shrink-0" aria-hidden />
+            {testimonials}
+          </span>
+        ) : undefined
+      }
       trailing={
-        <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-5 sm:flex">
-            {project._count.pendingModeration > 0 && (
-              <span className="flex items-center gap-1 rounded-md bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-                {project._count.pendingModeration} pending
-              </span>
-            )}
-            <span
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-              title={`${project._count.testimonials} testimonials`}
-            >
-              <MessageSquareTextIcon
-                className="size-3.5 shrink-0"
-                aria-hidden
-              />
-              {project._count.testimonials}
-            </span>
-            <span
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-              title={`${project._count.widgets} widget${project._count.widgets !== 1 ? "s" : ""}`}
-            >
-              <PuzzleIcon className="size-3.5 shrink-0" aria-hidden />
-              {project._count.widgets}
-            </span>
-            <span
-              className="flex items-center text-xs text-muted-foreground"
-              title={project.visibility.toLowerCase().replace("_", " ")}
-            >
-              <VisIcon className="size-3.5 shrink-0" aria-hidden />
-            </span>
-            <span
-              className="w-[68px] text-right text-xs tabular-nums text-muted-foreground"
-              title={new Date(project.updatedAt).toLocaleDateString()}
-            >
-              {fmtRelative(new Date(project.updatedAt))}
-            </span>
-          </div>
-          <ArrowRightIcon className="size-4 text-muted-foreground/30 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/70" />
-        </div>
+        <span
+          className="w-[72px] text-right text-xs tabular-nums text-muted-foreground"
+          title={new Date(project.updatedAt).toLocaleDateString()}
+        >
+          {fmtRelative(new Date(project.updatedAt))}
+        </span>
       }
     />
   );

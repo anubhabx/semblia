@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   ChatText as MessageSquareTextIcon,
   PuzzlePiece as PuzzleIcon,
-  ArrowRight as ArrowRightIcon,
 } from "@phosphor-icons/react";
 import type { V2ProjectDTO } from "@workspace/types";
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +90,6 @@ export function ProjectCard({
         <span className="ml-auto text-xs tabular-nums text-muted-foreground">
           {fmtRelative(new Date(project.updatedAt))}
         </span>
-        <ArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/70" />
       </div>
     </ItemCard>
   );

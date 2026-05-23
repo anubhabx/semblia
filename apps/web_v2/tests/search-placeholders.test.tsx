@@ -78,7 +78,16 @@ describe("search placeholders", () => {
   });
 
   it("renders the projects search placeholder with an ellipsis glyph", async () => {
-    const items = [makeApiProject()];
+    // ProjectsClient gates the toolbar (search + filter pills + view toggle)
+    // on `projects.length >= 6` so it stops being noise at small workspaces;
+    // seed 6 distinct projects so the search field renders.
+    const items = Array.from({ length: 6 }, (_, i) =>
+      makeApiProject({
+        id: `proj_${i}`,
+        slug: `project-${i}`,
+        name: `Project ${i}`,
+      }),
+    );
     const response: V2PaginatedResponse<V2ProjectDTO> = {
       items,
       total: items.length,

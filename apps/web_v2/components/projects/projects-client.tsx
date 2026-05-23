@@ -73,7 +73,10 @@ export function ProjectsClient() {
       })),
   ];
 
-  const showToolbar = !loading && projects.length > 0;
+  // Toolbar (filter pills + search + view toggle) is earned by content, not
+  // granted by default: at small workspaces (1-5 projects) there is nothing to
+  // filter, search, or switch view of, so the controls are noise.
+  const showToolbar = !loading && projects.length >= 6;
 
   return (
     <div className="flex flex-1 flex-col">
