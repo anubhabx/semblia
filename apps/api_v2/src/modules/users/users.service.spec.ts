@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { NotFoundException } from "@nestjs/common";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 
 // Prevent Prisma from initializing during import
 vi.mock("@workspace/database/prisma", () => ({
@@ -40,12 +40,21 @@ const mockUser = {
   updatedAt: new Date(),
 };
 
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe("UsersService", () => {
   let service: UsersService;
 
   beforeEach(() => {
     service = new UsersService(prismaMock);
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("getMe", () => {
@@ -61,12 +70,51 @@ describe("UsersService", () => {
       });
     });
 
-    it("throws NotFoundException when user does not exist", async () => {
+    it("waits for Clerk webhook reconciliation before returning the current user", async () => {
+      mockFindUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockUser);
+      mockUpsert.mockResolvedValue(mockUser);
+
+      const getMePromise = service.getMe("user_abc");
+      await flushMicrotasks();
+
+      expect(mockFindUnique).toHaveBeenCalledTimes(2);
+
+      await service.upsertFromClerk({
+        id: "user_abc",
+        emailAddresses: [{ emailAddress: "test@example.com" }],
+        primaryEmailAddressId: undefined,
+        firstName: "Alice",
+        lastName: "Smith",
+        imageUrl: null,
+      });
+
+      await expect(getMePromise).resolves.toEqual(mockUser);
+      expect(mockFindUnique).toHaveBeenCalledTimes(3);
+    });
+
+    it("returns a setup-pending service error when reconciliation does not arrive within the wait window", async () => {
+      vi.useFakeTimers();
       mockFindUnique.mockResolvedValue(null);
 
-      await expect(service.getMe("user_missing")).rejects.toThrow(
-        NotFoundException,
-      );
+      const getMePromise = service
+        .getMe("user_missing")
+        .catch((error) => error);
+      await flushMicrotasks();
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      const error = await getMePromise;
+
+      expect(error).toBeInstanceOf(ServiceUnavailableException);
+      expect((error as ServiceUnavailableException).getResponse()).toEqual({
+        message: "Account setup is still in progress",
+        details: {
+          code: "ACCOUNT_RECONCILING",
+          retryAfterMs: 2_000,
+        },
+      });
     });
   });
 

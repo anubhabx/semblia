@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CircleNotch } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type {
   V2OnboardingDataDTO,
@@ -18,11 +17,16 @@ import { useAnimatedStep } from "@/hooks/use-animated-step";
 import { useCreateProject } from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import {
+  isAccountReconciliationPendingError,
   useCompleteOnboarding,
   useCurrentUser,
   useUpdateCurrentUser,
   useUpdateOnboardingProgress,
 } from "@/hooks/use-current-user";
+import {
+  AccountSetupFallback,
+  AccountSetupLoader,
+} from "@/components/onboarding/account-setup-loader";
 
 import { WelcomeShell } from "./_welcome-shell";
 import type { OnboardStep } from "./steps/constants";
@@ -50,6 +54,12 @@ export function WelcomeFlow() {
   const liveState = useLiveQueryState(currentUser, {
     requireFreshOnMount: true,
   });
+  const setupRetrying =
+    !currentUser.isError &&
+    isAccountReconciliationPendingError(currentUser.failureReason);
+  const setupRetryExhausted = isAccountReconciliationPendingError(
+    currentUser.error,
+  );
 
   // Already-completed users shouldn't see this page.
   React.useEffect(() => {
@@ -58,8 +68,25 @@ export function WelcomeFlow() {
     }
   }, [currentUser.data?.onboardingCompletedAt, router]);
 
-  if (liveState.isWaitingForLiveData) {
+  if (liveState.isWaitingForLiveData || setupRetrying) {
     return <WelcomeLoading />;
+  }
+
+  if (setupRetryExhausted) {
+    return (
+      <WelcomeFallback fullScreen onRetry={() => void currentUser.refetch()} />
+    );
+  }
+
+  if (currentUser.isError) {
+    return (
+      <WelcomeFallback
+        fullScreen
+        title="Unable to load your account"
+        description="Refresh the page in a moment, or try again now."
+        onRetry={() => void currentUser.refetch()}
+      />
+    );
   }
 
   if (currentUser.data?.onboardingCompletedAt) {
@@ -329,16 +356,23 @@ function WelcomeFlowInner({ currentUser }: { currentUser?: V2UserDTO }) {
   );
 }
 
-function WelcomeLoading() {
+function WelcomeLoading(props: { title?: string; description?: string }) {
   return (
-    <div
-      role="status"
-      aria-label="Loading setup"
-      className="flex min-h-svh items-center justify-center bg-background text-muted-foreground"
-    >
-      <CircleNotch className="size-5 animate-spin" aria-hidden />
-    </div>
+    <AccountSetupLoader
+      fullScreen
+      title={props.title}
+      description={props.description}
+    />
   );
+}
+
+function WelcomeFallback(props: {
+  fullScreen?: boolean;
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return <AccountSetupFallback {...props} />;
 }
 
 function apiStepToUi(step: V2OnboardingStep): OnboardStep {

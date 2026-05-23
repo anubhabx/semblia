@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { Prisma, UserOnboardingStep } from "@workspace/database/prisma";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
@@ -7,6 +12,9 @@ import type {
   UpdateOnboardingProgressBodyDto,
   UpdateUserProfileBodyDto,
 } from "./users.dto.js";
+
+const USER_RECONCILIATION_WAIT_MS = 20_000;
+const USER_RECONCILIATION_RETRY_AFTER_MS = 2_000;
 
 @Injectable()
 export class UsersService {
@@ -24,16 +32,35 @@ export class UsersService {
     updatedAt: true,
   } as const;
 
+  private readonly reconciliationWaiters = new Map<string, Set<() => void>>();
+
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getMe(clerkUserId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: clerkUserId },
-      select: UsersService.USER_SELECT,
-    });
+    const user = await this.findCurrentUser(clerkUserId);
+    if (user) return user;
 
-    if (!user) throw new NotFoundException("User not found");
-    return user;
+    const waiter = this.createReconciliationWaiter(clerkUserId);
+    try {
+      const userAfterWaiterRegistration =
+        await this.findCurrentUser(clerkUserId);
+      if (userAfterWaiterRegistration) return userAfterWaiterRegistration;
+
+      await waiter.promise;
+    } finally {
+      waiter.cancel();
+    }
+
+    const reconciledUser = await this.findCurrentUser(clerkUserId);
+    if (reconciledUser) return reconciledUser;
+
+    throw new ServiceUnavailableException({
+      message: "Account setup is still in progress",
+      details: {
+        code: "ACCOUNT_RECONCILING",
+        retryAfterMs: USER_RECONCILIATION_RETRY_AFTER_MS,
+      },
+    });
   }
 
   async updateProfile(clerkUserId: string, body: UpdateUserProfileBodyDto) {
@@ -128,6 +155,65 @@ export class UsersService {
         avatar: payload.imageUrl ?? undefined,
       },
     });
+    this.notifyReconciliationWaiters(payload.id);
+  }
+
+  private findCurrentUser(clerkUserId: string) {
+    return this.prisma.client.user.findUnique({
+      where: { id: clerkUserId },
+      select: UsersService.USER_SELECT,
+    });
+  }
+
+  private createReconciliationWaiter(clerkUserId: string) {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let wake: (() => void) | undefined;
+
+    const cleanup = () => {
+      if (timeout) clearTimeout(timeout);
+
+      const waiters = this.reconciliationWaiters.get(clerkUserId);
+      if (waiters && wake) {
+        waiters.delete(wake);
+        if (waiters.size === 0) {
+          this.reconciliationWaiters.delete(clerkUserId);
+        }
+      }
+    };
+
+    const promise = new Promise<void>((resolve) => {
+      wake = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+
+      const waiters =
+        this.reconciliationWaiters.get(clerkUserId) ?? new Set<() => void>();
+      waiters.add(wake);
+      this.reconciliationWaiters.set(clerkUserId, waiters);
+      timeout = setTimeout(wake, USER_RECONCILIATION_WAIT_MS);
+    });
+
+    return {
+      promise,
+      cancel: () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+      },
+    };
+  }
+
+  private notifyReconciliationWaiters(clerkUserId: string) {
+    const waiters = this.reconciliationWaiters.get(clerkUserId);
+    if (!waiters) return;
+
+    for (const wake of [...waiters]) {
+      wake();
+    }
   }
 
   private isPrismaNotFoundError(error: unknown): error is { code: string } {

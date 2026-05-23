@@ -290,6 +290,7 @@ export interface V2ErrorResponse {
   statusCode: number;
   message: string | string[];
   error?: string;
+  details?: unknown;
 }
 
 export type V2ProjectAccessRole =

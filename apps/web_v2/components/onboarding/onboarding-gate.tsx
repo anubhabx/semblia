@@ -2,9 +2,15 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import {
+  isAccountReconciliationPendingError,
+  useCurrentUser,
+} from "@/hooks/use-current-user";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
-import { Spinner } from "@/components/ui/spinner";
+import {
+  AccountSetupFallback,
+  AccountSetupLoader,
+} from "@/components/onboarding/account-setup-loader";
 
 const WELCOME_PATH = "/welcome";
 const FALLBACK_PATH = "/projects";
@@ -16,6 +22,12 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   const liveState = useLiveQueryState(currentUser, {
     requireFreshOnMount: true,
   });
+  const setupRetrying =
+    !currentUser.isError &&
+    isAccountReconciliationPendingError(currentUser.failureReason);
+  const setupRetryExhausted = isAccountReconciliationPendingError(
+    currentUser.error,
+  );
 
   React.useEffect(() => {
     const user = currentUser.data;
@@ -32,11 +44,21 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser.data, pathname, router]);
 
-  if (liveState.isWaitingForLiveData) {
+  if (liveState.isWaitingForLiveData || setupRetrying) {
+    return <AccountSetupLoader />;
+  }
+
+  if (setupRetryExhausted) {
+    return <AccountSetupFallback onRetry={() => void currentUser.refetch()} />;
+  }
+
+  if (currentUser.isError) {
     return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        <Spinner className="size-4" />
-      </div>
+      <AccountSetupFallback
+        title="Unable to load your account"
+        description="Refresh the page in a moment, or try again now."
+        onRetry={() => void currentUser.refetch()}
+      />
     );
   }
 

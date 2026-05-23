@@ -4,6 +4,9 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { V2UserDTO } from "@workspace/types";
 import {
+  getCurrentUserRetryDelay,
+  isAccountReconciliationPendingError,
+  shouldRetryCurrentUserQuery,
   useCurrentUser,
   useUpdateOnboardingProgress,
 } from "@/hooks/use-current-user";
@@ -84,5 +87,50 @@ describe("useCurrentUser", () => {
       step: "INTENT",
       data: { referral: { source: "search" } },
     });
+  });
+
+  it("retries only account-reconciliation pending errors with the server backoff", () => {
+    const pendingError = {
+      status: 503,
+      body: {
+        statusCode: 503,
+        message: "Account setup is still in progress",
+        details: {
+          code: "ACCOUNT_RECONCILING",
+          retryAfterMs: 2_000,
+        },
+      },
+    };
+    const pendingEnvelopeError = {
+      status: 503,
+      body: {
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Account setup is still in progress",
+          details: {
+            code: "ACCOUNT_RECONCILING",
+            retryAfterMs: 2_000,
+          },
+        },
+      },
+    };
+    const notFoundError = {
+      status: 404,
+      body: {
+        statusCode: 404,
+        message: "User not found",
+      },
+    };
+
+    expect(isAccountReconciliationPendingError(pendingError)).toBe(true);
+    expect(isAccountReconciliationPendingError(pendingEnvelopeError)).toBe(
+      true,
+    );
+    expect(shouldRetryCurrentUserQuery(0, pendingError)).toBe(true);
+    expect(shouldRetryCurrentUserQuery(2, pendingError)).toBe(true);
+    expect(shouldRetryCurrentUserQuery(3, pendingError)).toBe(false);
+    expect(shouldRetryCurrentUserQuery(0, notFoundError)).toBe(false);
+    expect(getCurrentUserRetryDelay(0, pendingError)).toBe(2_000);
   });
 });

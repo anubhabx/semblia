@@ -92,7 +92,7 @@ export function SignUpForm() {
     }
     if (signUp.status === "complete") {
       const { error: finalErr } = await signUp.finalize({
-        navigate: () => router.push("/projects"),
+        navigate: () => router.push("/welcome"),
       });
       if (finalErr) {
         setError(errMsg(finalErr));
@@ -123,7 +123,7 @@ export function SignUpForm() {
     setError(null);
     const { error: ssoErr } = await signUp.sso({
       strategy,
-      redirectUrl: "/projects",
+      redirectUrl: "/welcome",
       redirectCallbackUrl: `${window.location.origin}/sso-callback`,
     });
     if (ssoErr) {
