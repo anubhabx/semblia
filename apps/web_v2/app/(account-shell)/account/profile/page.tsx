@@ -371,15 +371,26 @@ export default function ProfilePage() {
   const [disconnectTarget, setDisconnectTarget] =
     React.useState<ExternalAccountResource | null>(null);
 
+  const [connecting, setConnecting] = React.useState(false);
+
   async function connectGoogle() {
-    if (!user) return;
+    if (!user || connecting) return;
+    setConnecting(true);
     try {
-      await user.createExternalAccount({
+      const account = await user.createExternalAccount({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
+        redirectUrl: `${window.location.origin}/sso-callback`,
       });
+      const redirect = account.verification?.externalVerificationRedirectURL;
+      if (redirect) {
+        window.location.href = redirect.toString();
+        return;
+      }
+      toast.error("Could not start Google connect flow.");
     } catch {
       toast.error("Failed to connect Google account.");
+    } finally {
+      setConnecting(false);
     }
   }
 
@@ -533,11 +544,12 @@ export default function ProfilePage() {
               onClick={connectGoogle}
               disabled={
                 !isLoaded ||
+                connecting ||
                 user?.externalAccounts.some((a) => a.provider === "google")
               }
             >
               <GoogleLogoIcon className="size-3.5 mr-1.5" />
-              Connect Google
+              {connecting ? "Connecting…" : "Connect Google"}
             </Button>
           }
         >
