@@ -43,6 +43,10 @@ export const notificationIcon: Record<
     Icon: ExportIcon,
     tone: "text-warning bg-warning/15",
   },
+  EXPORT_DELIVERY_READY: {
+    Icon: ExportIcon,
+    tone: "text-success bg-success/12",
+  },
   AGENT_ACTION_CREATED: {
     Icon: RobotIcon,
     tone: "text-brand bg-brand/12",
@@ -50,6 +54,14 @@ export const notificationIcon: Record<
   PROJECT_INVITE_RECEIVED: {
     Icon: EnvelopeSimpleIcon,
     tone: "text-brand bg-brand/12",
+  },
+  PROJECT_INVITE_ACCEPTED: {
+    Icon: CircleCheckIcon,
+    tone: "text-success bg-success/12",
+  },
+  OUTBOUND_WEBHOOK_DELIVERY_FAILED: {
+    Icon: ShieldAlertIcon,
+    tone: "text-warning bg-warning/15",
   },
   SECURITY_ALERT: {
     Icon: ShieldAlertIcon,

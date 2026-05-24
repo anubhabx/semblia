@@ -8,8 +8,11 @@ export const notificationTypeSchema = z.enum([
   "TESTIMONIAL_APPROVED",
   "TESTIMONIAL_REJECTED",
   "EXPORT_DELIVERY_FAILED",
+  "EXPORT_DELIVERY_READY",
   "AGENT_ACTION_CREATED",
   "PROJECT_INVITE_RECEIVED",
+  "PROJECT_INVITE_ACCEPTED",
+  "OUTBOUND_WEBHOOK_DELIVERY_FAILED",
   "SECURITY_ALERT",
 ]);
 
@@ -38,8 +41,12 @@ const notificationTypePreferencesSchema = z
     TESTIMONIAL_APPROVED: notificationTypePreferenceSchema.optional(),
     TESTIMONIAL_REJECTED: notificationTypePreferenceSchema.optional(),
     EXPORT_DELIVERY_FAILED: notificationTypePreferenceSchema.optional(),
+    EXPORT_DELIVERY_READY: notificationTypePreferenceSchema.optional(),
     AGENT_ACTION_CREATED: notificationTypePreferenceSchema.optional(),
     PROJECT_INVITE_RECEIVED: notificationTypePreferenceSchema.optional(),
+    PROJECT_INVITE_ACCEPTED: notificationTypePreferenceSchema.optional(),
+    OUTBOUND_WEBHOOK_DELIVERY_FAILED:
+      notificationTypePreferenceSchema.optional(),
     SECURITY_ALERT: notificationTypePreferenceSchema.optional(),
   })
   .strict();

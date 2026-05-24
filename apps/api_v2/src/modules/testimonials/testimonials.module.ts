@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AuthzModule } from "../../common/authz/authz.module.js";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
+import { NotificationsModule } from "../notifications/notifications.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
 import { StorageModule } from "../storage/storage.module.js";
 import {
@@ -13,7 +14,7 @@ import { TestimonialPrivateMetadataService } from "./testimonial-private-metadat
 import { TestimonialsService } from "./testimonials.service.js";
 
 @Module({
-  imports: [AuthzModule, ProjectsModule, StorageModule],
+  imports: [AuthzModule, NotificationsModule, ProjectsModule, StorageModule],
   controllers: [TestimonialsController, PublicTestimonialsController],
   providers: [
     TestimonialsService,

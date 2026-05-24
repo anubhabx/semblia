@@ -5,7 +5,9 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
+import { encryptSecret } from "../../common/crypto/secret-cipher.js";
 import { REQUIRED_CAPABILITIES_KEY } from "../../common/authz/require-capability.decorator.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { OUTBOUND_WEBHOOK_EVENTS } from "./outbound-webhook-events.js";
 import { OutboundWebhooksController } from "./outbound-webhooks.controller.js";
@@ -31,6 +33,7 @@ const mockDeliveryUpdate = vi.fn();
 const mockAuditCreate = vi.fn();
 const mockQueueAdd = vi.fn();
 const mockDispatcherSend = vi.fn();
+const mockCreateForProjectManagers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -66,6 +69,10 @@ const dispatcherMock = {
   send: mockDispatcherSend,
 };
 
+const notificationsServiceMock = {
+  createForProjectManagers: mockCreateForProjectManagers,
+} as unknown as NotificationsService;
+
 const actor = {
   actorType: "user" as const,
   userId: "user_1",
@@ -79,7 +86,7 @@ function makeEndpoint(overrides: Record<string, unknown> = {}) {
     projectId: "project_1",
     name: "Production webhook",
     url: "https://example.com/tresta",
-    signingSecretEncrypted: "encrypted",
+    signingSecretEncrypted: encryptSecret("whsec_test", encryptionKey),
     signingSecretHash: "hash",
     subscribedEvents: ["testimonial.published"],
     status: OutboundWebhookStatus.ACTIVE,
@@ -167,6 +174,7 @@ describe("OutboundWebhooksService", () => {
       queueMock as never,
       dispatcherMock,
       new ProjectActionAuditService(prismaMock),
+      notificationsServiceMock,
     );
   });
 
@@ -320,5 +328,41 @@ describe("OutboundWebhooksService", () => {
       }),
       select: expect.any(Object),
     });
+  });
+
+  it("notifies project managers only when webhook delivery attempts are exhausted", async () => {
+    mockDeliveryFindFirst.mockResolvedValue(makeDelivery());
+    mockDeliveryUpdate
+      .mockResolvedValueOnce(
+        makeDelivery({ status: "DELIVERING", attempts: 3 }),
+      )
+      .mockResolvedValueOnce(
+        makeDelivery({
+          status: "EXHAUSTED",
+          attempts: 3,
+          error: "Webhook returned HTTP 500",
+        }),
+      );
+    mockDispatcherSend.mockResolvedValue({
+      status: 500,
+      bodySnippet: "nope",
+    });
+
+    await expect(service.processDelivery("del_123")).rejects.toThrow(
+      "Webhook returned HTTP 500",
+    );
+
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "OUTBOUND_WEBHOOK_DELIVERY_FAILED",
+        link: "/projects",
+        metadata: expect.objectContaining({
+          deliveryId: "del_123",
+          endpointId: "owhe_1",
+          eventType: "testimonial.published",
+        }),
+      }),
+    );
   });
 });

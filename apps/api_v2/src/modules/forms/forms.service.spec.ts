@@ -12,6 +12,7 @@ import type { RedisService } from "../redis/redis.service.js";
 import type { StudioDraftsService } from "../studio-drafts/studio-drafts.service.js";
 import type { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import type { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 import { hashIdempotencyPayload } from "../testimonials/testimonials.dto.js";
 
 const mockCollectionFormFindMany = vi.fn();
@@ -35,6 +36,7 @@ const mockGetClientIp = vi.fn();
 const mockCreatePrivateMetadataForPublicSubmit = vi.fn();
 const mockGetStudioDraft = vi.fn();
 const mockSaveStudioDraft = vi.fn();
+const mockCreateForProjectReviewers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -86,6 +88,10 @@ const studioDraftsServiceMock = {
   saveDraft: mockSaveStudioDraft,
 } as unknown as StudioDraftsService;
 
+const notificationsServiceMock = {
+  createForProjectReviewers: mockCreateForProjectReviewers,
+} as unknown as NotificationsService;
+
 function makeService() {
   return new FormsService(
     prismaMock,
@@ -93,6 +99,8 @@ function makeService() {
     trustServiceMock,
     privateMetadataServiceMock,
     studioDraftsServiceMock,
+    undefined,
+    notificationsServiceMock,
   );
 }
 
@@ -560,6 +568,19 @@ describe("FormsService", () => {
         ratingScale: 10,
       }),
     });
+    expect(mockCreateForProjectReviewers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SUBMISSION_CREATED",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          formId: "form_1",
+          submissionId: "submission_1",
+          testimonialId: "testimonial_1",
+        }),
+      }),
+    );
     expect(mockCreatePrivateMetadataForPublicSubmit).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({

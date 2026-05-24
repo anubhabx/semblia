@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   ModerationStatus,
@@ -21,6 +22,7 @@ import { StudioDraftsService } from "../studio-drafts/studio-drafts.service.js";
 import { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
 import { MediaService } from "../storage/media.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import {
   publicSubmitIdempotencyWhere,
   replayCompletedPublicSubmit,
@@ -125,6 +127,9 @@ export class FormsService {
     private readonly studioDraftsService: StudioDraftsService,
     @Inject(MediaService)
     private readonly mediaService?: MediaService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async list(params: ProjectFormsParamsDto, request: ProjectRequest) {
@@ -470,6 +475,23 @@ export class FormsService {
       });
     }
 
+    await this.notificationsService?.createForProjectReviewers(
+      trust.projectId,
+      {
+        type: "SUBMISSION_CREATED",
+        title: "New form response",
+        message: `${created.authorName} submitted a response.`,
+        link: `/projects/${params.slug}/testimonials/${created.id}`,
+        metadata: {
+          projectId: trust.projectId,
+          projectSlug: params.slug,
+          formId: form.id,
+          submissionId: submission.id,
+          testimonialId: created.id,
+          moderationStatus,
+        },
+      },
+    );
     await this.bustPublicTestimonialsCache(params.slug);
     return response;
   }

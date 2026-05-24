@@ -2,9 +2,11 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Optional,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash, randomBytes } from "node:crypto";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { decodeSecretEncryptionKey } from "../../config/env.js";
 import {
@@ -17,6 +19,9 @@ export class SigningSecretService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ConfigService) private readonly configService: ConfigService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async generateOrRotate(projectId: string): Promise<{
@@ -57,6 +62,17 @@ export class SigningSecretService {
       },
     });
 
+    await this.notificationsService?.createForProjectManagers(projectId, {
+      type: "SECURITY_ALERT",
+      title: "Signing secret rotated",
+      message: "The public submit signing secret was rotated.",
+      link: "/projects",
+      metadata: {
+        projectId,
+        action: "signing_secret.rotated",
+      },
+    });
+
     return { plaintext, rotatedAt };
   }
 
@@ -75,6 +91,17 @@ export class SigningSecretService {
       data: {
         signingSecretEncrypted: null,
         signingSecretRotatedAt: null,
+      },
+    });
+
+    await this.notificationsService?.createForProjectManagers(projectId, {
+      type: "SECURITY_ALERT",
+      title: "Signing secret cleared",
+      message: "The public submit signing secret was cleared.",
+      link: "/projects",
+      metadata: {
+        projectId,
+        action: "signing_secret.cleared",
       },
     });
   }

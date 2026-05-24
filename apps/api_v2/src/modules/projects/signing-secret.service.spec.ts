@@ -3,6 +3,7 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { SigningSecretService } from "./signing-secret.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { ConfigService } from "@nestjs/config";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 
 const mockProjectUpdate = vi.fn();
 const mockProjectFindUnique = vi.fn();
@@ -11,6 +12,7 @@ const mockProjectSigningSecretAggregate = vi.fn();
 const mockProjectSigningSecretUpdateMany = vi.fn();
 const mockProjectSigningSecretCreate = vi.fn();
 const mockConfigGet = vi.fn();
+const mockCreateForProjectManagers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -31,13 +33,21 @@ const configServiceMock = {
   get: mockConfigGet,
 } as unknown as ConfigService;
 
+const notificationsServiceMock = {
+  createForProjectManagers: mockCreateForProjectManagers,
+} as unknown as NotificationsService;
+
 const base64Key = Buffer.alloc(32, 9).toString("base64");
 
 describe("SigningSecretService", () => {
   let service: SigningSecretService;
 
   beforeEach(() => {
-    service = new SigningSecretService(prismaMock, configServiceMock);
+    service = new SigningSecretService(
+      prismaMock,
+      configServiceMock,
+      notificationsServiceMock,
+    );
     vi.clearAllMocks();
     mockConfigGet.mockReturnValue(base64Key);
     mockProjectSigningSecretAggregate.mockResolvedValue({
@@ -73,6 +83,16 @@ describe("SigningSecretService", () => {
         signingSecretRotatedAt: expect.any(Date),
       }),
     });
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          action: "signing_secret.rotated",
+        }),
+      }),
+    );
 
     const result = await service.generateOrRotate("project_1");
     expect(result.plaintext).toEqual(expect.any(String));
@@ -123,6 +143,16 @@ describe("SigningSecretService", () => {
         signingSecretRotatedAt: null,
       },
     });
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          action: "signing_secret.cleared",
+        }),
+      }),
+    );
   });
 
   it("throws when the env key is missing", async () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { MemberRole } from "@workspace/database/prisma";
 import { NotificationsController } from "./notifications.controller.js";
 import { NotificationsService } from "./notifications.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
@@ -10,8 +11,11 @@ const mockNotificationFindMany = vi.fn();
 const mockNotificationFindFirst = vi.fn();
 const mockNotificationUpdate = vi.fn();
 const mockNotificationUpdateMany = vi.fn();
+const mockNotificationCreateMany = vi.fn();
+const mockPreferencesFindMany = vi.fn();
 const mockPreferencesFindUnique = vi.fn();
 const mockPreferencesUpsert = vi.fn();
+const mockProjectFindUnique = vi.fn();
 
 const prismaMock = {
   client: {
@@ -21,10 +25,15 @@ const prismaMock = {
       findFirst: mockNotificationFindFirst,
       update: mockNotificationUpdate,
       updateMany: mockNotificationUpdateMany,
+      createMany: mockNotificationCreateMany,
     },
     notificationPreferences: {
+      findMany: mockPreferencesFindMany,
       findUnique: mockPreferencesFindUnique,
       upsert: mockPreferencesUpsert,
+    },
+    project: {
+      findUnique: mockProjectFindUnique,
     },
   },
 } as unknown as PrismaService;
@@ -152,6 +161,65 @@ describe("NotificationsService", () => {
         SECURITY_ALERT: { email: true, inApp: true },
         AGENT_ACTION_CREATED: { email: false, inApp: true },
       },
+    });
+  });
+
+  it("creates in-app notifications only for users whose preferences allow the type", async () => {
+    mockPreferencesFindMany.mockResolvedValue([
+      {
+        userId: "user_disabled",
+        typePreferences: {
+          NEW_TESTIMONIAL: { email: true, inApp: false },
+        },
+      },
+    ]);
+    mockNotificationCreateMany.mockResolvedValue({ count: 2 });
+
+    await expect(
+      service.createForUsers(["user_1", "user_1", "user_disabled", "user_2"], {
+        type: "NEW_TESTIMONIAL",
+        title: "New testimonial",
+        message: "Ada submitted a testimonial.",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: { projectId: "project_1", testimonialId: "testimonial_1" },
+      }),
+    ).resolves.toEqual({ count: 2 });
+
+    expect(mockNotificationCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ userId: "user_1" }),
+        expect.objectContaining({ userId: "user_2" }),
+      ],
+    });
+  });
+
+  it("notifies only project members with the requested capability", async () => {
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      userId: "owner_1",
+      members: [
+        { userId: "editor_1", role: MemberRole.EDITOR },
+        { userId: "viewer_1", role: MemberRole.VIEWER },
+      ],
+    });
+    mockPreferencesFindMany.mockResolvedValue([]);
+    mockNotificationCreateMany.mockResolvedValue({ count: 2 });
+
+    await service.createForProjectReviewers("project_1", {
+      type: "SUBMISSION_CREATED",
+      title: "New response",
+      message: "A new form response is ready for review.",
+      link: "/projects/acme/testimonials/testimonial_1",
+      metadata: { projectId: "project_1", submissionId: "submission_1" },
+    });
+
+    expect(mockNotificationCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ userId: "owner_1" }),
+        expect.objectContaining({ userId: "editor_1" }),
+      ],
     });
   });
 });

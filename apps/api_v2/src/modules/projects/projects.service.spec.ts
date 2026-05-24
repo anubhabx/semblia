@@ -15,6 +15,7 @@ import { ProjectActionAuditService } from "../../common/audit/project-action-aud
 import { ProjectsService } from "./projects.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 
 const mockProjectFindUnique = vi.fn();
 const mockProjectFindMany = vi.fn();
@@ -39,6 +40,8 @@ const mockTestimonialCount = vi.fn();
 const mockUserFindFirst = vi.fn();
 const mockUserFindUnique = vi.fn();
 const mockNotificationCreate = vi.fn();
+const mockCreateForUsers = vi.fn();
+const mockCreateForProjectManagers = vi.fn();
 const mockProjectActionAuditCreate = vi.fn();
 const mockTransaction = vi.fn();
 const mockEnsureOrganizationForActor = vi.fn();
@@ -95,6 +98,11 @@ const organizationsServiceMock = {
   ensureForActor: mockEnsureOrganizationForActor,
 } as unknown as OrganizationsService;
 
+const notificationsServiceMock = {
+  createForUsers: mockCreateForUsers,
+  createForProjectManagers: mockCreateForProjectManagers,
+} as unknown as NotificationsService;
+
 describe("ProjectsService allowed origins", () => {
   let service: ProjectsService;
 
@@ -103,6 +111,8 @@ describe("ProjectsService allowed origins", () => {
       prismaMock,
       organizationsServiceMock,
       new ProjectActionAuditService(prismaMock),
+      undefined,
+      notificationsServiceMock,
     );
     vi.clearAllMocks();
     mockTransaction.mockImplementation(
@@ -202,6 +212,17 @@ describe("ProjectsService allowed origins", () => {
       "https://alpha.example.com",
       "https://beta.example.com",
     ]);
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          action: "allowed_origins.replaced",
+          origins: ["https://alpha.example.com", "https://beta.example.com"],
+        }),
+      }),
+    );
   });
 
   it("creates default public surface hosts for new projects", async () => {
@@ -803,13 +824,15 @@ describe("ProjectsService allowed origins", () => {
         targetId: "invite_1",
       }),
     });
-    expect(mockNotificationCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: "invitee_1",
+    expect(mockCreateForUsers).toHaveBeenCalledWith(
+      ["invitee_1"],
+      expect.objectContaining({
         type: NotificationType.PROJECT_INVITE_RECEIVED,
+        link: "/projects",
         metadata: expect.objectContaining({ inviteId: "invite_1" }),
       }),
-    });
+      expect.any(Object),
+    );
     expect(invite).toMatchObject({
       id: "invite_1",
       email: "invitee@example.com",
@@ -959,6 +982,20 @@ describe("ProjectsService allowed origins", () => {
         targetId: "invite_1",
       }),
     });
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "PROJECT_INVITE_ACCEPTED",
+        link: "/projects/acme/settings/members",
+        metadata: expect.objectContaining({
+          inviteId: "invite_1",
+          memberId: "membership_1",
+          userId: "invitee_1",
+        }),
+      }),
+      { excludeUserIds: ["invitee_1"] },
+      expect.any(Object),
+    );
     expect(result).toMatchObject({
       invite: { status: ProjectMemberInviteStatus.ACCEPTED },
       member: { id: "membership_1", userId: "invitee_1" },
@@ -1081,6 +1118,10 @@ function inviteRecord(overrides: Partial<Record<string, unknown>> = {}) {
     expiresAt: date("2999-01-01"),
     createdAt: date("2026-05-02"),
     updatedAt: date("2026-05-02"),
+    project: {
+      slug: "acme",
+      name: "Acme",
+    },
     ...overrides,
   };
 }

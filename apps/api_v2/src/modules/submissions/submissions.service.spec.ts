@@ -5,6 +5,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import type { ActorContext } from "../../common/authz/actor-context.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { SubmissionsService } from "./submissions.service.js";
 
@@ -16,6 +17,7 @@ const mockSubmissionUpdate = vi.fn();
 const mockAnnotationCreate = vi.fn();
 const mockTestimonialUpdate = vi.fn();
 const mockActionAuditCreate = vi.fn();
+const mockCreateForProjectReviewers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -37,6 +39,10 @@ const prismaMock = {
     },
   },
 } as unknown as PrismaService;
+
+const notificationsServiceMock = {
+  createForProjectReviewers: mockCreateForProjectReviewers,
+} as unknown as NotificationsService;
 
 const agentActor: ActorContext = {
   actorType: "agent_key",
@@ -100,6 +106,7 @@ describe("SubmissionsService", () => {
     service = new SubmissionsService(
       prismaMock,
       new ProjectActionAuditService(prismaMock),
+      notificationsServiceMock,
     );
   });
 
@@ -206,6 +213,35 @@ describe("SubmissionsService", () => {
           targetId: "submission_1",
         }),
       }),
+    );
+    expect(mockCreateForProjectReviewers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SUBMISSION_MODERATED",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          submissionId: "submission_1",
+          testimonialId: "testimonial_1",
+          status: ModerationStatus.FLAGGED,
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
+      expect.any(Object),
+    );
+    expect(mockCreateForProjectReviewers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "TESTIMONIAL_FLAGGED",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          submissionId: "submission_1",
+          testimonialId: "testimonial_1",
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
+      expect.any(Object),
     );
   });
 });

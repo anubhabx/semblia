@@ -3,11 +3,13 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { ModerationStatus, Prisma } from "@workspace/database/prisma";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import type { ActorContext } from "../../common/authz/actor-context.js";
 import { paginate } from "../../common/utils/paginate.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
   CreateSubmissionAnnotationBodyDto,
@@ -106,6 +108,9 @@ export class SubmissionsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ProjectActionAuditService)
     private readonly actionAudit: ProjectActionAuditService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async list(query: SubmissionsListQueryDto, request: ProjectRequest) {
@@ -243,6 +248,60 @@ export class SubmissionsService {
           ...(body.metadata ? { metadata: body.metadata } : {}),
         },
       });
+
+      const link = moderated.testimonialId
+        ? `/projects/${params.slug}/testimonials/${moderated.testimonialId}`
+        : `/projects/${params.slug}/testimonials`;
+      const notificationOptions = {
+        excludeUserIds: actor?.userId ? [actor.userId] : [],
+      };
+
+      await this.notificationsService?.createForProjectReviewers(
+        projectId,
+        {
+          type: "SUBMISSION_MODERATED",
+          title: "Submission moderated",
+          message: `${moderated.collectionForm.name} was marked ${status.toLowerCase()}.`,
+          link,
+          metadata: {
+            projectId,
+            projectSlug: params.slug,
+            formId: moderated.formId,
+            submissionId: moderated.id,
+            testimonialId: moderated.testimonialId,
+            status,
+            reason: body.reason ?? null,
+            actorType: actor?.actorType ?? "system",
+            actorId,
+          },
+        },
+        notificationOptions,
+        tx,
+      );
+
+      if (status === ModerationStatus.FLAGGED && moderated.testimonialId) {
+        await this.notificationsService?.createForProjectReviewers(
+          projectId,
+          {
+            type: "TESTIMONIAL_FLAGGED",
+            title: "Testimonial flagged",
+            message: `${moderated.testimonial?.authorName ?? "A testimonial"} was flagged.`,
+            link,
+            metadata: {
+              projectId,
+              projectSlug: params.slug,
+              formId: moderated.formId,
+              submissionId: moderated.id,
+              testimonialId: moderated.testimonialId,
+              reason: body.reason ?? null,
+              actorType: actor?.actorType ?? "system",
+              actorId,
+            },
+          },
+          notificationOptions,
+          tx,
+        );
+      }
 
       return moderated;
     });

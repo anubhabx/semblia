@@ -5,6 +5,7 @@ import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { REQUIRED_CAPABILITIES_KEY } from "../../common/authz/require-capability.decorator.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 import { ApiKeysController } from "./api-keys.controller.js";
 import { ApiKeyAuthenticator } from "./api-key-auth.guard.js";
 import {
@@ -25,6 +26,7 @@ const mockApiKeyUpdate = vi.fn();
 const mockDailyUsageFindMany = vi.fn();
 const mockDailyUsageUpsert = vi.fn();
 const mockTransaction = vi.fn();
+const mockCreateForProjectManagers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -41,6 +43,10 @@ const prismaMock = {
     },
   },
 } as unknown as PrismaService;
+
+const notificationsServiceMock = {
+  createForProjectManagers: mockCreateForProjectManagers,
+} as unknown as NotificationsService;
 
 function makeKey(overrides: Record<string, unknown> = {}) {
   return {
@@ -143,7 +149,7 @@ describe("ApiKeysService", () => {
       }),
     );
 
-    const service = new ApiKeysService(prismaMock);
+    const service = new ApiKeysService(prismaMock, notificationsServiceMock);
     const result = await service.create({
       userId: "user_1",
       projectId: "project_1",
@@ -165,12 +171,25 @@ describe("ApiKeysService", () => {
     expect(result.secret).toBe(result.key);
     expect(result.secret.startsWith(`${result.keyPrefix}.`)).toBe(true);
     expect(result).not.toHaveProperty("keyHash");
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        link: "/projects",
+        metadata: expect.objectContaining({
+          keyId: "key_1",
+          keyType: ApiKeyType.SECRET,
+          action: "api_key.created",
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
+    );
   });
 
   it("lists metadata without returning raw secrets", async () => {
     mockApiKeyFindMany.mockResolvedValue([makeKey()]);
 
-    const service = new ApiKeysService(prismaMock);
+    const service = new ApiKeysService(prismaMock, notificationsServiceMock);
     const result = await service.list("project_1", {
       keyType: ApiKeyType.SECRET,
     });
@@ -188,6 +207,47 @@ describe("ApiKeysService", () => {
     expect(result[0]).not.toHaveProperty("secret");
   });
 
+  it("rotates keys and notifies project managers", async () => {
+    mockApiKeyFindFirst.mockResolvedValue(makeKey());
+    mockApiKeyUpdate.mockImplementation(async ({ data }) =>
+      makeKey({
+        keyPrefix: data.keyPrefix,
+        lastFour: data.lastFour,
+        revokedAt: data.revokedAt,
+      }),
+    );
+
+    const service = new ApiKeysService(prismaMock, notificationsServiceMock);
+    const result = await service.rotate(
+      "project_1",
+      "key_1",
+      ApiKeyType.SECRET,
+    );
+
+    expect(mockApiKeyUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "key_1" },
+        data: expect.objectContaining({
+          status: ApiKeyStatus.ACTIVE,
+          isActive: true,
+          revokedAt: null,
+        }),
+      }),
+    );
+    expect(result.secret).toBe(result.key);
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        metadata: expect.objectContaining({
+          keyId: "key_1",
+          action: "api_key.rotated",
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
+    );
+  });
+
   it("revokes keys by project boundary", async () => {
     mockApiKeyFindFirst.mockResolvedValue(makeKey());
     mockApiKeyUpdate.mockResolvedValue(
@@ -198,7 +258,7 @@ describe("ApiKeysService", () => {
       }),
     );
 
-    const service = new ApiKeysService(prismaMock);
+    const service = new ApiKeysService(prismaMock, notificationsServiceMock);
     const result = await service.revoke(
       "project_1",
       "key_1",
@@ -223,6 +283,17 @@ describe("ApiKeysService", () => {
       }),
     );
     expect(result.status).toBe(ApiKeyStatus.REVOKED);
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "SECURITY_ALERT",
+        metadata: expect.objectContaining({
+          keyId: "key_1",
+          action: "api_key.revoked",
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
+    );
   });
 });
 

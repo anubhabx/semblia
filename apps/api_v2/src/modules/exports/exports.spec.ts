@@ -7,6 +7,7 @@ import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { REQUIRED_CAPABILITIES_KEY } from "../../common/authz/require-capability.decorator.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { OutboundWebhooksService } from "../outbound-webhooks/outbound-webhooks.service.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 import { ExportsController } from "./exports.controller.js";
 import { ExportsService } from "./exports.service.js";
 
@@ -28,6 +29,7 @@ const mockAuditCreate = vi.fn();
 const mockQueueAdd = vi.fn();
 const mockEnqueueEvent = vi.fn();
 const mockS3PutObject = vi.fn();
+const mockCreateForProjectManagers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -68,6 +70,10 @@ const s3ServiceMock = {
   putObject: mockS3PutObject,
   presignGet: vi.fn(),
 };
+
+const notificationsServiceMock = {
+  createForProjectManagers: mockCreateForProjectManagers,
+} as unknown as NotificationsService;
 
 const actor = {
   actorType: "agent_key" as const,
@@ -161,6 +167,8 @@ describe("ExportsService", () => {
       new ProjectActionAuditService(prismaMock),
       outboundWebhooksMock,
       s3ServiceMock as never,
+      undefined,
+      notificationsServiceMock,
     );
   });
 
@@ -247,6 +255,18 @@ describe("ExportsService", () => {
     expect(csv).not.toContain("authorEmail");
     expect(csv).not.toContain("ipAddress");
     expect(csv).not.toContain("privateMetadata");
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "EXPORT_DELIVERY_READY",
+        link: "/projects",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          deliveryId: "expdel_123",
+          artifactAssetId: "media_1",
+        }),
+      }),
+    );
   });
 
   it("marks failed CSV jobs and emits the export.delivery_failed event", async () => {
@@ -282,5 +302,15 @@ describe("ExportsService", () => {
         error: "database unavailable",
       }),
     });
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "EXPORT_DELIVERY_FAILED",
+        metadata: expect.objectContaining({
+          deliveryId: "expdel_123",
+          error: "database unavailable",
+        }),
+      }),
+    );
   });
 });

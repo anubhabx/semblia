@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import {
@@ -31,6 +32,7 @@ import type { ProjectAccessRole } from "../../common/authz/project-access.servic
 import { paginate } from "../../common/utils/paginate.js";
 import { parseAccountDefaults } from "../account-defaults/account-defaults.service.js";
 import { OrganizationsService } from "../organizations/organizations.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { MediaService } from "../storage/media.service.js";
 import type {
@@ -108,6 +110,12 @@ const PROJECT_MEMBER_INVITE_SELECT = {
   expiresAt: true,
   createdAt: true,
   updatedAt: true,
+  project: {
+    select: {
+      slug: true,
+      name: true,
+    },
+  },
 } satisfies Prisma.ProjectMemberInviteSelect;
 
 const PUBLIC_SURFACE_HOST_SELECT = {
@@ -154,8 +162,12 @@ export class ProjectsService {
     private readonly organizationsService: OrganizationsService,
     @Inject(ProjectActionAuditService)
     private readonly actionAudit: ProjectActionAuditService,
+    @Optional()
     @Inject(MediaService)
     private readonly mediaService?: MediaService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async list(
@@ -600,12 +612,12 @@ export class ProjectsService {
         });
 
         if (existingUser) {
-          await tx.notification.create({
-            data: {
-              userId: existingUser.id,
+          await this.notificationsService?.createForUsers(
+            [existingUser.id],
+            {
               type: NotificationType.PROJECT_INVITE_RECEIVED,
               title: "Project invitation",
-              message: `You were invited to join ${project.slug}.`,
+              message: `You were invited to join ${project.name}.`,
               link: "/projects",
               metadata: {
                 projectId: project.id,
@@ -614,7 +626,8 @@ export class ProjectsService {
                 role,
               },
             },
-          });
+            tx,
+          );
         }
 
         // TODO: Queue an email invite when transactional email sending is in scope.
@@ -779,6 +792,26 @@ export class ProjectsService {
         },
       });
 
+      await this.notificationsService?.createForProjectManagers(
+        invite.projectId,
+        {
+          type: "PROJECT_INVITE_ACCEPTED",
+          title: "Project invitation accepted",
+          message: `${user.email} joined ${invite.project.name}.`,
+          link: `/projects/${invite.project.slug}/settings/members`,
+          metadata: {
+            projectId: invite.projectId,
+            projectSlug: invite.project.slug,
+            inviteId: invite.id,
+            memberId: member.id,
+            userId: user.id,
+            role: invite.role,
+          },
+        },
+        { excludeUserIds: [user.id] },
+        tx,
+      );
+
       return {
         invite: acceptedInvite,
         member,
@@ -922,6 +955,7 @@ export class ProjectsService {
       select: {
         id: true,
         slug: true,
+        name: true,
         userId: true,
         organizationId: true,
       },
@@ -1022,6 +1056,18 @@ export class ProjectsService {
         data: { allowedOrigins: normalizedOrigins },
         select: { allowedOrigins: true },
       });
+    });
+
+    await this.notificationsService?.createForProjectManagers(projectId, {
+      type: "SECURITY_ALERT",
+      title: "Trusted origins changed",
+      message: "Trusted collection origins were updated.",
+      link: "/projects",
+      metadata: {
+        projectId,
+        action: "allowed_origins.replaced",
+        origins: normalizedOrigins,
+      },
     });
 
     return updatedProject.allowedOrigins;
@@ -1178,8 +1224,7 @@ export class ProjectsService {
       tags: body.tags,
       visibility: body.visibility ?? visibilityAccessDefaults?.visibility,
       isActive: body.isActive ?? visibilityAccessDefaults?.isActive,
-      autoModeration:
-        body.autoModeration ?? moderationDefaults?.autoModeration,
+      autoModeration: body.autoModeration ?? moderationDefaults?.autoModeration,
       autoApproveVerified:
         body.autoApproveVerified ?? moderationDefaults?.autoApproveVerified,
       profanityFilterLevel:
@@ -1214,7 +1259,10 @@ export class ProjectsService {
     if (body.shortDescription !== undefined)
       data.shortDescription = body.shortDescription;
     if (body.description !== undefined) data.description = body.description;
-    if (logoAssetId !== undefined) data.logoAsset = logoAssetId ? { connect: { id: logoAssetId } } : { disconnect: true };
+    if (logoAssetId !== undefined)
+      data.logoAsset = logoAssetId
+        ? { connect: { id: logoAssetId } }
+        : { disconnect: true };
     if (body.projectType !== undefined) data.projectType = body.projectType;
     if (body.websiteUrl !== undefined) data.websiteUrl = body.websiteUrl;
     if (body.collectionFormUrl !== undefined) {

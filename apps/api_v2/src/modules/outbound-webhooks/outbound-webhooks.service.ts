@@ -4,6 +4,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { ConfigService } from "@nestjs/config";
@@ -22,6 +23,7 @@ import {
 } from "../../common/crypto/secret-cipher.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { decodeSecretEncryptionKey } from "../../config/env.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { buildOutboundWebhookHeaders } from "./outbound-webhook-signer.js";
 import type { OutboundWebhookDispatcher } from "./outbound-webhook-dispatcher.js";
@@ -100,6 +102,9 @@ export class OutboundWebhooksService {
     private readonly dispatcher: OutboundWebhookDispatcher,
     @Inject(ProjectActionAuditService)
     private readonly actionAudit: ProjectActionAuditService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async listEndpoints(projectId: string) {
@@ -533,6 +538,26 @@ export class OutboundWebhooksService {
       data: { lastFailureAt: new Date() },
       select: { id: true },
     });
+
+    if (exhausted) {
+      await this.notificationsService?.createForProjectManagers(
+        delivery.projectId,
+        {
+          type: "OUTBOUND_WEBHOOK_DELIVERY_FAILED",
+          title: "Webhook delivery failed",
+          message: "An outbound webhook delivery exhausted its retries.",
+          link: "/projects",
+          metadata: {
+            projectId: delivery.projectId,
+            deliveryId: delivery.id,
+            endpointId: delivery.endpointId,
+            eventType: delivery.eventType,
+            responseStatus: responseStatus ?? null,
+            error,
+          },
+        },
+      );
+    }
 
     return this.toDeliveryDto(updated);
   }

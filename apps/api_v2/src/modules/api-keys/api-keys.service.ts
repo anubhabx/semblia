@@ -3,8 +3,10 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { ApiKeyStatus, ApiKeyType, Prisma } from "@workspace/database/prisma";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import {
   apiKeyScopeValues,
@@ -65,7 +67,12 @@ type UsageEventOptions = {
 
 @Injectable()
 export class ApiKeysService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
+  ) {}
 
   async list(projectId: string, options: ApiKeyListOptions = {}) {
     const keys = await this.prisma.client.apiKey.findMany({
@@ -104,6 +111,24 @@ export class ApiKeysService {
       select: API_KEY_SELECT,
     });
 
+    await this.notificationsService?.createForProjectManagers(
+      input.projectId,
+      {
+        type: "SECURITY_ALERT",
+        title: "Project credential created",
+        message: `${input.name} was created.`,
+        link: "/projects",
+        metadata: {
+          projectId: input.projectId,
+          keyId: created.id,
+          keyType: created.keyType,
+          keyName: created.name,
+          action: "api_key.created",
+        },
+      },
+      { excludeUserIds: [input.userId] },
+    );
+
     return {
       ...this.toDto(created),
       secret: generated.secret,
@@ -135,6 +160,24 @@ export class ApiKeysService {
       select: API_KEY_SELECT,
     });
 
+    await this.notificationsService?.createForProjectManagers(
+      projectId,
+      {
+        type: "SECURITY_ALERT",
+        title: "Project credential rotated",
+        message: `${updated.name} was rotated.`,
+        link: "/projects",
+        metadata: {
+          projectId,
+          keyId: updated.id,
+          keyType: updated.keyType,
+          keyName: updated.name,
+          action: "api_key.rotated",
+        },
+      },
+      { excludeUserIds: [updated.userId] },
+    );
+
     return {
       ...this.toDto(updated),
       secret: generated.secret,
@@ -158,6 +201,24 @@ export class ApiKeysService {
       },
       select: API_KEY_SELECT,
     });
+
+    await this.notificationsService?.createForProjectManagers(
+      projectId,
+      {
+        type: "SECURITY_ALERT",
+        title: "Project credential revoked",
+        message: `${updated.name} was revoked.`,
+        link: "/projects",
+        metadata: {
+          projectId,
+          keyId: updated.id,
+          keyType: updated.keyType,
+          keyName: updated.name,
+          action: "api_key.revoked",
+        },
+      },
+      { excludeUserIds: [updated.userId] },
+    );
 
     return this.toDto(updated);
   }

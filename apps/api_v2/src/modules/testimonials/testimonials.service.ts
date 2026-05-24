@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   DisplayRevisionStatus,
@@ -22,6 +23,7 @@ import { paginate } from "../../common/utils/paginate.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
 import { MediaService } from "../storage/media.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
 import {
@@ -157,6 +159,9 @@ export class TestimonialsService {
     private readonly actionAudit: ProjectActionAuditService,
     @Inject(MediaService)
     private readonly mediaService?: MediaService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async list(query: TestimonialsListQueryDto, request: ProjectRequest) {
@@ -238,6 +243,24 @@ export class TestimonialsService {
     });
 
     await this.bustPublicCache(params.slug);
+    await this.notificationsService?.createForProjectReviewers(
+      projectId,
+      {
+        type: "TESTIMONIAL_APPROVED",
+        title: "Testimonial approved",
+        message: `${testimonial.authorName} was approved.`,
+        link: `/projects/${params.slug}/testimonials/${testimonial.id}`,
+        metadata: {
+          projectId,
+          projectSlug: params.slug,
+          testimonialId: testimonial.id,
+          submissionId: testimonial.submission?.id ?? null,
+          actorType: actor?.actorType ?? "system",
+          actorId: this.displayActorId(actor),
+        },
+      },
+      { excludeUserIds: actor?.userId ? [actor.userId] : [] },
+    );
     return this.toAuthenticatedDto(updated);
   }
 
@@ -287,6 +310,24 @@ export class TestimonialsService {
     });
 
     await this.bustPublicCache(params.slug);
+    await this.notificationsService?.createForProjectReviewers(
+      projectId,
+      {
+        type: "TESTIMONIAL_REJECTED",
+        title: "Testimonial rejected",
+        message: `${testimonial.authorName} was rejected.`,
+        link: `/projects/${params.slug}/testimonials/${testimonial.id}`,
+        metadata: {
+          projectId,
+          projectSlug: params.slug,
+          testimonialId: testimonial.id,
+          submissionId: testimonial.submission?.id ?? null,
+          actorType: actor?.actorType ?? "system",
+          actorId: this.displayActorId(actor),
+        },
+      },
+      { excludeUserIds: actor?.userId ? [actor.userId] : [] },
+    );
     return this.toAuthenticatedDto(updated);
   }
 
@@ -386,6 +427,27 @@ export class TestimonialsService {
 
       return revision;
     });
+
+    if (actor?.actorType !== "user") {
+      await this.notificationsService?.createForProjectReviewers(
+        projectId,
+        {
+          type: "AGENT_ACTION_CREATED",
+          title: "Agent suggested display copy",
+          message: "An agent created a display suggestion for a testimonial.",
+          link: `/projects/${params.slug}/testimonials/${testimonial.id}`,
+          metadata: {
+            projectId,
+            projectSlug: params.slug,
+            testimonialId: testimonial.id,
+            revisionId: created.id,
+            actorType: actor?.actorType ?? "system",
+            actorId: this.displayActorId(actor),
+          },
+        },
+        { excludeUserIds: actor?.userId ? [actor.userId] : [] },
+      );
+    }
 
     return this.toDisplayRevisionDto(created);
   }
@@ -628,6 +690,21 @@ export class TestimonialsService {
       });
     }
 
+    await this.notificationsService?.createForProjectReviewers(
+      trust.projectId,
+      {
+        type: "NEW_TESTIMONIAL",
+        title: "New testimonial",
+        message: `${created.authorName} submitted a testimonial.`,
+        link: `/projects/${params.slug}/testimonials/${created.id}`,
+        metadata: {
+          projectId: trust.projectId,
+          projectSlug: params.slug,
+          testimonialId: created.id,
+          moderationStatus,
+        },
+      },
+    );
     return response;
   }
 
@@ -947,9 +1024,12 @@ export class TestimonialsService {
       asset.createdByActorType !== "public" ||
       asset.createdByActorId !== input.principal ||
       Date.now() - asset.createdAt.getTime() > 30 * 60 * 1000 ||
-      !([MediaAssetStatus.PENDING, MediaAssetStatus.ACTIVE] as MediaAssetStatus[]).includes(
-        asset.status,
-      )
+      !(
+        [
+          MediaAssetStatus.PENDING,
+          MediaAssetStatus.ACTIVE,
+        ] as MediaAssetStatus[]
+      ).includes(asset.status)
     ) {
       throw new ForbiddenException("Invalid testimonial media asset");
     }

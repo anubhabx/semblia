@@ -18,6 +18,7 @@ import { hashIdempotencyPayload } from "./testimonials.dto.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { RedisService } from "../redis/redis.service.js";
 import type { SigningSecretService } from "../projects/signing-secret.service.js";
+import type { NotificationsService } from "../notifications/notifications.service.js";
 
 const mockProjectFindUnique = vi.fn();
 const mockTestimonialFindMany = vi.fn();
@@ -44,6 +45,7 @@ const mockSigningSecretGetDecrypted = vi.fn();
 const mockSigningSecretGetActiveDecrypted = vi.fn();
 const mockSigningSecretMarkUsed = vi.fn();
 const mockActionAuditRecordWith = vi.fn();
+const mockCreateForProjectReviewers = vi.fn();
 
 const prismaMock = {
   client: {
@@ -102,6 +104,10 @@ const signingSecretServiceMock = {
   getActiveDecrypted: mockSigningSecretGetActiveDecrypted,
   markUsed: mockSigningSecretMarkUsed,
 } as unknown as SigningSecretService;
+
+const notificationsServiceMock = {
+  createForProjectReviewers: mockCreateForProjectReviewers,
+} as unknown as NotificationsService;
 
 describe("PublicSubmitTrustService", () => {
   let service: PublicSubmitTrustService;
@@ -268,6 +274,8 @@ describe("TestimonialsService", () => {
       trustServiceMock,
       privateMetadataServiceMock,
       actionAuditServiceMock,
+      undefined,
+      notificationsServiceMock,
     );
     vi.clearAllMocks();
     mockCreatePrivateMetadataForPublicSubmit.mockResolvedValue(null);
@@ -556,6 +564,17 @@ describe("TestimonialsService", () => {
           responseBody: expect.not.objectContaining({
             authorEmail: "ava@example.com",
           }),
+        }),
+      }),
+    );
+    expect(mockCreateForProjectReviewers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "NEW_TESTIMONIAL",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          testimonialId: "testimonial_1",
         }),
       }),
     );
@@ -848,6 +867,20 @@ describe("TestimonialsService", () => {
         action: "testimonial.display_suggested",
         targetId: "revision_1",
       }),
+    );
+    expect(mockCreateForProjectReviewers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: "AGENT_ACTION_CREATED",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: expect.objectContaining({
+          projectId: "project_1",
+          testimonialId: "testimonial_1",
+          revisionId: "revision_1",
+          actorType: "agent_key",
+        }),
+      }),
+      { excludeUserIds: ["user_1"] },
     );
   });
 

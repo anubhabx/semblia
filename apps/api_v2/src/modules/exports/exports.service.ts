@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import {
@@ -20,6 +21,7 @@ import { ProjectActionAuditService } from "../../common/audit/project-action-aud
 import type { ActorContext } from "../../common/authz/actor-context.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { OutboundWebhooksService } from "../outbound-webhooks/outbound-webhooks.service.js";
 import { generateDeliveryId } from "../outbound-webhooks/outbound-webhooks.service.js";
 import { S3Service } from "../storage/s3.service.js";
@@ -108,8 +110,15 @@ export class ExportsService {
     private readonly actionAudit: ProjectActionAuditService,
     @Inject(OutboundWebhooksService)
     private readonly outboundWebhooksService: OutboundWebhooksService,
-    @Inject(S3Service) private readonly s3Service?: S3Service,
-    @Inject(ConfigService) private readonly configService?: ConfigService,
+    @Optional()
+    @Inject(S3Service)
+    private readonly s3Service?: S3Service,
+    @Optional()
+    @Inject(ConfigService)
+    private readonly configService?: ConfigService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   async createCsvExport(
@@ -273,6 +282,22 @@ export class ExportsService {
         });
       });
 
+      await this.notificationsService?.createForProjectManagers(
+        completed.projectId,
+        {
+          type: "EXPORT_DELIVERY_READY",
+          title: "CSV export ready",
+          message: "Your CSV export is ready to download.",
+          link: "/projects",
+          metadata: {
+            projectId: completed.projectId,
+            deliveryId: completed.id,
+            destinationId: completed.destinationId,
+            artifactAssetId: completed.artifactAssetId,
+          },
+        },
+      );
+
       return this.toDeliveryDto(completed);
     } catch (error) {
       const failed = await this.markDeliveryFailed(
@@ -289,6 +314,22 @@ export class ExportsService {
           error: failed.error,
         },
       });
+
+      await this.notificationsService?.createForProjectManagers(
+        failed.projectId,
+        {
+          type: "EXPORT_DELIVERY_FAILED",
+          title: "CSV export failed",
+          message: "A CSV export could not be completed.",
+          link: "/projects",
+          metadata: {
+            projectId: failed.projectId,
+            deliveryId: failed.id,
+            destinationId: failed.destinationId,
+            error: failed.error,
+          },
+        },
+      );
 
       throw error instanceof Error ? error : new Error("CSV export failed");
     }

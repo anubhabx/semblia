@@ -1,5 +1,13 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, type NotificationType } from "@workspace/database/prisma";
+import {
+  MemberRole,
+  Prisma,
+  type NotificationType,
+} from "@workspace/database/prisma";
+import {
+  Capability,
+  roleHasCapability,
+} from "../../common/authz/capabilities.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
@@ -34,9 +42,99 @@ type NotificationPreferencesRecord = Prisma.NotificationPreferencesGetPayload<{
   select: typeof NOTIFICATION_PREFERENCES_SELECT;
 }>;
 
+export type CreateNotificationInput = {
+  type: NotificationType | string;
+  title: string;
+  message: string;
+  link?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type NotificationWriter = Pick<
+  Prisma.TransactionClient,
+  "notification" | "notificationPreferences" | "project"
+>;
+
 @Injectable()
 export class NotificationsService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  async createForUsers(
+    userIds: readonly string[],
+    input: CreateNotificationInput,
+    writer: NotificationWriter = this.prisma.client,
+  ) {
+    const recipients = [...new Set(userIds)].filter(Boolean);
+    if (recipients.length === 0) {
+      return { count: 0 };
+    }
+
+    const preferences = await writer.notificationPreferences.findMany({
+      where: { userId: { in: recipients } },
+      select: {
+        userId: true,
+        typePreferences: true,
+      },
+    });
+    const disabledInApp = new Set(
+      preferences
+        .filter((preference) =>
+          this.isInAppDisabled(preference.typePreferences, input.type),
+        )
+        .map((preference) => preference.userId),
+    );
+    const enabledRecipients = recipients.filter(
+      (userId) => !disabledInApp.has(userId),
+    );
+
+    if (enabledRecipients.length === 0) {
+      return { count: 0 };
+    }
+
+    return writer.notification.createMany({
+      data: enabledRecipients.map((userId) => ({
+        userId,
+        type: input.type as NotificationType,
+        title: input.title,
+        message: input.message,
+        link: input.link ?? null,
+        metadata:
+          input.metadata === undefined || input.metadata === null
+            ? Prisma.JsonNull
+            : (input.metadata as Prisma.InputJsonValue),
+      })),
+    });
+  }
+
+  createForProjectReviewers(
+    projectId: string,
+    input: CreateNotificationInput,
+    options: { excludeUserIds?: readonly string[] } = {},
+    writer: NotificationWriter = this.prisma.client,
+  ) {
+    return this.createForProjectCapability(
+      projectId,
+      Capability.REVIEW_TESTIMONIALS,
+      input,
+      options,
+      writer,
+    );
+  }
+
+  createForProjectManagers(
+    projectId: string,
+    input: CreateNotificationInput,
+    options: { excludeUserIds?: readonly string[] } = {},
+    writer: NotificationWriter = this.prisma.client,
+  ) {
+    return this.createForProjectCapability(
+      projectId,
+      Capability.MANAGE_PROJECT,
+      input,
+      options,
+      writer,
+    );
+  }
 
   async list(userId: string, query: NotificationListQueryDto) {
     const where: Prisma.NotificationWhereInput = {
@@ -172,5 +270,71 @@ export class NotificationsService {
       >,
       updatedAt: preferences?.updatedAt.toISOString() ?? null,
     };
+  }
+
+  private async createForProjectCapability(
+    projectId: string,
+    capability: Capability,
+    input: CreateNotificationInput,
+    options: { excludeUserIds?: readonly string[] },
+    writer: NotificationWriter,
+  ) {
+    const project = await writer.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        userId: true,
+        members: {
+          select: {
+            userId: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return { count: 0 };
+    }
+
+    const excluded = new Set(options.excludeUserIds ?? []);
+    const userIds = new Set<string>();
+
+    if (!excluded.has(project.userId)) {
+      userIds.add(project.userId);
+    }
+
+    for (const member of project.members) {
+      if (
+        roleHasCapability(member.role as MemberRole, capability) &&
+        !excluded.has(member.userId)
+      ) {
+        userIds.add(member.userId);
+      }
+    }
+
+    return this.createForUsers([...userIds], input, writer);
+  }
+
+  private isInAppDisabled(
+    value: Prisma.JsonValue,
+    type: NotificationType | string,
+  ) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const preference = (value as Record<string, unknown>)[type];
+    if (
+      !preference ||
+      typeof preference !== "object" ||
+      Array.isArray(preference)
+    ) {
+      return false;
+    }
+
+    return (preference as { inApp?: unknown }).inApp === false;
   }
 }
