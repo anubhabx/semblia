@@ -247,6 +247,38 @@ export class BillingService {
     };
   }
 
+  // used by B2 checkout
+  private async ensureRazorpayCustomer(userId: string): Promise<string> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!user) throw new NotFoundException("User not found");
+
+    const subscription = await this.getOrCreateSubscription(userId);
+    if (subscription.externalCustomerId) {
+      return subscription.externalCustomerId;
+    }
+
+    const customer = await this.razorpay.ensureCustomer({
+      name: this.toRazorpayCustomerName(user),
+      email: user.email,
+    });
+
+    await this.prisma.client.subscription.update({
+      where: { userId },
+      data: { externalCustomerId: customer.id },
+      select: this.subscriptionSelect(),
+    });
+
+    return customer.id;
+  }
+
   private async getOrCreateSubscription(userId: string) {
     const existing = await this.prisma.client.subscription.findUnique({
       where: { userId },
@@ -323,6 +355,7 @@ export class BillingService {
       amount: true,
       currency: true,
       interval: true,
+      externalCustomerId: true,
     } satisfies Prisma.SubscriptionSelect;
   }
 
@@ -391,6 +424,19 @@ export class BillingService {
       country: profile.country,
       ...(profile.gstin ? { gstin: profile.gstin } : {}),
     };
+  }
+
+  private toRazorpayCustomerName(user: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  }) {
+    const name = [user.firstName, user.lastName]
+      .filter((value): value is string => Boolean(value))
+      .join(" ")
+      .trim();
+
+    return name || user.email;
   }
 
   private toSubscriptionStatus(status: Subscription["status"]) {

@@ -1,8 +1,27 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createRequire } from "node:module";
 
-type RazorpayClient = {
+export type RazorpayCustomerInput = {
+  name: string;
+  email: string;
+  contact?: string;
+  notes?: Record<string, string | number | boolean | null>;
+};
+
+export type RazorpayCustomer = {
+  id: string;
+};
+
+export type RazorpayClient = {
+  customers: {
+    create(input: RazorpayCustomerInput): Promise<RazorpayCustomer>;
+  };
   subscriptions?: unknown;
   paymentLink?: unknown;
   invoices?: unknown;
@@ -42,6 +61,28 @@ export class RazorpayService {
   }
 
   getClient() {
+    return this.getRazorpayClient();
+  }
+
+  async ensureCustomer(input: RazorpayCustomerInput): Promise<RazorpayCustomer> {
+    const client = this.getRazorpayClient();
+    if (!client) {
+      throw new ServiceUnavailableException("Billing provider is not configured");
+    }
+
+    try {
+      const customer = await client.customers.create(input);
+      return { id: customer.id };
+    } catch (error: unknown) {
+      this.logger.error(
+        "Razorpay customer creation failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new ServiceUnavailableException("Billing provider request failed");
+    }
+  }
+
+  protected getRazorpayClient() {
     return this.client;
   }
 

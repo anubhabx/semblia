@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Test } from "@nestjs/testing";
 import { BillingService } from "./billing.service.js";
-import type { PrismaService } from "../prisma/prisma.service.js";
-import type { RazorpayService } from "./razorpay.service.js";
+import { PrismaService } from "../prisma/prisma.service.js";
+import { RazorpayService } from "./razorpay.service.js";
 
 type SubscriptionRecord = {
   id: string;
@@ -15,6 +16,7 @@ type SubscriptionRecord = {
   amount: number | null;
   currency: string | null;
   interval: string | null;
+  externalCustomerId: string | null;
 };
 
 type PaymentMethodRecord = {
@@ -28,12 +30,21 @@ type PaymentMethodRecord = {
   createdAt: Date;
 };
 
+type UserRecord = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+};
+
 const state: {
   subscriptions: SubscriptionRecord[];
   paymentMethods: PaymentMethodRecord[];
+  users: UserRecord[];
 } = {
   subscriptions: [],
   paymentMethods: [],
+  users: [],
 };
 
 const prismaMock = {
@@ -60,6 +71,7 @@ const prismaMock = {
           amount: data.amount ?? null,
           currency: data.currency ?? null,
           interval: data.interval ?? null,
+          externalCustomerId: data.externalCustomerId ?? null,
         };
         state.subscriptions.push(row);
         return row;
@@ -86,6 +98,10 @@ const prismaMock = {
     },
     user: {
       update: vi.fn(() => ({ id: "user_1" })),
+      findUnique: vi.fn(
+        ({ where }: { where: { id: string } }) =>
+          state.users.find((row) => row.id === where.id) ?? null,
+      ),
     },
     paymentMethod: {
       findMany: vi.fn(({ where }: { where: { userId: string } }) =>
@@ -159,18 +175,64 @@ const prismaMock = {
 
 const razorpayMock = {
   getClient: vi.fn(() => null),
-} as unknown as RazorpayService;
+  ensureCustomer: vi.fn(async () => ({ id: "cust_new" })),
+};
+
+function makeSubscription(
+  overrides: Partial<SubscriptionRecord> = {},
+): SubscriptionRecord {
+  return {
+    id: "sub_1",
+    userId: "user_1",
+    status: "ACTIVE",
+    userPlan: "FREE",
+    planId: null,
+    currentPeriodStart: new Date("2026-05-20T10:00:00.000Z"),
+    currentPeriodEnd: new Date("2026-06-20T10:00:00.000Z"),
+    cancelAtPeriodEnd: false,
+    amount: 0,
+    currency: "INR",
+    interval: "month",
+    externalCustomerId: null,
+    ...overrides,
+  };
+}
+
+function ensureRazorpayCustomer(service: BillingService, userId: string) {
+  return (
+    service as unknown as {
+      ensureRazorpayCustomer(userId: string): Promise<string>;
+    }
+  ).ensureRazorpayCustomer(userId);
+}
 
 describe("BillingService", () => {
   let service: BillingService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T10:00:00.000Z"));
     vi.clearAllMocks();
     state.subscriptions = [];
     state.paymentMethods = [];
-    service = new BillingService(prismaMock, razorpayMock);
+    state.users = [
+      {
+        id: "user_1",
+        email: "ada@example.com",
+        firstName: "Ada",
+        lastName: "Lovelace",
+      },
+    ];
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BillingService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: RazorpayService, useValue: razorpayMock },
+      ],
+    }).compile();
+
+    service = moduleRef.get(BillingService);
   });
 
   afterEach(() => {
@@ -290,5 +352,36 @@ describe("BillingService", () => {
       state.paymentMethods.find((method) => method.id === "pm_other")
         ?.isDefault,
     ).toBe(true);
+  });
+
+  it("does not create a Razorpay customer when one is already stored", async () => {
+    state.subscriptions = [
+      makeSubscription({ externalCustomerId: "cust_existing" }),
+    ];
+
+    const customerId = await ensureRazorpayCustomer(service, "user_1");
+
+    expect(customerId).toBe("cust_existing");
+    expect(razorpayMock.ensureCustomer).not.toHaveBeenCalled();
+    expect(prismaMock.client.subscription.update).not.toHaveBeenCalled();
+  });
+
+  it("creates and stores a Razorpay customer when the subscription is missing one", async () => {
+    state.subscriptions = [makeSubscription({ externalCustomerId: null })];
+
+    const customerId = await ensureRazorpayCustomer(service, "user_1");
+
+    expect(customerId).toBe("cust_new");
+    expect(razorpayMock.ensureCustomer).toHaveBeenCalledWith({
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+    });
+    expect(prismaMock.client.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_1" },
+        data: { externalCustomerId: "cust_new" },
+      }),
+    );
+    expect(state.subscriptions[0]?.externalCustomerId).toBe("cust_new");
   });
 });

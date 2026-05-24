@@ -18,6 +18,8 @@ export const apiV2EnvSchema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_PLAN_ID_PRO_MONTHLY: z.string().optional(),
+  RAZORPAY_PLAN_ID_BUSINESS_MONTHLY: z.string().optional(),
   SLACK_WEBHOOK_URL: z.string().optional(),
   API_V2_SECRET_ENCRYPTION_KEY: z.string().optional(),
   AWS_REGION: z.string().optional(),
@@ -55,6 +57,20 @@ export function decodeSecretEncryptionKey(
 
 export function validateApiV2Env(config: Record<string, unknown>): ApiV2Env {
   const parsed = apiV2EnvSchema.parse(config);
+
+  if (parsed.NODE_ENV === "production") {
+    const missingRazorpayVars = [
+      "RAZORPAY_KEY_ID",
+      "RAZORPAY_KEY_SECRET",
+      "RAZORPAY_WEBHOOK_SECRET",
+    ].filter((key) => !String(parsed[key as keyof ApiV2Env] ?? "").trim());
+
+    if (missingRazorpayVars.length > 0) {
+      throw new Error(
+        `Missing required production Razorpay env vars: ${missingRazorpayVars.join(", ")}`,
+      );
+    }
+  }
 
   if (
     parsed.NODE_ENV === "production" &&

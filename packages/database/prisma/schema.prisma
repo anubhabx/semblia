@@ -586,7 +586,7 @@ model Plan {
   isActive       Boolean  @default(true)
   limits         Json // { "projects": 5, "teamMembers": 2 }
   razorpayPlanId String?  @unique // ID from Razorpay
-  type           UserPlan @default(FREE) // Mapping to enum for code compatibility
+  type           UserPlan @unique @default(FREE) // Mapping to enum for code compatibility
 
   subscriptions        Subscription[]
   subscriptionPayments SubscriptionPayment[]

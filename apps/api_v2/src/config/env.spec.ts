@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { validateApiV2Env } from "./env.js";
+
+const productionBaseEnv = {
+  NODE_ENV: "production",
+  DATABASE_URL: "postgresql://appuser:apppassword@localhost:5432/appdb",
+  REDIS_URL: "redis://localhost:6379",
+  API_V2_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+};
+
+describe("validateApiV2Env", () => {
+  it("requires Razorpay credentials in production", () => {
+    expect(() =>
+      validateApiV2Env({
+        ...productionBaseEnv,
+        RAZORPAY_KEY_ID: "rzp_test_key",
+      }),
+    ).toThrow(
+      "Missing required production Razorpay env vars: RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET",
+    );
+  });
+
+  it("keeps Razorpay credentials optional outside production", () => {
+    const parsed = validateApiV2Env({
+      NODE_ENV: "test",
+      DATABASE_URL: "postgresql://appuser:apppassword@localhost:5432/appdb",
+      REDIS_URL: "redis://localhost:6379",
+      RAZORPAY_PLAN_ID_PRO_MONTHLY: "plan_pro",
+      RAZORPAY_PLAN_ID_BUSINESS_MONTHLY: "plan_business",
+    });
+
+    expect(parsed.RAZORPAY_KEY_ID).toBeUndefined();
+    expect(parsed.RAZORPAY_PLAN_ID_PRO_MONTHLY).toBe("plan_pro");
+    expect(parsed.RAZORPAY_PLAN_ID_BUSINESS_MONTHLY).toBe("plan_business");
+  });
+});
