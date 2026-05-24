@@ -114,9 +114,6 @@ function WelcomeFlowInner({ currentUser }: { currentUser?: V2UserDTO }) {
   const [lastName, setLastName] = React.useState(
     currentUser?.lastName ?? onboardingData?.profile?.lastName ?? "",
   );
-  const [jobTitle, setJobTitle] = React.useState(
-    onboardingData?.profile?.jobTitle ?? "",
-  );
   const [profileLoading, setProfileLoading] = React.useState(false);
 
   // Referral
@@ -160,7 +157,6 @@ function WelcomeFlowInner({ currentUser }: { currentUser?: V2UserDTO }) {
         profile: {
           firstName: cleanText(firstName),
           lastName: cleanText(lastName),
-          jobTitle: cleanText(jobTitle),
         },
       });
       go("referral", "forward");
@@ -306,13 +302,10 @@ function WelcomeFlowInner({ currentUser }: { currentUser?: V2UserDTO }) {
           <ProfileStep
             firstName={firstName}
             lastName={lastName}
-            jobTitle={jobTitle}
             setFirstName={setFirstName}
             setLastName={setLastName}
-            setJobTitle={setJobTitle}
             loading={profileLoading}
             onContinue={handleSaveProfile}
-            onSkip={() => handleSkipTo("referral")}
           />
         )}
         {activeStep === "referral" && (

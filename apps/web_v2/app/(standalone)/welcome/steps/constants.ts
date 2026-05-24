@@ -172,24 +172,6 @@ export const INTENT_OPTIONS: readonly OptionItem[] = [
   },
 ] as const;
 
-// ── Job title presets ──────────────────────────────────────────────────────
-//
-// Used by the profile step. Each `id` is also the canonical label stored on
-// the user record. The "other" sentinel reveals a free-text input.
-
-export const JOB_TITLE_OPTIONS: readonly { id: string; label: string }[] = [
-  { id: "Founder", label: "Founder / CEO" },
-  { id: "Product Manager", label: "Product Manager" },
-  { id: "Designer", label: "Designer" },
-  { id: "Engineer", label: "Engineer / Developer" },
-  { id: "Marketer", label: "Marketer" },
-  { id: "Customer Success", label: "Customer Success" },
-  { id: "Operations", label: "Operations" },
-  { id: "Sales", label: "Sales" },
-] as const;
-
-export const JOB_TITLE_OTHER = "other" as const;
-
 // ── Project starter suggestions ────────────────────────────────────────────
 
 export const PROJECT_SUGGESTIONS = [
