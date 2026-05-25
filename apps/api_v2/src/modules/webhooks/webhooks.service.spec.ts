@@ -74,6 +74,9 @@ const subscriptionRecord = {
   userPlan: "FREE",
   planId: null,
   externalSubscriptionId: "sub_rzp_123",
+  scheduledRazorpaySubscriptionId: null,
+  scheduledPlanId: null,
+  scheduledStartAt: null,
 };
 
 const proPlanRecord = {
@@ -407,6 +410,88 @@ describe("WebhooksService", () => {
       expectProcessedLedger();
     });
 
+    it("subscription.activated for a scheduled id promotes the scheduled subscription and clears the schedule", async () => {
+      const body = {
+        event: "subscription.activated",
+        created_at: 1779700000,
+        payload: {
+          subscription: {
+            entity: {
+              id: "sub_rzp_next",
+              status: "active",
+              current_start: 1779700000,
+              current_end: 1782292000,
+              plan_id: "plan_rzp_business",
+              notes: {
+                tresta_user_id: "user_1",
+                tresta_plan: "BUSINESS",
+              },
+            },
+          },
+        },
+      };
+      const scheduledSubscription = {
+        ...subscriptionRecord,
+        userPlan: "PRO",
+        planId: "plan_pro",
+        externalSubscriptionId: "sub_rzp_current",
+        scheduledRazorpaySubscriptionId: "sub_rzp_next",
+        scheduledPlanId: "plan_business",
+        scheduledStartAt: new Date("2026-06-24T09:06:40.000Z"),
+      };
+      mockSubscriptionFindUnique.mockImplementation(
+        ({ where }: { where: Record<string, string> }) => {
+          if (where.scheduledRazorpaySubscriptionId === "sub_rzp_next") {
+            return Promise.resolve(scheduledSubscription);
+          }
+          return Promise.resolve(null);
+        },
+      );
+      mockPlanFindUnique.mockResolvedValue({
+        id: "plan_business",
+        type: "BUSINESS",
+        price: 249900,
+        currency: "INR",
+        interval: "month",
+      });
+
+      await expect(
+        service.handleRazorpayWebhook({
+          body,
+          rawBody: makeRazorpayRawBody(body),
+        }),
+      ).resolves.toEqual({ received: true, replayed: false });
+
+      expect(mockSubscriptionFindUnique).toHaveBeenCalledWith({
+        where: { externalSubscriptionId: "sub_rzp_next" },
+        select: expect.any(Object),
+      });
+      expect(mockSubscriptionFindUnique).toHaveBeenCalledWith({
+        where: { scheduledRazorpaySubscriptionId: "sub_rzp_next" },
+        select: expect.any(Object),
+      });
+      expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+        where: { id: "sub_local_1" },
+        data: expect.objectContaining({
+          externalSubscriptionId: "sub_rzp_next",
+          razorpaySubscriptionId: "sub_rzp_next",
+          planId: "plan_business",
+          userPlan: "BUSINESS",
+          scheduledRazorpaySubscriptionId: null,
+          scheduledPlanId: null,
+          scheduledStartAt: null,
+          cancelAtPeriodEnd: false,
+          providerStatus: "active",
+        }),
+      });
+      expect(mockUserUpdate).toHaveBeenCalledWith({
+        where: { id: "user_1" },
+        data: { plan: "BUSINESS" },
+        select: { id: true },
+      });
+      expectProcessedLedger();
+    });
+
     it("subscription.charged refreshes currentPeriodEnd without changing plan or status", async () => {
       const body = {
         event: "subscription.charged",
@@ -489,6 +574,47 @@ describe("WebhooksService", () => {
       expectProcessedLedger();
     });
 
+    it("subscription.cancelled with a scheduled switch does not downgrade the local user plan", async () => {
+      const body = {
+        event: "subscription.cancelled",
+        created_at: 1782292000,
+        payload: {
+          subscription: {
+            entity: {
+              id: "sub_rzp_123",
+              status: "cancelled",
+            },
+          },
+        },
+      };
+      mockSubscriptionFindUnique.mockResolvedValue({
+        ...subscriptionRecord,
+        userPlan: "PRO",
+        planId: "plan_pro",
+        scheduledRazorpaySubscriptionId: "sub_rzp_next",
+        scheduledPlanId: "plan_business",
+      });
+
+      await service.handleRazorpayWebhook({
+        body,
+        rawBody: makeRazorpayRawBody(body),
+      });
+
+      expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+        where: { id: "sub_local_1" },
+        data: expect.objectContaining({
+          status: "CANCELED",
+          providerStatus: "cancelled",
+          cancelAtPeriodEnd: false,
+        }),
+      });
+      expect(mockSubscriptionUpdate.mock.calls[0]?.[0]?.data.userPlan).toBe(
+        undefined,
+      );
+      expect(mockUserUpdate).not.toHaveBeenCalled();
+      expectProcessedLedger();
+    });
+
     it("subscription.completed downgrades subscription and user plans to FREE", async () => {
       const body = {
         event: "subscription.completed",
@@ -527,6 +653,47 @@ describe("WebhooksService", () => {
         data: { plan: "FREE" },
         select: { id: true },
       });
+      expectProcessedLedger();
+    });
+
+    it("subscription.completed with a scheduled switch does not downgrade the local user plan", async () => {
+      const body = {
+        event: "subscription.completed",
+        created_at: 1782292000,
+        payload: {
+          subscription: {
+            entity: {
+              id: "sub_rzp_123",
+              status: "completed",
+            },
+          },
+        },
+      };
+      mockSubscriptionFindUnique.mockResolvedValue({
+        ...subscriptionRecord,
+        userPlan: "PRO",
+        planId: "plan_pro",
+        scheduledRazorpaySubscriptionId: "sub_rzp_next",
+        scheduledPlanId: "plan_business",
+      });
+
+      await service.handleRazorpayWebhook({
+        body,
+        rawBody: makeRazorpayRawBody(body),
+      });
+
+      expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+        where: { id: "sub_local_1" },
+        data: expect.objectContaining({
+          status: "CANCELED",
+          providerStatus: "completed",
+          cancelAtPeriodEnd: false,
+        }),
+      });
+      expect(mockSubscriptionUpdate.mock.calls[0]?.[0]?.data.userPlan).toBe(
+        undefined,
+      );
+      expect(mockUserUpdate).not.toHaveBeenCalled();
       expectProcessedLedger();
     });
 

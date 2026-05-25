@@ -589,6 +589,7 @@ model Plan {
   type           UserPlan @unique @default(FREE) // Mapping to enum for code compatibility
 
   subscriptions        Subscription[]
+  scheduledSubscriptions Subscription[] @relation("ScheduledPlan")
   subscriptionPayments SubscriptionPayment[]
 
   createdAt DateTime @default(now())
@@ -609,6 +610,8 @@ model Subscription {
   // Relations
   planId String?
   plan   Plan?   @relation(fields: [planId], references: [id])
+  scheduledPlanId String?
+  scheduledPlan   Plan?   @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id])
 
   // Legacy/Code Enum fallback (optional, but good to keep synced)
   userPlan UserPlan @default(FREE) @map("plan")
@@ -619,6 +622,8 @@ model Subscription {
   externalSubscriptionId String? @unique // Razorpay Subscription ID
   razorpaySubscriptionId String?
   externalCustomerId     String? // Razorpay Customer ID (optional)
+  scheduledRazorpaySubscriptionId String? @unique
+  scheduledStartAt                DateTime?
 
   // Razorpay Specifics
   razorpayOrderId      String?
@@ -645,6 +650,7 @@ model Subscription {
   @@index([userId])
   @@index([userId, externalSubscriptionId])
   @@index([planId])
+  @@index([scheduledPlanId])
   @@index([status])
   @@index([providerStatus])
   @@index([lastWebhookAt])

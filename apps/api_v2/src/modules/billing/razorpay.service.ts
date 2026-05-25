@@ -26,6 +26,11 @@ export type RazorpaySubscriptionCreateInput = {
   notes?: Record<string, string | number | boolean | null>;
 };
 
+export type RazorpayScheduledSubscriptionInput =
+  RazorpaySubscriptionCreateInput & {
+    start_at: number;
+  };
+
 export type RazorpaySubscription = {
   id: string;
   status: string;
@@ -42,6 +47,10 @@ export type RazorpayClient = {
   subscriptions: {
     create(
       input: RazorpaySubscriptionCreateInput,
+    ): Promise<RazorpaySubscription>;
+    cancel(
+      id: string,
+      cancelAtCycleEnd?: boolean,
     ): Promise<RazorpaySubscription>;
   };
   paymentLink?: unknown;
@@ -122,6 +131,48 @@ export class RazorpayService {
     } catch (error: unknown) {
       this.logger.error(
         "Razorpay subscription creation failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new ServiceUnavailableException("Billing provider request failed");
+    }
+  }
+
+  async cancelSubscription(
+    subscriptionId: string,
+    options?: { cancelAtCycleEnd?: boolean },
+  ): Promise<RazorpaySubscription> {
+    const client = this.getRazorpayClient();
+    if (!client) {
+      throw new ServiceUnavailableException("Billing provider is not configured");
+    }
+
+    try {
+      return await client.subscriptions.cancel(
+        subscriptionId,
+        options?.cancelAtCycleEnd ?? true,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        "Razorpay subscription cancellation failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new ServiceUnavailableException("Billing provider request failed");
+    }
+  }
+
+  async createScheduledSubscription(
+    input: RazorpayScheduledSubscriptionInput,
+  ): Promise<RazorpaySubscription> {
+    const client = this.getRazorpayClient();
+    if (!client) {
+      throw new ServiceUnavailableException("Billing provider is not configured");
+    }
+
+    try {
+      return await client.subscriptions.create({ ...input });
+    } catch (error: unknown) {
+      this.logger.error(
+        "Razorpay scheduled subscription creation failed",
         error instanceof Error ? error.stack : String(error),
       );
       throw new ServiceUnavailableException("Billing provider request failed");

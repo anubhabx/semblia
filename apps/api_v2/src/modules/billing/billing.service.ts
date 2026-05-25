@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
@@ -81,6 +82,8 @@ const PLAN_DEFAULTS: Record<
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(RazorpayService) private readonly razorpay: RazorpayService,
@@ -147,14 +150,27 @@ export class BillingService {
   }
 
   async cancelSubscription(userId: string): Promise<V2SubscriptionDTO> {
-    const current = await this.getOrCreateSubscription(userId);
+    const subscription = await this.getOrCreateSubscription(userId);
 
-    // TODO(billing): mirror to Razorpay subscription
-    void this.razorpay.getClient();
+    if (subscription.userPlan === "FREE") {
+      throw new BadRequestException("FREE plan has no subscription to cancel");
+    }
+
+    if (!this.hasActiveProviderSubscription(subscription)) {
+      throw new BadRequestException("No active subscription to cancel");
+    }
+
+    const providerSubscription = await this.razorpay.cancelSubscription(
+      subscription.externalSubscriptionId,
+      { cancelAtCycleEnd: true },
+    );
 
     const updated = await this.prisma.client.subscription.update({
       where: { userId },
-      data: { cancelAtPeriodEnd: !current.cancelAtPeriodEnd },
+      data: {
+        cancelAtPeriodEnd: true,
+        providerStatus: providerSubscription.status,
+      },
       select: this.subscriptionSelect(),
     });
 
@@ -165,36 +181,77 @@ export class BillingService {
     userId: string,
     body: SwitchSubscriptionBodyDto,
   ): Promise<V2SubscriptionDTO> {
-    await this.getOrCreateSubscription(userId);
-    const plan = await this.resolvePlan(body.planId);
-    const periodStart = new Date();
-    const periodEnd = this.addMonths(periodStart, 1);
+    const subscription = await this.getOrCreateSubscription(userId);
 
-    // TODO(billing): mirror to Razorpay subscription
-    void this.razorpay.getClient();
+    if (body.planId === "FREE") {
+      throw new BadRequestException("Use cancel to downgrade to FREE");
+    }
 
-    const [updated] = await this.prisma.client.$transaction([
-      this.prisma.client.subscription.update({
-        where: { userId },
-        data: {
-          status: "ACTIVE",
-          userPlan: body.planId,
-          planId: plan.planId,
-          amount: plan.amount,
-          currency: plan.currency,
-          interval: plan.interval,
-          currentPeriodStart: periodStart,
-          currentPeriodEnd: periodEnd,
-          cancelAtPeriodEnd: false,
+    if (body.planId === subscription.userPlan) {
+      throw new BadRequestException("Already on this plan");
+    }
+
+    if (
+      !subscription.currentPeriodEnd ||
+      subscription.currentPeriodEnd.getTime() <= Date.now()
+    ) {
+      throw new BadRequestException(
+        "Cannot schedule plan switch without an active period",
+      );
+    }
+
+    const nextPlan = await this.resolveCheckoutPlan(body.planId);
+
+    if (!subscription.externalCustomerId) {
+      throw new ServiceUnavailableException(
+        "Missing Razorpay customer for subscription switch",
+      );
+    }
+
+    if (!this.hasActiveProviderSubscription(subscription)) {
+      throw new BadRequestException("No active subscription to switch");
+    }
+
+    if (subscription.scheduledRazorpaySubscriptionId) {
+      try {
+        await this.razorpay.cancelSubscription(
+          subscription.scheduledRazorpaySubscriptionId,
+          { cancelAtCycleEnd: false },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          `Failed to cancel previously scheduled Razorpay subscription ${subscription.scheduledRazorpaySubscriptionId}: ${this.getErrorMessage(error)}`,
+        );
+      }
+    }
+
+    await this.razorpay.cancelSubscription(subscription.externalSubscriptionId, {
+      cancelAtCycleEnd: true,
+    });
+
+    const providerSubscription =
+      await this.razorpay.createScheduledSubscription({
+        plan_id: nextPlan.razorpayPlanId,
+        customer_id: subscription.externalCustomerId,
+        total_count: 12,
+        customer_notify: 1,
+        start_at: Math.floor(subscription.currentPeriodEnd.getTime() / 1000),
+        notes: {
+          tresta_user_id: userId,
+          tresta_plan: body.planId,
         },
-        select: this.subscriptionSelect(),
-      }),
-      this.prisma.client.user.update({
-        where: { id: userId },
-        data: { plan: body.planId },
-        select: { id: true },
-      }),
-    ]);
+      });
+
+    const updated = await this.prisma.client.subscription.update({
+      where: { userId },
+      data: {
+        cancelAtPeriodEnd: true,
+        scheduledRazorpaySubscriptionId: providerSubscription.id,
+        scheduledPlanId: nextPlan.id,
+        scheduledStartAt: subscription.currentPeriodEnd,
+      },
+      select: this.subscriptionSelect(),
+    });
 
     return this.toSubscriptionDto(updated);
   }
@@ -454,6 +511,9 @@ export class BillingService {
       externalSubscriptionId: true,
       razorpaySubscriptionId: true,
       providerStatus: true,
+      scheduledRazorpaySubscriptionId: true,
+      scheduledPlanId: true,
+      scheduledStartAt: true,
       plan: {
         select: {
           type: true,
@@ -624,6 +684,10 @@ export class BillingService {
 
   private requiredDateIso(value: Date | null) {
     return (value ?? new Date()).toISOString();
+  }
+
+  private getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private addMonths(value: Date, months: number) {

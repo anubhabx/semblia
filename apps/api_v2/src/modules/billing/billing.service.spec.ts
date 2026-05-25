@@ -26,6 +26,9 @@ type SubscriptionRecord = {
   externalSubscriptionId: string | null;
   razorpaySubscriptionId: string | null;
   providerStatus: string | null;
+  scheduledRazorpaySubscriptionId: string | null;
+  scheduledPlanId: string | null;
+  scheduledStartAt: Date | null;
   plan?: PlanRecord | null;
 };
 
@@ -103,6 +106,10 @@ const prismaMock = {
           externalSubscriptionId: data.externalSubscriptionId ?? null,
           razorpaySubscriptionId: data.razorpaySubscriptionId ?? null,
           providerStatus: data.providerStatus ?? null,
+          scheduledRazorpaySubscriptionId:
+            data.scheduledRazorpaySubscriptionId ?? null,
+          scheduledPlanId: data.scheduledPlanId ?? null,
+          scheduledStartAt: data.scheduledStartAt ?? null,
         };
         state.subscriptions.push(row);
         return row;
@@ -238,6 +245,22 @@ const razorpayMock = {
       tresta_plan: "PRO",
     },
   })),
+  cancelSubscription: vi.fn(async (subscriptionId: string) => ({
+    id: subscriptionId,
+    status: "cancelled",
+    plan_id: "plan_rzp_pro",
+  })),
+  createScheduledSubscription: vi.fn(async () => ({
+    id: "rzp_sub_scheduled",
+    status: "created",
+    short_url: "https://rzp.io/i/scheduled",
+    customer_id: "cust_existing",
+    plan_id: "plan_rzp_business",
+    notes: {
+      tresta_user_id: "user_1",
+      tresta_plan: "BUSINESS",
+    },
+  })),
   getPublishableKeyId: vi.fn(() => "rzp_test_key"),
 };
 
@@ -260,6 +283,9 @@ function makeSubscription(
     externalSubscriptionId: null,
     razorpaySubscriptionId: null,
     providerStatus: null,
+    scheduledRazorpaySubscriptionId: null,
+    scheduledPlanId: null,
+    scheduledStartAt: null,
     ...overrides,
   };
 }
@@ -343,36 +369,330 @@ describe("BillingService", () => {
     expect(state.subscriptions).toHaveLength(1);
   });
 
-  it("persists a plan switch", async () => {
-    await service.getSubscription("user_1");
+  it("schedules a paid plan switch for the next billing cycle", async () => {
+    const currentPeriodEnd = new Date("2026-06-20T10:00:00.000Z");
+    state.plans = [
+      makePlan({ id: "plan_pro", type: "PRO" }),
+      makePlan({
+        id: "plan_business",
+        type: "BUSINESS",
+        razorpayPlanId: "plan_rzp_business",
+        price: 249900,
+        limits: {
+          testimonials: 10000,
+          widgets: 100,
+          projects: 25,
+        },
+      }),
+    ];
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        planId: "plan_pro",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        razorpaySubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+        currentPeriodEnd,
+      }),
+    ];
 
     const subscription = await service.switchSubscriptionPlan("user_1", {
-      planId: "PRO",
+      planId: "BUSINESS",
     });
 
-    expect(subscription).toMatchObject({
+    expect(razorpayMock.cancelSubscription).toHaveBeenCalledWith(
+      "rzp_sub_current",
+      { cancelAtCycleEnd: true },
+    );
+    expect(razorpayMock.createScheduledSubscription).toHaveBeenCalledWith({
+      plan_id: "plan_rzp_business",
+      customer_id: "cust_existing",
+      total_count: 12,
+      customer_notify: 1,
+      start_at: Math.floor(currentPeriodEnd.getTime() / 1000),
+      notes: {
+        tresta_user_id: "user_1",
+        tresta_plan: "BUSINESS",
+      },
+    });
+    expect(prismaMock.client.subscription.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_1" },
+        data: {
+          cancelAtPeriodEnd: true,
+          scheduledRazorpaySubscriptionId: "rzp_sub_scheduled",
+          scheduledPlanId: "plan_business",
+          scheduledStartAt: currentPeriodEnd,
+        },
+      }),
+    );
+    expect(state.subscriptions[0]).toMatchObject({
       userPlan: "PRO",
-      amount: 79900,
-      currency: "INR",
-      interval: "month",
-      cancelAtPeriodEnd: false,
+      planId: "plan_pro",
+      cancelAtPeriodEnd: true,
+      scheduledRazorpaySubscriptionId: "rzp_sub_scheduled",
+      scheduledPlanId: "plan_business",
+      scheduledStartAt: currentPeriodEnd,
     });
-    expect(state.subscriptions[0]?.userPlan).toBe("PRO");
-    expect(prismaMock.client.user.update).toHaveBeenCalledWith({
-      where: { id: "user_1" },
-      data: { plan: "PRO" },
-      select: { id: true },
-    });
+    expect(subscription.userPlan).toBe("PRO");
+    expect(subscription.cancelAtPeriodEnd).toBe(true);
+    expect(prismaMock.client.user.update).not.toHaveBeenCalled();
   });
 
-  it("toggles cancelAtPeriodEnd", async () => {
-    await service.getSubscription("user_1");
+  it("cancels an active paid subscription at period end", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        planId: "plan_pro",
+        externalSubscriptionId: "rzp_sub_current",
+        razorpaySubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+      }),
+    ];
 
     const canceled = await service.cancelSubscription("user_1");
-    const resumed = await service.cancelSubscription("user_1");
 
+    expect(razorpayMock.cancelSubscription).toHaveBeenCalledWith(
+      "rzp_sub_current",
+      { cancelAtCycleEnd: true },
+    );
     expect(canceled.cancelAtPeriodEnd).toBe(true);
-    expect(resumed.cancelAtPeriodEnd).toBe(false);
+    expect(state.subscriptions[0]).toMatchObject({
+      cancelAtPeriodEnd: true,
+      providerStatus: "cancelled",
+      status: "ACTIVE",
+      userPlan: "PRO",
+      planId: "plan_pro",
+    });
+    expect(prismaMock.client.user.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects cancelling a FREE subscription", async () => {
+    state.subscriptions = [makeSubscription({ userPlan: "FREE" })];
+
+    await expect(service.cancelSubscription("user_1")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects cancelling when no active provider subscription exists", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "completed",
+      }),
+    ];
+
+    await expect(service.cancelSubscription("user_1")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(prismaMock.client.subscription.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching to FREE and directs callers to cancel", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "FREE" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching to the current paid plan", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "PRO" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching when the current period already elapsed", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+        currentPeriodEnd: new Date("2026-05-01T10:00:00.000Z"),
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching without a current period end", async () => {
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+        currentPeriodEnd: null,
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching when the target paid plan lacks a Razorpay plan id", async () => {
+    state.plans = [
+      makePlan({
+        id: "plan_business",
+        type: "BUSINESS",
+        razorpayPlanId: null,
+      }),
+    ];
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rejects switching when the subscription has no Razorpay customer", async () => {
+    state.plans = [
+      makePlan({
+        id: "plan_business",
+        type: "BUSINESS",
+        razorpayPlanId: "plan_rzp_business",
+      }),
+    ];
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: null,
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+      }),
+    ];
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(razorpayMock.cancelSubscription).not.toHaveBeenCalled();
+    expect(razorpayMock.createScheduledSubscription).not.toHaveBeenCalled();
+  });
+
+  it("cancels a previous scheduled subscription before replacing it", async () => {
+    state.plans = [
+      makePlan({
+        id: "plan_business",
+        type: "BUSINESS",
+        razorpayPlanId: "plan_rzp_business",
+      }),
+    ];
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+        scheduledRazorpaySubscriptionId: "rzp_sub_old",
+        scheduledPlanId: "plan_old",
+        scheduledStartAt: new Date("2026-06-20T10:00:00.000Z"),
+      }),
+    ];
+
+    await service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" });
+
+    expect(razorpayMock.cancelSubscription).toHaveBeenNthCalledWith(
+      1,
+      "rzp_sub_old",
+      { cancelAtCycleEnd: false },
+    );
+    expect(razorpayMock.cancelSubscription).toHaveBeenNthCalledWith(
+      2,
+      "rzp_sub_current",
+      { cancelAtCycleEnd: true },
+    );
+    expect(state.subscriptions[0]?.scheduledRazorpaySubscriptionId).toBe(
+      "rzp_sub_scheduled",
+    );
+  });
+
+  it("continues switching when previous scheduled subscription cleanup fails", async () => {
+    state.plans = [
+      makePlan({
+        id: "plan_business",
+        type: "BUSINESS",
+        razorpayPlanId: "plan_rzp_business",
+      }),
+    ];
+    state.subscriptions = [
+      makeSubscription({
+        userPlan: "PRO",
+        externalCustomerId: "cust_existing",
+        externalSubscriptionId: "rzp_sub_current",
+        providerStatus: "active",
+        scheduledRazorpaySubscriptionId: "rzp_sub_old",
+      }),
+    ];
+    razorpayMock.cancelSubscription.mockRejectedValueOnce(new Error("gone"));
+
+    await expect(
+      service.switchSubscriptionPlan("user_1", { planId: "BUSINESS" }),
+    ).resolves.toMatchObject({
+      userPlan: "PRO",
+      cancelAtPeriodEnd: true,
+    });
+
+    expect(razorpayMock.cancelSubscription).toHaveBeenNthCalledWith(
+      1,
+      "rzp_sub_old",
+      { cancelAtCycleEnd: false },
+    );
+    expect(razorpayMock.cancelSubscription).toHaveBeenNthCalledWith(
+      2,
+      "rzp_sub_current",
+      { cancelAtCycleEnd: true },
+    );
+    expect(razorpayMock.createScheduledSubscription).toHaveBeenCalled();
   });
 
   it("set-default flips exactly one payment method to default", async () => {

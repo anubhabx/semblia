@@ -51,6 +51,9 @@ type RazorpaySubscriptionForProcessing = {
   userPlan: UserPlanValue;
   planId: string | null;
   externalSubscriptionId: string | null;
+  scheduledRazorpaySubscriptionId: string | null;
+  scheduledPlanId: string | null;
+  scheduledStartAt: Date | null;
 };
 
 type RazorpayPlanSnapshot = {
@@ -333,6 +336,10 @@ export class WebhooksService {
     const userPlan = this.resolveUserPlanFromWebhook(entity?.notes, snapshot);
     const currentPeriodStart = this.toUnixDate(entity?.current_start);
     const currentPeriodEnd = this.toUnixDate(entity?.current_end);
+    const isScheduledPromotion =
+      Boolean(entity?.id) &&
+      subscription.scheduledRazorpaySubscriptionId === entity?.id &&
+      subscription.externalSubscriptionId !== entity?.id;
     const data: Prisma.SubscriptionUncheckedUpdateInput = {
       status: SubscriptionStatus.ACTIVE,
       providerStatus: "active",
@@ -352,6 +359,13 @@ export class WebhooksService {
     if (snapshot.currency) data.currency = snapshot.currency;
     if (snapshot.interval) data.interval = snapshot.interval;
     if (userPlan) data.userPlan = userPlan;
+    if (isScheduledPromotion) {
+      data.planId = subscription.scheduledPlanId ?? snapshot.planId;
+      data.scheduledRazorpaySubscriptionId = null;
+      data.scheduledPlanId = null;
+      data.scheduledStartAt = null;
+      data.cancelAtPeriodEnd = false;
+    }
 
     await tx.subscription.update({
       where: { id: subscription.id },
@@ -432,21 +446,28 @@ export class WebhooksService {
     const subscription = await this.findRazorpaySubscription(tx, body);
     if (!subscription) return null;
 
+    const data: Prisma.SubscriptionUncheckedUpdateInput = {
+      status: SubscriptionStatus.CANCELED,
+      providerStatus: "completed",
+      cancelAtPeriodEnd: false,
+      ...this.razorpayWebhookStamp(providerEventId, body.event),
+    };
+
+    if (!subscription.scheduledRazorpaySubscriptionId) {
+      data.userPlan = UserPlan.FREE;
+    }
+
     await tx.subscription.update({
       where: { id: subscription.id },
-      data: {
-        status: SubscriptionStatus.CANCELED,
-        providerStatus: "completed",
-        userPlan: UserPlan.FREE,
-        cancelAtPeriodEnd: false,
-        ...this.razorpayWebhookStamp(providerEventId, body.event),
-      },
+      data,
     });
-    await tx.user.update({
-      where: { id: subscription.userId },
-      data: { plan: UserPlan.FREE },
-      select: { id: true },
-    });
+    if (!subscription.scheduledRazorpaySubscriptionId) {
+      await tx.user.update({
+        where: { id: subscription.userId },
+        data: { plan: UserPlan.FREE },
+        select: { id: true },
+      });
+    }
 
     return subscription.id;
   }
@@ -622,6 +643,12 @@ export class WebhooksService {
         externalSubscriptionId,
       );
       if (subscription) return subscription;
+
+      const scheduledSubscription = await tx.subscription.findUnique({
+        where: { scheduledRazorpaySubscriptionId: externalSubscriptionId },
+        select: this.razorpaySubscriptionSelect(),
+      });
+      if (scheduledSubscription) return scheduledSubscription;
     }
 
     if (body.event !== "subscription.activated") return null;
@@ -716,6 +743,9 @@ export class WebhooksService {
       userPlan: true,
       planId: true,
       externalSubscriptionId: true,
+      scheduledRazorpaySubscriptionId: true,
+      scheduledPlanId: true,
+      scheduledStartAt: true,
     } satisfies Prisma.SubscriptionSelect;
   }
 
