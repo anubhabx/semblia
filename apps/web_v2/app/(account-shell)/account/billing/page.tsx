@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableHeader,
@@ -62,18 +69,17 @@ function PlanCard() {
     requireFreshOnMount: true,
   });
   const sub = subscriptionQuery.data;
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
 
   const cancelMutation = useCancelSubscription();
   const cancelling = cancelMutation.isPending;
-  const toggleCancel = () =>
+  const cancelSubscription = () =>
     cancelMutation.mutate(undefined, {
-      onSuccess: (updated) =>
-        toast.success(
-          updated.cancelAtPeriodEnd
-            ? "Subscription will cancel at period end."
-            : "Subscription renewal restored.",
-        ),
-      onError: () => toast.error("Failed to update subscription."),
+      onSuccess: () => {
+        toast.success("Subscription will cancel at period end.");
+        setCancelDialogOpen(false);
+      },
+      onError: () => toast.error("Failed to cancel subscription."),
     });
 
   if (liveState.isWaitingForLiveData || !sub) {
@@ -123,8 +129,8 @@ function PlanCard() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => toggleCancel()}
-          disabled={cancelling}
+          onClick={() => setCancelDialogOpen(true)}
+          disabled={cancelling || sub.cancelAtPeriodEnd}
           className={
             sub.cancelAtPeriodEnd
               ? ""
@@ -132,12 +138,22 @@ function PlanCard() {
           }
         >
           {cancelling
-            ? "Updating…"
+            ? "Cancelling…"
             : sub.cancelAtPeriodEnd
-              ? "Resume subscription"
+              ? "Cancellation scheduled"
               : "Cancel subscription"}
         </Button>
       </div>
+
+      <ConfirmationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        intent="danger"
+        title="Cancel subscription?"
+        description={`Cancel your subscription at the end of the current period? You'll keep paid features until ${periodEnd ?? "then"}. To resume, you'll need to start a new subscription.`}
+        confirmLabel={cancelling ? "Cancelling…" : "Cancel subscription"}
+        onConfirm={cancelSubscription}
+      />
     </div>
   );
 }
@@ -272,30 +288,7 @@ function InvoiceTable() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    disabled={!inv.downloadUrl}
-                    title={
-                      inv.downloadUrl
-                        ? "Download invoice"
-                        : "Download unavailable"
-                    }
-                    asChild={!!inv.downloadUrl}
-                  >
-                    {inv.downloadUrl ? (
-                      <a
-                        href={inv.downloadUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <DownloadSimpleIcon className="size-3.5" />
-                      </a>
-                    ) : (
-                      <DownloadSimpleIcon className="size-3.5" />
-                    )}
-                  </Button>
+                  <InvoiceDownloadButton invoice={inv} />
                 </TableCell>
               </TableRow>
             ))}
@@ -303,6 +296,45 @@ function InvoiceTable() {
         </Table>
       </div>
     </div>
+  );
+}
+
+function InvoiceDownloadButton({ invoice }: { invoice: V2InvoiceDTO }) {
+  if (invoice.downloadUrl) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-7"
+        aria-label={`Open invoice ${invoice.number}`}
+        asChild
+      >
+        <a href={invoice.downloadUrl} target="_blank" rel="noopener noreferrer">
+          <DownloadSimpleIcon className="size-3.5" />
+        </a>
+      </Button>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label={`Hosted invoice pending for ${invoice.number}`}
+              disabled
+            >
+              <DownloadSimpleIcon className="size-3.5" />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Hosted invoice pending</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -337,7 +369,7 @@ export default function BillingPage() {
         <SettingsSection
           id="plans"
           title="Plans"
-          description="Compare and switch plans. Razorpay checkout wires in when the billing API is ready."
+          description="Compare plans, start checkout, or schedule plan changes."
           staggerIndex={2}
         >
           <PlanSwitcher />

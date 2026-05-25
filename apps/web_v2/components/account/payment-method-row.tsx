@@ -1,19 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { toast } from "sonner";
 import type { V2PaymentMethodDTO } from "@workspace/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -21,13 +11,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { RefreshingDataBadge } from "@/components/shared";
-import {
-  useDeletePaymentMethod,
-  usePaymentMethods,
-  useSetDefaultPaymentMethod,
-} from "@/hooks/api";
+import { usePaymentMethods } from "@/hooks/api";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
-import { DotsThreeIcon, PlusIcon } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react";
 
 // ── Brand label ────────────────────────────────────────────────────────────────
 
@@ -40,15 +26,7 @@ const BRAND_LABELS: Record<V2PaymentMethodDTO["brand"], string> = {
 
 // ── Single payment method row ──────────────────────────────────────────────────
 
-function PaymentRow({
-  method,
-  onDelete,
-  onMakeDefault,
-}: {
-  method: V2PaymentMethodDTO;
-  onDelete: () => void;
-  onMakeDefault: () => void;
-}) {
+function PaymentRow({ method }: { method: V2PaymentMethodDTO }) {
   const expiry = `${String(method.expMonth).padStart(2, "0")}/${method.expYear % 100}`;
 
   return (
@@ -75,28 +53,7 @@ function PaymentRow({
         </div>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-7 shrink-0">
-            <DotsThreeIcon className="size-4" />
-            <span className="sr-only">Payment method options</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          {!method.isDefault && (
-            <DropdownMenuItem onClick={onMakeDefault}>
-              Make default
-            </DropdownMenuItem>
-          )}
-          {!method.isDefault && <DropdownMenuSeparator />}
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={onDelete}
-          >
-            Remove
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="size-7 shrink-0" aria-hidden="true" />
     </div>
   );
 }
@@ -108,29 +65,8 @@ export function PaymentMethodsSection() {
   const liveState = useLiveQueryState(methodsQuery);
   const methods = methodsQuery.data;
 
-  const [deleteTarget, setDeleteTarget] =
-    React.useState<V2PaymentMethodDTO | null>(null);
-
-  const deleteMutation = useDeletePaymentMethod();
-  const deleting = deleteMutation.isPending;
-  const deleteMethod = (id: string) =>
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        toast.success("Payment method removed.");
-        setDeleteTarget(null);
-      },
-      onError: () => toast.error("Failed to remove payment method."),
-    });
-
-  const defaultMutation = useSetDefaultPaymentMethod();
-  const makeDefault = (id: string) =>
-    defaultMutation.mutate(id, {
-      onSuccess: () => toast.success("Default payment method updated."),
-      onError: () => toast.error("Failed to update default payment method."),
-    });
-
   return (
-    <>
+    <div>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-h-6">
           <RefreshingDataBadge show={liveState.isBackgroundRefreshing} />
@@ -145,7 +81,9 @@ export function PaymentMethodsSection() {
                 </Button>
               </span>
             </TooltipTrigger>
-            <TooltipContent>Available after next checkout</TooltipContent>
+            <TooltipContent>
+              Cards are saved automatically after your next paid charge.
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -162,44 +100,16 @@ export function PaymentMethodsSection() {
                   </div>
                 </div>
               ))
-            : methods?.map((m) => (
-                <PaymentRow
-                  key={m.id}
-                  method={m}
-                  onDelete={() => setDeleteTarget(m)}
-                  onMakeDefault={() => makeDefault(m.id)}
-                />
-              ))}
+            : methods?.map((m) => <PaymentRow key={m.id} method={m} />)}
 
           {!methodsQuery.isPending && (!methods || methods.length === 0) && (
             <div className="px-4 py-4 text-sm text-muted-foreground text-center">
-              No saved payment methods.
+              No saved cards yet. We&apos;ll save your card here after your
+              first paid charge.
             </div>
           )}
         </div>
       </div>
-
-      <ConfirmationDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        intent="danger"
-        title="Remove payment method?"
-        description={
-          deleteTarget ? (
-            <>
-              Remove{" "}
-              <span className="font-medium text-foreground">
-                {BRAND_LABELS[deleteTarget.brand]} •••• {deleteTarget.last4}
-              </span>
-              ?
-            </>
-          ) : (
-            ""
-          )
-        }
-        confirmLabel={deleting ? "Removing…" : "Remove"}
-        onConfirm={() => deleteTarget && deleteMethod(deleteTarget.id)}
-      />
-    </>
+    </div>
   );
 }

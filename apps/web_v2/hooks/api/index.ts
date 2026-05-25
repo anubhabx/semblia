@@ -90,8 +90,7 @@ export {
   useBillingUsage,
   useCancelSubscription,
   useSwitchPlan,
-  useDeletePaymentMethod,
-  useSetDefaultPaymentMethod,
+  useCreateCheckoutSession,
   useUpdateBillingProfile,
 } from "./use-billing-api";
 

@@ -36,6 +36,7 @@ import type {
   V2CurrentOrganizationDTO,
   V2InvoiceDTO,
   V2PaymentMethodDTO,
+  V2SubscriptionCheckoutDTO,
   V2SubscriptionDTO,
   V2UsageDTO,
   V2UserPlan,
@@ -1333,22 +1334,21 @@ export function switchSubscriptionPlan(
   });
 }
 
+export function createSubscriptionCheckout(
+  token: string | null,
+  planId: V2UserPlan,
+) {
+  return post<V2SubscriptionCheckoutDTO>(
+    "/account/subscription/checkout",
+    token,
+    {
+      planId,
+    },
+  );
+}
+
 export function fetchPaymentMethods(token: string | null) {
   return api<V2PaymentMethodDTO[]>("/account/payment-methods", token);
-}
-
-export function deletePaymentMethodApi(token: string | null, id: string) {
-  return del<{ success: true }>(
-    `/account/payment-methods/${encodeURIComponent(id)}`,
-    token,
-  );
-}
-
-export function setDefaultPaymentMethodApi(token: string | null, id: string) {
-  return post<V2PaymentMethodDTO[]>(
-    `/account/payment-methods/${encodeURIComponent(id)}/default`,
-    token,
-  );
 }
 
 export function fetchInvoicesApi(token: string | null) {

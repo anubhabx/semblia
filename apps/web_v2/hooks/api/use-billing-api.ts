@@ -4,19 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import type {
   V2BillingProfileDTO,
-  V2PaymentMethodDTO,
   V2SubscriptionDTO,
   V2UserPlan,
 } from "@workspace/types";
 import {
   cancelSubscription,
-  deletePaymentMethodApi,
+  createSubscriptionCheckout,
   fetchBillingProfile,
   fetchBillingUsage,
   fetchInvoicesApi,
   fetchPaymentMethods,
   fetchSubscription,
-  setDefaultPaymentMethodApi,
   switchSubscriptionPlan,
   updateBillingProfile,
 } from "@/lib/tresta-api";
@@ -131,32 +129,17 @@ export function useSwitchPlan() {
   });
 }
 
-export function useDeletePaymentMethod() {
+export function useCreateCheckoutSession() {
   const { getToken } = useAuth();
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (planId: V2UserPlan) => {
       const token = await getToken();
-      return deletePaymentMethodApi(token, id);
+      return createSubscriptionCheckout(token, planId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: billingQueryKeys.paymentMethods });
-    },
-  });
-}
-
-export function useSetDefaultPaymentMethod() {
-  const { getToken } = useAuth();
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const token = await getToken();
-      return setDefaultPaymentMethodApi(token, id);
-    },
-    onSuccess: (methods: V2PaymentMethodDTO[]) => {
-      qc.setQueryData(billingQueryKeys.paymentMethods, methods);
+      qc.invalidateQueries({ queryKey: billingQueryKeys.subscription });
     },
   });
 }

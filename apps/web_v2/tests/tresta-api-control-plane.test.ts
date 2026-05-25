@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createSubscriptionCheckout,
   createOutboundWebhookEndpoint,
   duplicateForm,
   duplicateWidget,
@@ -119,6 +120,23 @@ describe("tresta-api control-plane contracts", () => {
           name: "Production events",
           url: "https://example.com/tresta",
           subscribedEvents: ["testimonial.published"],
+        }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer session-token",
+        }),
+      }),
+    );
+  });
+
+  it("creates Razorpay subscription checkout sessions through the account route", async () => {
+    await createSubscriptionCheckout("session-token", "PRO");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8100/v2/account/subscription/checkout",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          planId: "PRO",
         }),
         headers: expect.objectContaining({
           Authorization: "Bearer session-token",
