@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100";
 
 class AdminApiError extends Error {
   constructor(
@@ -10,6 +10,25 @@ class AdminApiError extends Error {
   ) {
     super(message);
   }
+}
+
+type ApiEnvelope<T> = {
+  success: boolean;
+  data: T;
+  meta?: Record<string, unknown>;
+};
+
+function isEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "success" in value &&
+    "data" in value
+  );
+}
+
+function unwrap<T>(payload: unknown): T {
+  return isEnvelope<T>(payload) ? payload.data : (payload as T);
 }
 
 async function authHeaders(): Promise<HeadersInit> {
@@ -35,7 +54,7 @@ export async function adminGet<T>(path: string): Promise<T> {
     const body = await res.text();
     throw new AdminApiError(res.status, body, `GET ${path} failed: ${res.status}`);
   }
-  return (await res.json()) as T;
+  return unwrap<T>(await res.json());
 }
 
 export async function adminPost<T>(path: string, body: unknown): Promise<T> {
@@ -50,7 +69,7 @@ export async function adminPost<T>(path: string, body: unknown): Promise<T> {
     const errBody = await res.text();
     throw new AdminApiError(res.status, errBody, `POST ${path} failed: ${res.status}`);
   }
-  return (await res.json()) as T;
+  return unwrap<T>(await res.json());
 }
 
 export { AdminApiError };

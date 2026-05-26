@@ -12,23 +12,15 @@ export default function AccessDeniedPage() {
         <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
           403 — Forbidden
         </p>
-        <h1 className="text-2xl font-semibold text-zinc-900">
-          Access denied
-        </h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Access denied</h1>
         <p className="text-sm leading-relaxed text-zinc-600">
           Your account is authenticated but not authorized to use the admin
           panel. If you believe this is a mistake, ask an existing admin to
           grant you access.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
-          <SignOutButton>
-            <button
-              type="button"
-              className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              Sign out
-            </button>
-          </SignOutButton>
+          <SignOutButton />
+
           <Link
             href="/sign-in"
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"

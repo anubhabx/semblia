@@ -8,7 +8,10 @@ async function loadCurrentAdmin(): Promise<AdminMe | null> {
   try {
     return await adminGet<AdminMe>("/admin/me");
   } catch (err) {
-    if (err instanceof AdminApiError && (err.status === 401 || err.status === 403)) {
+    if (
+      err instanceof AdminApiError &&
+      (err.status === 401 || err.status === 403)
+    ) {
       return null;
     }
     throw err;
@@ -26,7 +29,7 @@ export default async function AuthedLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-6">
@@ -42,16 +45,11 @@ export default async function AuthedLayout({
               </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-3 text-xs text-zinc-500">
-            <span className="font-mono">{me.email}</span>
-            <SignOutButton>
-              <button
-                type="button"
-                className="rounded border border-zinc-200 px-2.5 py-1 hover:bg-zinc-50"
-              >
-                Sign out
-              </button>
-            </SignOutButton>
+          <div className="flex items-center gap-3">
+            <span className="hidden font-mono text-[11px] text-zinc-500 sm:inline">
+              {me.email}
+            </span>
+            <SignOutButton />
           </div>
         </div>
       </header>
