@@ -15,6 +15,10 @@ export const apiV2EnvSchema = z.object({
   CLERK_AUTHORIZED_PARTIES: z.string().optional(),
   CLERK_JWT_AUDIENCE: z.string().optional(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
+  ADMIN_CLERK_SECRET_KEY: z.string().optional(),
+  ADMIN_CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  ADMIN_CLERK_AUTHORIZED_PARTIES: z.string().optional(),
+  ADMIN_CLERK_JWT_AUDIENCE: z.string().optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
@@ -68,6 +72,18 @@ export function validateApiV2Env(config: Record<string, unknown>): ApiV2Env {
     if (missingRazorpayVars.length > 0) {
       throw new Error(
         `Missing required production Razorpay env vars: ${missingRazorpayVars.join(", ")}`,
+      );
+    }
+
+    const missingAdminClerkVars = [
+      "ADMIN_CLERK_SECRET_KEY",
+      "ADMIN_CLERK_PUBLISHABLE_KEY",
+      "ADMIN_CLERK_AUTHORIZED_PARTIES",
+    ].filter((key) => !String(parsed[key as keyof ApiV2Env] ?? "").trim());
+
+    if (missingAdminClerkVars.length > 0) {
+      throw new Error(
+        `Missing required production admin Clerk env vars: ${missingAdminClerkVars.join(", ")}`,
       );
     }
   }
