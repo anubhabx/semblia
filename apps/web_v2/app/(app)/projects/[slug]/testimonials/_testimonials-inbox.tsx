@@ -14,6 +14,7 @@ import { useProject, useTestimonial } from "@/hooks/api";
 import { getProjectCollectionUrl } from "@/lib/project-utils";
 import { PageHeader, HeaderSep, PageTabs } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   STATUS_TABS,
   type StatusFilter,
@@ -240,6 +241,18 @@ export function TestimonialsInbox({ slug }: TestimonialsInboxProps) {
               </>
             )}
           </>
+        }
+        actions={
+          pendingCount > 0 && status !== "PENDING" ? (
+            <Button
+              size="xs"
+              variant="outline"
+              className="gap-1.5 border-warning/30 bg-warning/[0.06] text-warning hover:bg-warning/10 hover:text-warning"
+              onClick={() => setStatus("PENDING")}
+            >
+              Review {pendingCount} pending
+            </Button>
+          ) : undefined
         }
         toolbar={
           <PageTabs<StatusFilter>

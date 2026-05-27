@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Funnel as FilterIcon,
   CaretDown as ChevronDownIcon,
-  Check as CheckIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,10 +54,7 @@ interface FilterBarProps {
   search: string;
   setSearch: (s: string) => void;
   result: FilterBarResultSummary | null;
-  hasActionable: boolean;
-  bulkMode: boolean;
   refreshing?: boolean;
-  onSelectAll: () => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -69,10 +65,7 @@ export function TestimonialsFilterBar({
   search,
   setSearch,
   result,
-  hasActionable,
-  bulkMode,
   refreshing,
-  onSelectAll,
 }: FilterBarProps) {
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
 
@@ -115,18 +108,6 @@ export function TestimonialsFilterBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {hasActionable && !bulkMode && (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="gap-1 text-muted-foreground"
-              onClick={onSelectAll}
-            >
-              <CheckIcon className="size-3" />
-              Select
-            </Button>
-          )}
         </>
       }
       trailing={

@@ -6,6 +6,8 @@ import {
   ShieldCheck as ShieldCheckIcon,
   Check as CheckIcon,
   CaretRight as ChevronRightIcon,
+  Eye as EyeIcon,
+  EyeSlash as EyeSlashIcon,
 } from "@phosphor-icons/react";
 
 import { ActionButton } from "@/components/ui/action-button";
@@ -14,11 +16,14 @@ import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/format";
 import type { V2TestimonialDTO } from "@workspace/types";
 import { Stars, StatusPill } from "@/components/testimonials/shared";
+import type { StatusFilter } from "@/components/testimonials/testimonials-filter-bar";
 
 // ── Testimonial row (with inline actions on hover) ────────────────────────
 
 export interface TestimonialRowProps {
   t: V2TestimonialDTO;
+  /** Active filter tab — used to suppress redundant per-row status pills */
+  currentTab?: StatusFilter;
   isSelected?: boolean;
   isBulkSelected?: boolean;
   bulkMode?: boolean;
@@ -30,6 +35,7 @@ export interface TestimonialRowProps {
 
 export function TestimonialRow({
   t,
+  currentTab,
   isSelected,
   isBulkSelected,
   bulkMode,
@@ -40,6 +46,8 @@ export function TestimonialRow({
 }: TestimonialRowProps) {
   const isActionable =
     t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED";
+  const showStatusPill = currentTab === "ALL" || currentTab === undefined;
+  const showPublishGlyph = t.moderationStatus === "APPROVED";
 
   return (
     <ItemShell
@@ -80,7 +88,9 @@ export function TestimonialRow({
         </span>
       )}
 
-      <div className="min-w-0 flex-1">
+      <div
+        className={cn("min-w-0 flex-1", !bulkMode && isActionable && "pr-14")}
+      >
         {/* Name + role + time */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-foreground truncate">
@@ -107,7 +117,25 @@ export function TestimonialRow({
         {/* Compact meta */}
         <div className="mt-1.5 flex items-center gap-2">
           <Stars rating={t.rating} />
-          <StatusPill status={t.moderationStatus} />
+          {showStatusPill && <StatusPill status={t.moderationStatus} />}
+          {showPublishGlyph &&
+            (t.isPublished ? (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-success"
+                title="Published to widgets"
+              >
+                <EyeIcon className="size-3" weight="bold" />
+                Published
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
+                title="Approved but not published"
+              >
+                <EyeSlashIcon className="size-3" weight="bold" />
+                Draft
+              </span>
+            ))}
         </div>
       </div>
 

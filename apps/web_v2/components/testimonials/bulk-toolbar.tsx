@@ -32,7 +32,7 @@ export function BulkToolbar({
           onClick={onApproveAll}
         >
           <CheckCircle2Icon className="size-3" />
-          Approve
+          Approve {count}
         </Button>
         <Button
           size="xs"
@@ -41,7 +41,7 @@ export function BulkToolbar({
           onClick={onRejectAll}
         >
           <XCircleIcon className="size-3" />
-          Reject
+          Reject {count}
         </Button>
         <Button size="xs" variant="ghost" onClick={onCancel}>
           Cancel

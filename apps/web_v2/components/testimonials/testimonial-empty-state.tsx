@@ -107,7 +107,7 @@ function FirstTestimonialEmpty({
         className={cn(
           "mt-6 flex w-full max-w-md items-stretch overflow-hidden rounded-xl border transition-[border-color,box-shadow] duration-200",
           copied
-            ? "border-success/40 shadow-[0_0_0_2px_var(--color-success)/6%]"
+            ? "border-success/40 ring-2 ring-success/10"
             : "border-border bg-card shadow-xs",
         )}
       >

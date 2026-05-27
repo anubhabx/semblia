@@ -130,23 +130,6 @@ export function TestimonialsClient({
     setBulkSelected(new Set());
   }, []);
 
-  const handleSelectAll = React.useCallback(() => {
-    const actionable = items.filter(
-      (t) =>
-        t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED",
-    );
-    const allSelected = actionable.every((t) => bulkSelected.has(t.id));
-    if (allSelected) {
-      setBulkSelected(new Set());
-    } else {
-      setBulkSelected(new Set(actionable.map((t) => t.id)));
-    }
-  }, [items, bulkSelected]);
-
-  const hasActionable = items.some(
-    (t) => t.moderationStatus === "PENDING" || t.moderationStatus === "FLAGGED",
-  );
-
   return (
     <div className="flex flex-1 flex-col">
       <TestimonialsFilterBar
@@ -155,10 +138,7 @@ export function TestimonialsClient({
         search={search}
         setSearch={setSearch}
         result={result}
-        hasActionable={hasActionable}
-        bulkMode={bulkMode}
         refreshing={refreshing}
-        onSelectAll={handleSelectAll}
       />
 
       {bulkMode && (
@@ -195,6 +175,7 @@ export function TestimonialsClient({
               <TestimonialRow
                 key={t.id}
                 t={t}
+                currentTab={status}
                 isSelected={selectedId === t.id}
                 isBulkSelected={bulkSelected.has(t.id)}
                 bulkMode={bulkMode}
@@ -220,7 +201,6 @@ export function TestimonialsClient({
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={!result.hasPrev}
               aria-label="Previous page"
-              className="size-7"
             >
               <ChevronLeftIcon className="size-3.5" />
             </Button>
@@ -230,7 +210,6 @@ export function TestimonialsClient({
               onClick={() => setPage((p) => Math.min(result.totalPages, p + 1))}
               disabled={!result.hasNext}
               aria-label="Next page"
-              className="size-7"
             >
               <ChevronRightIcon className="size-3.5" />
             </Button>
