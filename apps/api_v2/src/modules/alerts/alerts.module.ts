@@ -11,5 +11,6 @@ import { ALERTS_SLACK_FETCH, AlertsService } from "./alerts.service.js";
       useValue: fetch,
     },
   ],
+  exports: [AlertsService],
 })
 export class AlertsModule {}

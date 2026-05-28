@@ -1,4 +1,4 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { OpsAdminService } from "./ops-admin.service.js";
 
 @Controller("ops-admin")
@@ -12,5 +12,15 @@ export class OpsAdminController {
   @Get("_status")
   getStatus() {
     return this.opsAdminService.getStatus();
+  }
+
+  @Get("queues")
+  getQueues() {
+    return this.opsAdminService.getQueueSnapshot();
+  }
+
+  @Post("dead-letter/:id/retry")
+  retryDeadLetter(@Param("id") id: string) {
+    return this.opsAdminService.retryDeadLetter(id);
   }
 }

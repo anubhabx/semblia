@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { RequestMethod } from "@nestjs/common";
+import { describe, expect, it, vi } from "vitest";
+import { BadRequestException, RequestMethod } from "@nestjs/common";
 import { OpsAdminController } from "./ops-admin.controller.js";
 import { OpsAdminService } from "./ops-admin.service.js";
+import { EMAIL_DELIVERY_QUEUE } from "../queueing/queueing.constants.js";
 
 const PATH_METADATA = "path";
 const METHOD_METADATA = "method";
@@ -30,11 +31,135 @@ describe("OpsAdminController", () => {
   });
 
   it("keeps ops-admin status placeholder-only and non-sensitive", () => {
-    const service = new OpsAdminService();
+    const service = new OpsAdminService({} as never, {} as never);
 
     expect(service.getStatus()).toEqual({
       status: "ready",
       surface: "internal-only",
     });
+  });
+
+  it("declares queue snapshot and dead-letter retry routes", () => {
+    expect(
+      Reflect.getMetadata(PATH_METADATA, OpsAdminController.prototype.getQueues),
+    ).toBe("queues");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        OpsAdminController.prototype.getQueues,
+      ),
+    ).toBe(RequestMethod.GET);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        OpsAdminController.prototype.retryDeadLetter,
+      ),
+    ).toBe("dead-letter/:id/retry");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        OpsAdminController.prototype.retryDeadLetter,
+      ),
+    ).toBe(RequestMethod.POST);
+  });
+
+  it("combines queue telemetry with email usage and unresolved alert counts", async () => {
+    const service = new OpsAdminService(
+      {
+        client: {
+          emailUsage: {
+            findUnique: vi
+              .fn()
+              .mockResolvedValueOnce({ date: "2026-05-28", count: 4 })
+              .mockResolvedValueOnce({ date: "2026-05-27", count: 3 }),
+          },
+          alertHistory: {
+            count: vi.fn().mockResolvedValue(2),
+          },
+        },
+      } as never,
+      {
+        getSnapshot: vi.fn().mockResolvedValue({
+          queues: { [EMAIL_DELIVERY_QUEUE]: { waiting: 1 } },
+          deliveries: { emails: { PENDING: 1 } },
+        }),
+      } as never,
+    );
+
+    await expect(service.getQueueSnapshot()).resolves.toEqual(
+      expect.objectContaining({
+        queues: { [EMAIL_DELIVERY_QUEUE]: { waiting: 1 } },
+        deliveries: { emails: { PENDING: 1 } },
+        emailUsage: {
+          today: { date: "2026-05-28", count: 4 },
+          yesterday: { date: "2026-05-27", count: 3 },
+        },
+        unresolvedAlertCount: 2,
+      }),
+    );
+  });
+
+  it("rejects retry for unsupported dead-letter queues", async () => {
+    const service = new OpsAdminService(
+      {
+        client: {
+          deadLetterJob: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: "dlq_1",
+              queue: "unknown",
+              retried: false,
+              data: { deliveryId: "delivery_1" },
+              retryHistory: null,
+            }),
+          },
+        },
+      } as never,
+      {} as never,
+    );
+
+    await expect(service.retryDeadLetter("dlq_1")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it("retries email dead-letter jobs with deterministic BullMQ jobs", async () => {
+    const emailQueue = { add: vi.fn().mockResolvedValue({ id: "job_1" }) };
+    const update = vi.fn().mockResolvedValue({ id: "dlq_1", retried: true });
+    const service = new OpsAdminService(
+      {
+        client: {
+          deadLetterJob: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: "dlq_1",
+              queue: EMAIL_DELIVERY_QUEUE,
+              retried: false,
+              data: { deliveryId: "email_1" },
+              retryHistory: null,
+            }),
+            update,
+          },
+        },
+      } as never,
+      {} as never,
+      emailQueue as never,
+    );
+
+    await expect(service.retryDeadLetter("dlq_1")).resolves.toEqual({
+      retried: true,
+      jobId: "retry:email-delivery:dlq_1:email_1",
+    });
+    expect(emailQueue.add).toHaveBeenCalledWith(
+      "send",
+      { deliveryId: "email_1" },
+      expect.objectContaining({
+        jobId: "retry:email-delivery:dlq_1:email_1",
+      }),
+    );
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dlq_1" },
+        data: expect.objectContaining({ retried: true }),
+      }),
+    );
   });
 });

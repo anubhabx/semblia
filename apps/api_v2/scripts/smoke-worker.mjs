@@ -1,3 +1,4 @@
+/* global console, process, URL */
 import { spawn } from "node:child_process";
 
 const child = spawn(process.execPath, ["dist/src/worker.js"], {

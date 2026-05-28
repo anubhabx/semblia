@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Queue } from "bullmq";
 import { EmailDeliveryStatus, EmailTemplateKey } from "@workspace/database/prisma";
-import { EMAIL_DELIVERY_QUEUE } from "../queueing/queueing.constants.js";
 import { EmailDeliveryService } from "./email-delivery.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { ResendMailerService } from "./resend-mailer.service.js";
