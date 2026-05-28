@@ -75,6 +75,27 @@ describe("OnboardingGate account reconciliation fallback", () => {
     expect(screen.queryByText("App content")).toBeNull();
   });
 
+  it("shows a neutral loader while the initial /v2/me fetch resolves for returning users", () => {
+    mockCurrentUserQuery({
+      isPending: true,
+      failureReason: null,
+    });
+
+    render(
+      <OnboardingGate>
+        <div>App content</div>
+      </OnboardingGate>,
+    );
+
+    expect(
+      screen.getByRole("status", { name: "Loading your account" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("status", { name: "Setting up your account" }),
+    ).toBeNull();
+    expect(screen.queryByText("App content")).toBeNull();
+  });
+
   it("shows a manual retry fallback after reconciliation retries are exhausted", () => {
     const refetch = vi.fn();
     mockCurrentUserQuery({

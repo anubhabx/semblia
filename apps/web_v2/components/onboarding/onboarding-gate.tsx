@@ -44,8 +44,17 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser.data, pathname, router]);
 
-  if (liveState.isWaitingForLiveData || setupRetrying) {
+  if (setupRetrying) {
     return <AccountSetupLoader />;
+  }
+
+  if (liveState.isWaitingForLiveData) {
+    return (
+      <AccountSetupLoader
+        title="Loading your account"
+        description="One moment while we get things ready."
+      />
+    );
   }
 
   if (setupRetryExhausted) {
