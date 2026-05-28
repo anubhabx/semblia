@@ -31,6 +31,7 @@ import { ProjectActionAuditService } from "../../common/audit/project-action-aud
 import type { ProjectAccessRole } from "../../common/authz/project-access.service.js";
 import { paginate } from "../../common/utils/paginate.js";
 import { parseAccountDefaults } from "../account-defaults/account-defaults.service.js";
+import { EmailDeliveryService } from "../email/email-delivery.service.js";
 import { OrganizationsService } from "../organizations/organizations.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -168,6 +169,9 @@ export class ProjectsService {
     @Optional()
     @Inject(NotificationsService)
     private readonly notificationsService?: NotificationsService,
+    @Optional()
+    @Inject(EmailDeliveryService)
+    private readonly emailDeliveryService?: EmailDeliveryService,
   ) {}
 
   async list(
@@ -549,6 +553,12 @@ export class ProjectsService {
     const email = this.normalizeEmail(body.email);
     const role = body.role as MemberRole;
     const now = new Date();
+    const inviter = this.emailDeliveryService
+      ? await this.prisma.client.user.findUnique({
+          where: { id: userId },
+          select: { email: true },
+        })
+      : null;
 
     await this.expirePendingInvitesByEmail(project.id, email, now);
 
@@ -630,7 +640,13 @@ export class ProjectsService {
           );
         }
 
-        // TODO: Queue an email invite when transactional email sending is in scope.
+        await this.emailDeliveryService?.createProjectInviteDeliveryWith(
+          tx,
+          createdInvite,
+          { id: project.id, name: project.name },
+          inviter,
+        );
+
         return createdInvite;
       });
 

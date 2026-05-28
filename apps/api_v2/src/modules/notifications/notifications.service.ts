@@ -9,6 +9,7 @@ import {
   roleHasCapability,
 } from "../../common/authz/capabilities.js";
 import { paginate } from "../../common/utils/paginate.js";
+import { EmailDeliveryService } from "../email/email-delivery.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type {
   NotificationListQueryDto,
@@ -52,12 +53,16 @@ export type CreateNotificationInput = {
 
 type NotificationWriter = Pick<
   Prisma.TransactionClient,
-  "notification" | "notificationPreferences" | "project"
+  "notification" | "notificationPreferences" | "project" | "user" | "emailDelivery"
 >;
 
 @Injectable()
 export class NotificationsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(EmailDeliveryService)
+    private readonly emailDeliveryService?: EmailDeliveryService,
+  ) {}
 
   async createForUsers(
     userIds: readonly string[],
@@ -91,19 +96,79 @@ export class NotificationsService {
       return { count: 0 };
     }
 
-    return writer.notification.createMany({
-      data: enabledRecipients.map((userId) => ({
-        userId,
-        type: input.type as NotificationType,
-        title: input.title,
-        message: input.message,
-        link: input.link ?? null,
-        metadata:
-          input.metadata === undefined || input.metadata === null
-            ? Prisma.JsonNull
-            : (input.metadata as Prisma.InputJsonValue),
-      })),
+    if (!this.emailDeliveryService) {
+      return writer.notification.createMany({
+        data: enabledRecipients.map((userId) => ({
+          userId,
+          type: input.type as NotificationType,
+          title: input.title,
+          message: input.message,
+          link: input.link ?? null,
+          metadata:
+            input.metadata === undefined || input.metadata === null
+              ? Prisma.JsonNull
+              : (input.metadata as Prisma.InputJsonValue),
+        })),
+      });
+    }
+
+    const users = await writer.user.findMany({
+      where: { id: { in: enabledRecipients } },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        notificationPreferences: {
+          select: {
+            emailEnabled: true,
+            typePreferences: true,
+          },
+        },
+      },
     });
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    const createdNotifications = await Promise.all(
+      enabledRecipients.map((userId) =>
+        writer.notification.create({
+          data: {
+            userId,
+            type: input.type as NotificationType,
+            title: input.title,
+            message: input.message,
+            link: input.link ?? null,
+            metadata:
+              input.metadata === undefined || input.metadata === null
+                ? Prisma.JsonNull
+                : (input.metadata as Prisma.InputJsonValue),
+          },
+          select: NOTIFICATION_SELECT,
+        }),
+      ),
+    );
+
+    await Promise.all(
+      createdNotifications.map((notification) => {
+        const user = usersById.get(notification.userId);
+        if (!user) return null;
+
+        return this.emailDeliveryService?.createNotificationDeliveryWith(
+          writer,
+          notification,
+          {
+            userId: user.id,
+            email: user.email,
+            name: formatUserName(user.firstName, user.lastName),
+            emailEnabled: user.notificationPreferences?.emailEnabled ?? true,
+            typePreferences:
+              user.notificationPreferences?.typePreferences ?? null,
+          },
+        );
+      }),
+    );
+
+    return { count: createdNotifications.length };
   }
 
   createForProjectReviewers(
@@ -337,4 +402,9 @@ export class NotificationsService {
 
     return (preference as { inApp?: unknown }).inApp === false;
   }
+}
+
+function formatUserName(firstName?: string | null, lastName?: string | null) {
+  const name = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return name || null;
 }

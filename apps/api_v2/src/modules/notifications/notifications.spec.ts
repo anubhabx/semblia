@@ -3,6 +3,7 @@ import { MemberRole } from "@workspace/database/prisma";
 import { NotificationsController } from "./notifications.controller.js";
 import { NotificationsService } from "./notifications.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
+import type { EmailDeliveryService } from "../email/email-delivery.service.js";
 
 const PATH_METADATA = "path";
 
@@ -11,11 +12,14 @@ const mockNotificationFindMany = vi.fn();
 const mockNotificationFindFirst = vi.fn();
 const mockNotificationUpdate = vi.fn();
 const mockNotificationUpdateMany = vi.fn();
+const mockNotificationCreate = vi.fn();
 const mockNotificationCreateMany = vi.fn();
 const mockPreferencesFindMany = vi.fn();
 const mockPreferencesFindUnique = vi.fn();
 const mockPreferencesUpsert = vi.fn();
 const mockProjectFindUnique = vi.fn();
+const mockUserFindMany = vi.fn();
+const mockCreateNotificationDeliveryWith = vi.fn();
 
 const prismaMock = {
   client: {
@@ -23,6 +27,7 @@ const prismaMock = {
       count: mockNotificationCount,
       findMany: mockNotificationFindMany,
       findFirst: mockNotificationFindFirst,
+      create: mockNotificationCreate,
       update: mockNotificationUpdate,
       updateMany: mockNotificationUpdateMany,
       createMany: mockNotificationCreateMany,
@@ -35,8 +40,15 @@ const prismaMock = {
     project: {
       findUnique: mockProjectFindUnique,
     },
+    user: {
+      findMany: mockUserFindMany,
+    },
   },
 } as unknown as PrismaService;
+
+const emailDeliveryServiceMock = {
+  createNotificationDeliveryWith: mockCreateNotificationDeliveryWith,
+} as unknown as EmailDeliveryService;
 
 describe("NotificationsController", () => {
   it("declares the authenticated notifications route family", () => {
@@ -191,6 +203,52 @@ describe("NotificationsService", () => {
         expect.objectContaining({ userId: "user_2" }),
       ],
     });
+  });
+
+  it("creates email delivery rows for created notifications when email delivery is available", async () => {
+    service = new NotificationsService(prismaMock, emailDeliveryServiceMock);
+    mockPreferencesFindMany.mockResolvedValue([]);
+    mockUserFindMany.mockResolvedValue([
+      {
+        id: "user_1",
+        email: "ada@example.com",
+        firstName: "Ada",
+        lastName: "Lovelace",
+        notificationPreferences: {
+          emailEnabled: true,
+          typePreferences: {},
+        },
+      },
+    ]);
+    mockNotificationCreate.mockResolvedValue(
+      notificationRecord({ id: "notif_1", userId: "user_1" }),
+    );
+    mockCreateNotificationDeliveryWith.mockResolvedValue({ id: "email_1" });
+
+    await expect(
+      service.createForUsers(["user_1"], {
+        type: "NEW_TESTIMONIAL",
+        title: "New testimonial",
+        message: "Ada submitted a testimonial.",
+        link: "/projects/acme/testimonials/testimonial_1",
+        metadata: { projectId: "project_1", testimonialId: "testimonial_1" },
+      }),
+    ).resolves.toEqual({ count: 1 });
+
+    expect(mockNotificationCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: "user_1" }),
+      select: expect.any(Object),
+    });
+    expect(mockCreateNotificationDeliveryWith).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ id: "notif_1", userId: "user_1" }),
+      expect.objectContaining({
+        userId: "user_1",
+        email: "ada@example.com",
+        name: "Ada Lovelace",
+        emailEnabled: true,
+      }),
+    );
   });
 
   it("notifies only project members with the requested capability", async () => {

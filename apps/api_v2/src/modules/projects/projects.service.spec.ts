@@ -16,6 +16,7 @@ import { ProjectsService } from "./projects.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
+import type { EmailDeliveryService } from "../email/email-delivery.service.js";
 
 const mockProjectFindUnique = vi.fn();
 const mockProjectFindMany = vi.fn();
@@ -42,6 +43,7 @@ const mockUserFindUnique = vi.fn();
 const mockNotificationCreate = vi.fn();
 const mockCreateForUsers = vi.fn();
 const mockCreateForProjectManagers = vi.fn();
+const mockCreateProjectInviteDeliveryWith = vi.fn();
 const mockProjectActionAuditCreate = vi.fn();
 const mockTransaction = vi.fn();
 const mockEnsureOrganizationForActor = vi.fn();
@@ -102,6 +104,10 @@ const notificationsServiceMock = {
   createForUsers: mockCreateForUsers,
   createForProjectManagers: mockCreateForProjectManagers,
 } as unknown as NotificationsService;
+
+const emailDeliveryServiceMock = {
+  createProjectInviteDeliveryWith: mockCreateProjectInviteDeliveryWith,
+} as unknown as EmailDeliveryService;
 
 describe("ProjectsService allowed origins", () => {
   let service: ProjectsService;
@@ -839,6 +845,48 @@ describe("ProjectsService allowed origins", () => {
       role: MemberRole.ADMIN,
       status: ProjectMemberInviteStatus.PENDING,
     });
+  });
+
+  it("creates a project invite email delivery for invited addresses", async () => {
+    const serviceWithEmail = new ProjectsService(
+      prismaMock,
+      organizationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+      undefined,
+      notificationsServiceMock,
+      emailDeliveryServiceMock,
+    );
+    mockProjectFindUnique.mockResolvedValue(projectRecord());
+    mockUserFindFirst.mockResolvedValue(null);
+    mockUserFindUnique.mockResolvedValue({ id: "admin_1", email: "admin@example.com" });
+    mockProjectMemberInviteFindFirst.mockResolvedValue(null);
+    mockProjectMemberInviteCreate.mockResolvedValue(
+      inviteRecord({
+        email: "outsider@example.com",
+        role: MemberRole.VIEWER,
+      }),
+    );
+    mockCreateProjectInviteDeliveryWith.mockResolvedValue({ id: "email_1" });
+
+    await serviceWithEmail.createMemberInvite(
+      "admin_1",
+      { slug: "acme" },
+      { email: "Outsider@Example.com", role: MemberRole.VIEWER },
+    );
+
+    expect(mockCreateProjectInviteDeliveryWith).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        id: "invite_1",
+        email: "outsider@example.com",
+        role: MemberRole.VIEWER,
+      }),
+      expect.objectContaining({
+        id: "project_1",
+        name: "Acme",
+      }),
+      expect.objectContaining({ email: "admin@example.com" }),
+    );
   });
 
   it("lists only active pending project member invites ordered newest first", async () => {

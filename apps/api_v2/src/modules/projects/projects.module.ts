@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import { AuthzModule } from "../../common/authz/authz.module.js";
+import { EmailModule } from "../email/email.module.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { OrganizationsModule } from "../organizations/organizations.module.js";
 import { StorageModule } from "../storage/storage.module.js";
@@ -12,6 +13,7 @@ import { SigningSecretService } from "./signing-secret.service.js";
 @Module({
   imports: [
     AuthzModule,
+    EmailModule,
     NotificationsModule,
     OrganizationsModule,
     StorageModule,
