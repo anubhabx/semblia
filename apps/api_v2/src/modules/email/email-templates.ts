@@ -1,4 +1,9 @@
 import { EmailTemplateKey } from "@workspace/database/prisma";
+import {
+  emailTextFooter,
+  paragraph,
+  renderEmailLayout,
+} from "./email-layout.js";
 import type {
   EmailTemplatePayload,
   NotificationEmailPayload,
@@ -6,7 +11,9 @@ import type {
   RenderedEmail,
 } from "./email.types.js";
 
-export function renderEmailTemplate(input: EmailTemplatePayload): RenderedEmail {
+export function renderEmailTemplate(
+  input: EmailTemplatePayload,
+): RenderedEmail {
   switch (input.template) {
     case EmailTemplateKey.NOTIFICATION:
       return renderNotificationEmail(input.payload);
@@ -19,23 +26,27 @@ function renderNotificationEmail(
   payload: NotificationEmailPayload,
 ): RenderedEmail {
   const subject = trimSubject(payload.title);
-  const action = payload.link
-    ? `<p><a href="${escapeHtml(payload.link)}">Open in Tresta</a></p>`
-    : "";
+  const cta = payload.link
+    ? { label: "Open in Tresta", href: payload.link }
+    : null;
 
-  return {
-    subject,
-    text: [payload.title, payload.message, payload.link ?? ""]
-      .filter(Boolean)
-      .join("\n\n"),
-    html: [
-      "<main>",
-      `<h1>${escapeHtml(payload.title)}</h1>`,
-      `<p>${escapeHtml(payload.message)}</p>`,
-      action,
-      "</main>",
-    ].join(""),
-  };
+  const html = renderEmailLayout({
+    preheader: payload.message,
+    heading: payload.title,
+    bodyHtml: paragraph(payload.message),
+    cta,
+  });
+
+  const text = [
+    payload.title,
+    payload.message,
+    cta ? `Open in Tresta: ${cta.href}` : "",
+    emailTextFooter(),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return { subject, text, html };
 }
 
 function renderProjectInviteEmail(
@@ -43,34 +54,38 @@ function renderProjectInviteEmail(
 ): RenderedEmail {
   const inviter = payload.inviterEmail
     ? `${payload.inviterEmail} invited you`
-    : "You were invited";
+    : "You've been invited";
   const subject = trimSubject(`Invitation to ${payload.projectName}`);
+  const lead = `${inviter} to join ${payload.projectName} as ${formatRole(payload.role)} on Tresta.`;
 
-  return {
-    subject,
-    text: [
-      `${inviter} to join ${payload.projectName} as ${payload.role}.`,
-      payload.acceptUrl,
-    ].join("\n\n"),
-    html: [
-      "<main>",
-      `<h1>${escapeHtml(payload.projectName)}</h1>`,
-      `<p>${escapeHtml(inviter)} to join this project as ${escapeHtml(payload.role)}.</p>`,
-      `<p><a href="${escapeHtml(payload.acceptUrl)}">Accept invitation</a></p>`,
-      "</main>",
-    ].join(""),
-  };
+  const html = renderEmailLayout({
+    preheader: lead,
+    heading: `Join ${payload.projectName}`,
+    bodyHtml: paragraph(lead),
+    cta: { label: "Accept invitation", href: payload.acceptUrl },
+    footnote:
+      "If you weren't expecting this invitation, you can safely ignore this email.",
+  });
+
+  const text = [
+    lead,
+    `Accept invitation: ${payload.acceptUrl}`,
+    "If you weren't expecting this invitation, you can safely ignore this email.",
+    emailTextFooter(),
+  ].join("\n\n");
+
+  return { subject, text, html };
+}
+
+function formatRole(role: string) {
+  const normalized = role.trim().toLowerCase();
+  if (!normalized) {
+    return "a member";
+  }
+  const article = /^[aeiou]/.test(normalized) ? "an" : "a";
+  return `${article} ${normalized}`;
 }
 
 function trimSubject(value: string) {
   return value.trim().slice(0, 255);
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }

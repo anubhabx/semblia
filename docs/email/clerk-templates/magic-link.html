@@ -1,0 +1,34 @@
+<re-html>
+  <re-head>
+    <re-title>Sign in</re-title>
+    <re-style>
+      re-text, re-heading, re-button { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    </re-style>
+  </re-head>
+  <re-body background-color="#f7f5f2">
+    <re-preheader>Your secure sign-in link for {{app.name}}</re-preheader>
+    <re-container>
+      <re-header>
+        <re-block padding="24px 8px 12px">
+          <re-text font-size="20px" font-weight="700" color="#201914">Tresta</re-text>
+        </re-block>
+      </re-header>
+      <re-main>
+        <re-block background-color="#ffffff" border="1px solid #ece8e2" border-radius="16px" padding="32px">
+          <re-heading level="h1" color="#201914">Sign in to {{app.name}}</re-heading>
+          <re-text color="#5f574e" font-size="15px" line-height="1.6" margin="0 0 20px">Click the button below to finish signing in. This link expires shortly and can only be used once.</re-text>
+          <re-button href="{{magic_link}}" background-color="#d78951" color="#ffffff" border-radius="10px" font-size="15px" font-weight="700" margin="4px 0 8px">Sign in</re-button>
+          <re-text color="#8c8377" font-size="13px" line-height="1.6" margin="16px 0 0">If the button doesn’t work, copy and paste this link into your browser:</re-text>
+          <re-text color="#b9692f" font-size="13px" line-height="1.6" margin="4px 0 0">{{magic_link}}</re-text>
+          <re-text color="#8c8377" font-size="13px" line-height="1.6" margin="16px 0 0">If you didn’t request this, you can safely ignore this email.</re-text>
+        </re-block>
+      </re-main>
+      <re-footer>
+        <re-block padding="20px 8px">
+          <re-text color="#8c8377" font-size="12px" line-height="1.5" margin="0 0 6px">Sent by {{app.name}} — the testimonial and feedback platform.</re-text>
+          <re-text color="#8c8377" font-size="12px" line-height="1.5">Need help? Reach us at support@tresta.app.</re-text>
+        </re-block>
+      </re-footer>
+    </re-container>
+  </re-body>
+</re-html>
