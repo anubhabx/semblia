@@ -103,7 +103,7 @@ export function WidgetStudioTopbar({
             )}
           >
             <span
-              className="size-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20"
+              className="size-1.5 rounded-full bg-brand ring-2 ring-brand/20"
               aria-hidden
             />
             <span className="text-muted-foreground">tresta.io/wall/</span>
@@ -167,10 +167,12 @@ export function WidgetStudioTopbar({
         @keyframes widget-share-pulse {
           0%,
           100% {
-            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            box-shadow: 0 0 0 0
+              color-mix(in oklch, var(--brand) 0%, transparent);
           }
           50% {
-            box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.18);
+            box-shadow: 0 0 0 6px
+              color-mix(in oklch, var(--brand) 35%, transparent);
           }
         }
         :global(.widget-share-pulse) {

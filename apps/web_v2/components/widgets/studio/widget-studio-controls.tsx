@@ -122,7 +122,7 @@ function Header() {
     <StudioMark
       className="px-5 pt-4 pb-3"
       name="Widget Studio"
-      version="0.1"
+      status="Layout & style"
       icon={
         <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
           <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor" />

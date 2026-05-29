@@ -148,22 +148,11 @@ function ScaledDeviceFrame({
 }
 
 const STAGE_CSS = `
-.widget-stage {
-  --stage-bg: #ebe8e0;
-  --stage-chrome: #8d8b83;
-}
-:is(.dark, [data-theme="dark"]) .widget-stage {
-  --stage-bg: #1b1814;
-  --stage-chrome: #6b6963;
-}
 .widget-stage-frame {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   contain: style;
 }
-@keyframes widget-stage-pulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
-.widget-stage-live { animation: widget-stage-pulse 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .widget-stage-live { animation: none; }
   .widget-stage-frame { transition: none; }
 }
 `;
@@ -241,24 +230,11 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
   const wallUrl = `tresta.io/wall/${draft.wall.slug}`;
 
   return (
-    <div
-      className="widget-stage flex h-full min-h-0 flex-col"
-      style={{ background: "var(--stage-bg, #ebe8e0)" }}
-    >
+    <div className="widget-stage flex h-full min-h-0 flex-col bg-muted">
       {/* Stage chrome — top */}
-      <div className="flex shrink-0 items-center justify-between px-5 py-2.5 font-mono text-[10px] tracking-tight text-[var(--stage-chrome,#8d8b83)]">
+      <div className="flex shrink-0 items-center justify-between px-5 py-2.5 font-mono text-[10px] tracking-tight text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span
-            className="widget-stage-live"
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "#10b981",
-              boxShadow: "0 0 6px rgba(16,185,129,0.45)",
-            }}
-            aria-hidden
-          />
+          <span className="size-1.5 rounded-full bg-brand" aria-hidden />
           LIVE PREVIEW
           {autoActive && (
             <>
@@ -318,7 +294,7 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
 
       {/* Stage tip */}
       <div className="px-5 pb-2.5 pt-1 text-center font-mono text-[9.5px] tracking-tight text-muted-foreground/65">
-        {isWall ? "Wall preview" : "Embedded inside a faux site"} · ⌘S to save ·
+        {isWall ? "Wall preview" : "Shown on a sample page"} · ⌘S to save ·
         changes auto-deploy
       </div>
     </div>

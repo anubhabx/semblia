@@ -149,7 +149,7 @@ const RailItem = React.memo(function RailItem({
         className={cn(
           "absolute bottom-0.5 right-0.5 inline-flex items-center justify-center rounded-sm p-0.5",
           isWall
-            ? "bg-emerald-500/85 text-white"
+            ? "bg-brand text-background"
             : "bg-foreground/80 text-background",
         )}
         aria-hidden
