@@ -132,7 +132,6 @@ export function ForgotPasswordForm() {
       const { error: finalErr } = await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
-            console.log(session.currentTask);
             return;
           }
           go("success", "forward");

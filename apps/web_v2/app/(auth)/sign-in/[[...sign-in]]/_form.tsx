@@ -104,7 +104,6 @@ export function SignInForm() {
       const { error: finalErr } = await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
-            console.log(session.currentTask);
             return;
           }
           const url = decorateUrl("/projects");
