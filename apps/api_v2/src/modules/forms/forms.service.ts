@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -146,6 +147,51 @@ type SubmitProjectPolicy = {
   autoModeration: boolean;
   autoApproveVerified: boolean;
 };
+
+type SubmissionModerationDecision = {
+  status: ModerationStatus;
+  isApproved: boolean;
+  autoPublished: boolean;
+  score: number | null;
+  flags: string[];
+  reason: string | null;
+};
+
+type SubmissionQualityAssessment = {
+  flags: string[];
+  score: number;
+  reason: string | null;
+};
+
+type QualityTextAccumulator = {
+  parts: string[];
+  length: number;
+};
+
+const DUPLICATE_RESPONSE_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const QUALITY_TEXT_LIMIT = 12_000;
+const SPAM_TERM_PATTERNS = [
+  /\bbuy now\b/i,
+  /\bfree money\b/i,
+  /\bcasino\b/i,
+  /\bcrypto\b/i,
+  /\bloan approved\b/i,
+  /\bclick here\b/i,
+  /\blimited time offer\b/i,
+];
+const DECEPTIVE_REVIEW_PATTERNS = [
+  /\bfake review\b/i,
+  /\bfake testimonial\b/i,
+  /\bpaid to write\b/i,
+  /\bpaid review\b/i,
+  /\bnot a real customer\b/i,
+  /\bnever used (?:this|the) (?:product|service|app|tool)\b/i,
+];
+const ABUSIVE_LANGUAGE_PATTERNS = [
+  /\byou should die\b/i,
+  /\bkill yourself\b/i,
+  /\bgo die\b/i,
+];
 
 @Injectable()
 export class FormsService {
@@ -531,6 +577,14 @@ export class FormsService {
     const idempotencyKey = this.readHeader(request, "idempotency-key");
     const payloadHash = hashIdempotencyPayload(request.rawBody);
 
+    await this.assertNotRecentDuplicateSubmit({
+      projectId: trust.projectId,
+      formId: form.id,
+      payloadHash,
+      rawBody: request.rawBody,
+      idempotencyKey,
+    });
+
     if (idempotencyKey) {
       const replay = await this.tryReplayIdempotentSubmit(
         trust.projectId,
@@ -580,6 +634,15 @@ export class FormsService {
             isOAuthVerified: body.isOAuthVerified ?? false,
             oauthProvider: body.oauthProvider ?? null,
             moderationStatus: moderation.status,
+            ...(moderation.score !== null
+              ? { moderationScore: moderation.score }
+              : {}),
+            ...(moderation.flags.length > 0
+              ? {
+                  moderationFlags:
+                    moderation.flags as unknown as Prisma.InputJsonValue,
+                }
+              : {}),
             autoPublished: moderation.autoPublished,
             ipAddress: null,
             userAgent: null,
@@ -604,6 +667,21 @@ export class FormsService {
             ratingValue: body.rating ?? null,
             ratingScale: this.toSubmissionRatingScale(body.rating),
             moderationStatus: moderation.status,
+            ...(moderation.reason
+              ? { moderationReason: moderation.reason }
+              : {}),
+            ...(moderation.flags.length > 0
+              ? {
+                  metadata: {
+                    qualityGate: {
+                      action: "flag",
+                      flags: moderation.flags,
+                      score: moderation.score,
+                      reason: moderation.reason,
+                    },
+                  } satisfies Prisma.InputJsonObject,
+                }
+              : {}),
           },
         });
         const day = startOfUtcDay(new Date());
@@ -994,7 +1072,7 @@ export class FormsService {
     project: SubmitProjectPolicy,
     trust: PublicSubmitTrustResult,
     body: CreateFormSubmissionBodyDto,
-  ) {
+  ): SubmissionModerationDecision {
     let status: ModerationStatus = ModerationStatus.PENDING;
     let isApproved = false;
     let autoPublished = false;
@@ -1015,7 +1093,177 @@ export class FormsService {
       }
     }
 
-    return { status, isApproved, autoPublished };
+    const quality = this.assessSubmissionQuality(body);
+    if (quality.flags.length > 0) {
+      return {
+        status: ModerationStatus.FLAGGED,
+        isApproved: false,
+        autoPublished: false,
+        score: quality.score,
+        flags: quality.flags,
+        reason: quality.reason,
+      };
+    }
+
+    return {
+      status,
+      isApproved,
+      autoPublished,
+      score: null,
+      flags: [],
+      reason: null,
+    };
+  }
+
+  private async assertNotRecentDuplicateSubmit(input: {
+    projectId: string;
+    formId: string;
+    payloadHash: string;
+    rawBody: Buffer | string | undefined;
+    idempotencyKey: string | undefined;
+  }) {
+    if (!this.hasRawSubmitPayload(input.rawBody)) {
+      return;
+    }
+
+    const duplicate =
+      await this.prisma.client.collectionFormSubmission.findFirst({
+        where: {
+          projectId: input.projectId,
+          formId: input.formId,
+          payloadHash: input.payloadHash,
+          createdAt: {
+            gte: new Date(Date.now() - DUPLICATE_RESPONSE_LOOKBACK_MS),
+          },
+          ...(input.idempotencyKey
+            ? {
+                OR: [
+                  { idempotencyKey: null },
+                  { idempotencyKey: { not: input.idempotencyKey } },
+                ],
+              }
+            : {}),
+        },
+        select: { id: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+    if (duplicate) {
+      throw new ConflictException("Duplicate form response detected");
+    }
+  }
+
+  private hasRawSubmitPayload(rawBody: Buffer | string | undefined) {
+    if (typeof rawBody === "string") {
+      return rawBody.trim().length > 0;
+    }
+
+    return Buffer.isBuffer(rawBody) && rawBody.length > 0;
+  }
+
+  private assessSubmissionQuality(
+    body: CreateFormSubmissionBodyDto,
+  ): SubmissionQualityAssessment {
+    const flags = new Set<string>();
+    const text = this.collectSubmissionQualityText(body);
+    const linkCount = this.countLinks(text);
+
+    if (linkCount >= 3) {
+      flags.add("spam_links");
+    }
+    if (SPAM_TERM_PATTERNS.some((pattern) => pattern.test(text))) {
+      flags.add("spam_terms");
+    }
+    if (/(.)\1{12,}/i.test(text) || /\b(\w+)(?:\s+\1){5,}\b/i.test(text)) {
+      flags.add("repetitive_content");
+    }
+    if (DECEPTIVE_REVIEW_PATTERNS.some((pattern) => pattern.test(text))) {
+      flags.add("deceptive_review");
+    }
+    if (ABUSIVE_LANGUAGE_PATTERNS.some((pattern) => pattern.test(text))) {
+      flags.add("abusive_language");
+    }
+
+    const orderedFlags = Array.from(flags);
+    return {
+      flags: orderedFlags,
+      score:
+        orderedFlags.length === 0
+          ? 0
+          : Math.min(1, 0.45 + orderedFlags.length * 0.2),
+      reason:
+        orderedFlags.length === 0
+          ? null
+          : `Quality gate flagged: ${orderedFlags.join(", ")}`,
+    };
+  }
+
+  private collectSubmissionQualityText(body: CreateFormSubmissionBodyDto) {
+    const accumulator: QualityTextAccumulator = { parts: [], length: 0 };
+    for (const part of [
+      body.authorName,
+      body.authorRole,
+      body.authorCompany,
+      body.content,
+      body.source,
+      body.sourceUrl,
+    ]) {
+      this.addQualityText(accumulator, part);
+    }
+    this.collectJsonQualityText(body.answers, accumulator);
+
+    return accumulator.parts.join(" ");
+  }
+
+  private collectJsonQualityText(
+    value: unknown,
+    output: QualityTextAccumulator,
+    depth = 0,
+  ) {
+    if (output.length >= QUALITY_TEXT_LIMIT || depth > 4) {
+      return;
+    }
+
+    if (typeof value === "string") {
+      this.addQualityText(output, value);
+      return;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      this.addQualityText(output, String(value));
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value.slice(0, 25)) {
+        this.collectJsonQualityText(item, output, depth + 1);
+      }
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      for (const item of Object.values(value).slice(0, 50)) {
+        this.collectJsonQualityText(item, output, depth + 1);
+      }
+    }
+  }
+
+  private addQualityText(
+    output: QualityTextAccumulator,
+    value: string | null | undefined,
+  ) {
+    if (!value || output.length >= QUALITY_TEXT_LIMIT) {
+      return;
+    }
+
+    const remaining = QUALITY_TEXT_LIMIT - output.length;
+    const chunk = value.slice(0, remaining);
+    output.parts.push(chunk);
+    output.length += chunk.length + 1;
+  }
+
+  private countLinks(value: string) {
+    return value.match(/\b(?:https?:\/\/|www\.)\S+/gi)?.length ?? 0;
   }
 
   private async recordRuntimeFormView(input: {

@@ -28,6 +28,7 @@ const mockPublicSubmitIdempotencyCreate = vi.fn();
 const mockPublicSubmitIdempotencyFindUnique = vi.fn();
 const mockPublicSubmitIdempotencyUpdate = vi.fn();
 const mockTestimonialCreate = vi.fn();
+const mockCollectionFormSubmissionFindFirst = vi.fn();
 const mockCollectionFormSubmissionCreate = vi.fn();
 const mockCollectionFormSubmissionGroupBy = vi.fn();
 const mockProjectAnalyticsDailyUpsert = vi.fn();
@@ -66,6 +67,7 @@ const prismaMock = {
       create: mockTestimonialCreate,
     },
     collectionFormSubmission: {
+      findFirst: mockCollectionFormSubmissionFindFirst,
       create: mockCollectionFormSubmissionCreate,
       groupBy: mockCollectionFormSubmissionGroupBy,
     },
@@ -214,6 +216,7 @@ describe("FormsService", () => {
     );
     mockProjectAnalyticsDailyUpsert.mockResolvedValue({ id: "daily_1" });
     mockFormImpressionCreate.mockResolvedValue({ id: "impression_1" });
+    mockCollectionFormSubmissionFindFirst.mockResolvedValue(null);
     mockCollectionFormSubmissionGroupBy.mockResolvedValue([]);
     mockFormImpressionGroupBy.mockResolvedValue([]);
   });
@@ -1163,5 +1166,197 @@ describe("FormsService", () => {
         },
       ),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it("submitPublic rejects exact duplicate form responses within the recent duplicate window", async () => {
+    const rawBody = JSON.stringify({ authorName: "Ada", content: "Loved it" });
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "origin",
+      principal: "198.51.100.10",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+    });
+    mockCollectionFormSubmissionFindFirst.mockResolvedValue({
+      id: "submission_existing",
+      createdAt: new Date("2026-05-31T12:00:00.000Z"),
+    });
+
+    const service = makeService();
+
+    await expect(
+      service.submitPublic(
+        { slug: "acme", formId: "form_1" },
+        { authorName: "Ada", content: "Loved it" },
+        {
+          headers: {},
+          rawBody,
+        },
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockCollectionFormSubmissionFindFirst).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        formId: "form_1",
+        payloadHash: hashIdempotencyPayload(rawBody),
+        createdAt: { gte: expect.any(Date) },
+      },
+      select: { id: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(mockTestimonialCreate).not.toHaveBeenCalled();
+    expect(mockCollectionFormSubmissionCreate).not.toHaveBeenCalled();
+  });
+
+  it("submitPublic flags spammy submissions instead of auto-approving them", async () => {
+    const rawBody = JSON.stringify({
+      authorName: "Ada",
+      content:
+        "Buy now visit https://one.example https://two.example https://three.example",
+    });
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "hmac",
+      principal: "project:project_1",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+    });
+    mockTestimonialCreate.mockResolvedValue(
+      makeTestimonial({
+        moderationStatus: ModerationStatus.FLAGGED,
+        isApproved: false,
+        autoPublished: false,
+        moderationScore: 0.9,
+        moderationFlags: ["spam_links", "spam_terms"],
+      }),
+    );
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
+
+    const service = makeService();
+    const result = await service.submitPublic(
+      { slug: "acme", formId: "form_1" },
+      {
+        authorName: "Ada",
+        content:
+          "Buy now visit https://one.example https://two.example https://three.example",
+      },
+      {
+        headers: {},
+        rawBody,
+      },
+    );
+
+    expect(mockTestimonialCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          moderationStatus: ModerationStatus.FLAGGED,
+          isApproved: false,
+          autoPublished: false,
+          moderationScore: expect.any(Number),
+          moderationFlags: expect.arrayContaining(["spam_links", "spam_terms"]),
+        }),
+      }),
+    );
+    expect(mockCollectionFormSubmissionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        moderationStatus: ModerationStatus.FLAGGED,
+        moderationReason: expect.stringContaining("spam"),
+        metadata: expect.objectContaining({
+          qualityGate: expect.objectContaining({
+            action: "flag",
+            flags: expect.arrayContaining(["spam_links", "spam_terms"]),
+          }),
+        }),
+      }),
+    });
+    expect(result).toMatchObject({
+      moderationStatus: ModerationStatus.FLAGGED,
+      autoPublished: false,
+    });
+  });
+
+  it("submitPublic flags deceptive or abusive submissions for review", async () => {
+    const rawBody = JSON.stringify({
+      authorName: "Reviewer",
+      content: "I was paid to write this fake review. You should die.",
+    });
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "hmac",
+      principal: "project:project_1",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+    });
+    mockTestimonialCreate.mockResolvedValue(
+      makeTestimonial({
+        moderationStatus: ModerationStatus.FLAGGED,
+        isApproved: false,
+        autoPublished: false,
+        moderationScore: 1,
+        moderationFlags: ["deceptive_review", "abusive_language"],
+      }),
+    );
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
+
+    const service = makeService();
+    await service.submitPublic(
+      { slug: "acme", formId: "form_1" },
+      {
+        authorName: "Reviewer",
+        content: "I was paid to write this fake review. You should die.",
+      },
+      {
+        headers: {},
+        rawBody,
+      },
+    );
+
+    expect(mockTestimonialCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          moderationStatus: ModerationStatus.FLAGGED,
+          isApproved: false,
+          autoPublished: false,
+          moderationFlags: expect.arrayContaining([
+            "deceptive_review",
+            "abusive_language",
+          ]),
+        }),
+      }),
+    );
+    expect(mockCollectionFormSubmissionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        moderationStatus: ModerationStatus.FLAGGED,
+        moderationReason: expect.stringContaining("deceptive_review"),
+        metadata: expect.objectContaining({
+          qualityGate: expect.objectContaining({
+            action: "flag",
+            flags: expect.arrayContaining([
+              "deceptive_review",
+              "abusive_language",
+            ]),
+          }),
+        }),
+      }),
+    });
   });
 });
