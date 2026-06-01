@@ -11,6 +11,7 @@ import {
   StudioColorInput,
   Pills,
 } from "./studio-primitives";
+import type { LabelCasing } from "@/lib/collect/studio-types";
 
 /* ─── Typography section ──────────────────────────────────────────────────── */
 
@@ -68,6 +69,24 @@ export function TypographySection() {
           step={100}
         />
       </Row>
+      <Row label="Body weight" hint={String(t.weightBody)}>
+        <StudioNumberInput
+          value={t.weightBody}
+          onChange={(v) => setTok("weightBody", v)}
+          min={100}
+          max={700}
+          step={100}
+        />
+      </Row>
+      <Row label="Line height" hint={t.bodyLineHeight.toFixed(2)}>
+        <StudioNumberInput
+          value={t.bodyLineHeight}
+          onChange={(v) => setTok("bodyLineHeight", v)}
+          min={1.2}
+          max={2}
+          step={0.05}
+        />
+      </Row>
       <Row label="Tracking" hint={`${t.trackingHead.toFixed(2)}em`}>
         <StudioNumberInput
           value={t.trackingHead}
@@ -76,6 +95,16 @@ export function TypographySection() {
           max={0.06}
           step={0.01}
           suffix="em"
+        />
+      </Row>
+      <Row label="Field labels">
+        <Pills<LabelCasing>
+          options={[
+            { value: "none", label: "Normal" },
+            { value: "uppercase", label: "Uppercase" },
+          ]}
+          value={t.labelCasing}
+          onChange={(v) => setTok("labelCasing", v)}
         />
       </Row>
     </SectionCollapsible>

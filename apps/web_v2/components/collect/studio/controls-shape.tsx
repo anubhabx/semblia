@@ -4,6 +4,7 @@ import { useStudioDraft } from "@/lib/collect/studio-draft-context";
 import type {
   DesignTokens,
   FieldShape,
+  FocusRing,
   TokenDensity,
   TokenButtonStyle,
   TokenShadow,
@@ -47,6 +48,25 @@ export function ShapeSection() {
           onChange={(v) => setTok("fieldShape", v)}
         />
       </Row>
+      <Row label="Field border" hint={`${t.fieldBorderWidth}px`}>
+        <StudioNumberInput
+          value={t.fieldBorderWidth}
+          onChange={(v) => setTok("fieldBorderWidth", v)}
+          min={0}
+          max={4}
+        />
+      </Row>
+      <Row label="Focus ring">
+        <Pills<FocusRing>
+          options={[
+            { value: "ring", label: "Ring" },
+            { value: "underline", label: "Border" },
+            { value: "none", label: "None" },
+          ]}
+          value={t.focusRing}
+          onChange={(v) => setTok("focusRing", v)}
+        />
+      </Row>
       <Row label="Density">
         <Pills<TokenDensity>
           options={[
@@ -78,6 +98,7 @@ export function ShapeSection() {
             { value: "sm", label: "Sm" },
             { value: "soft", label: "Soft" },
             { value: "hard", label: "Hard" },
+            { value: "glow", label: "Glow" },
           ]}
           value={t.shadow}
           onChange={(v) => setTok("shadow", v)}

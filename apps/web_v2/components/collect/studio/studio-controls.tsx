@@ -10,6 +10,12 @@ import { BrandLogo } from "@/components/brand/brand-logo";
 import { HouseStylesSection } from "./controls-style-presets";
 import { TypographySection, ColorSection } from "./controls-design";
 import { ShapeSection } from "./controls-shape";
+import { ContentSection } from "./controls-content";
+import { QuestionsSection } from "./controls-questions";
+import { FlowSection } from "./controls-flow";
+import { LogoSection } from "./controls-logo";
+import { LoaderSection } from "./controls-loader";
+import { SuccessSection } from "./controls-success";
 
 /* ─── Main controls panel ─────────────────────────────────────────────────── */
 
@@ -70,10 +76,16 @@ export const StudioControls = React.memo(function StudioControls() {
 
       <div className="pb-1.5" />
 
+      <ContentSection />
+      <QuestionsSection />
+      <FlowSection />
+      <LogoSection />
       <HouseStylesSection />
       <TypographySection />
       <ColorSection />
       <ShapeSection />
+      <LoaderSection />
+      <SuccessSection />
 
       <div className="h-15" />
     </div>

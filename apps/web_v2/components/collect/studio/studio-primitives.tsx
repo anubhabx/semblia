@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 /* ─── Shared small primitives ─────────────────────────────────────────────── */
 
@@ -206,6 +208,60 @@ export function StudioNumberInput({
         )}
       </div>
     </div>
+  );
+}
+
+export function StudioTextarea({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <Textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className="min-h-0 resize-none text-[12.5px] leading-relaxed"
+    />
+  );
+}
+
+/**
+ * A labelled on/off row. `hint` reads as a quiet sub-line under the label so
+ * toggles can explain themselves without a separate tooltip.
+ */
+export function StudioToggle({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="mb-3.5 flex cursor-pointer items-center justify-between gap-3">
+      <span className="min-w-0">
+        <span className="block text-[12.5px] font-medium text-foreground">
+          {label}
+        </span>
+        {hint && (
+          <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+            {hint}
+          </span>
+        )}
+      </span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
   );
 }
 
