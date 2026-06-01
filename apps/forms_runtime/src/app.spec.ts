@@ -24,6 +24,13 @@ describe("createFormsRuntimeApp", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("s-maxage=60");
+    expect(response.headers.get("content-security-policy")).toContain(
+      "default-src 'none'",
+    );
+    expect(response.headers.get("strict-transport-security")).toContain(
+      "max-age=31536000",
+    );
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(html).toContain("Acme Launchpad");
     expect(html).toContain("How was your experience?");
   });

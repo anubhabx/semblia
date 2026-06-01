@@ -34,6 +34,8 @@ const mockCollectionFormSubmissionGroupBy = vi.fn();
 const mockProjectAnalyticsDailyUpsert = vi.fn();
 const mockFormImpressionCreate = vi.fn();
 const mockFormImpressionGroupBy = vi.fn();
+const mockStudioDraftFindUnique = vi.fn();
+const mockStudioDraftUpdateMany = vi.fn();
 const mockTransaction = vi.fn();
 const mockRedisGet = vi.fn();
 const mockRedisSet = vi.fn();
@@ -82,6 +84,10 @@ const prismaMock = {
       create: mockPublicSubmitIdempotencyCreate,
       findUnique: mockPublicSubmitIdempotencyFindUnique,
       update: mockPublicSubmitIdempotencyUpdate,
+    },
+    studioDraft: {
+      findUnique: mockStudioDraftFindUnique,
+      updateMany: mockStudioDraftUpdateMany,
     },
   },
 } as unknown as PrismaService;
@@ -212,13 +218,16 @@ describe("FormsService", () => {
     mockTransaction.mockImplementation(
       async (
         input: ((tx: unknown) => Promise<unknown>) | Array<Promise<unknown>>,
-      ) => (Array.isArray(input) ? Promise.all(input) : input(prismaMock.client)),
+      ) =>
+        Array.isArray(input) ? Promise.all(input) : input(prismaMock.client),
     );
     mockProjectAnalyticsDailyUpsert.mockResolvedValue({ id: "daily_1" });
     mockFormImpressionCreate.mockResolvedValue({ id: "impression_1" });
     mockCollectionFormSubmissionFindFirst.mockResolvedValue(null);
     mockCollectionFormSubmissionGroupBy.mockResolvedValue([]);
     mockFormImpressionGroupBy.mockResolvedValue([]);
+    mockStudioDraftFindUnique.mockResolvedValue(null);
+    mockStudioDraftUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   it("list returns forms for the project ordered by createdAt asc", async () => {
@@ -554,6 +563,55 @@ describe("FormsService", () => {
     expect(result.version).toBe(2);
   });
 
+  it("publishDraft promotes the saved Studio draft into the live hosted form config", async () => {
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockStudioDraftFindUnique.mockResolvedValue({
+      resourceType: StudioDraftResourceType.FORM,
+      resourceId: "form_1",
+      version: 2,
+      publishedVersion: null,
+      draft: { brandName: "Acme", headline: "Live headline", tokens: {} },
+      updatedByUserId: "user_1",
+      updatedAt: new Date("2026-05-02T00:01:00.000Z"),
+    });
+    mockCollectionFormUpdate.mockResolvedValue(
+      makeForm({
+        isActive: true,
+        config: { brandName: "Acme", headline: "Live headline", tokens: {} },
+      }),
+    );
+
+    const service = makeService();
+    const result = await service.publishDraft(
+      { slug: "acme", formId: "form_1" },
+      { expectedVersion: 2 },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(mockCollectionFormUpdate).toHaveBeenCalledWith({
+      where: { id: "form_1" },
+      data: {
+        config: { brandName: "Acme", headline: "Live headline", tokens: {} },
+      },
+      select: expect.any(Object),
+    });
+    expect(mockStudioDraftUpdateMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        resourceType: StudioDraftResourceType.FORM,
+        resourceId: "form_1",
+        version: 2,
+      },
+      data: { publishedVersion: 2 },
+    });
+    expect(mockRedisDel).toHaveBeenCalledWith("v2:forms:public:acme");
+    expect(result.config).toEqual({
+      brandName: "Acme",
+      headline: "Live headline",
+      tokens: {},
+    });
+  });
+
   it("listPublic returns only active forms with safe projection", async () => {
     mockRedisGet.mockResolvedValue(null);
     mockProjectFindUnique.mockResolvedValue({ id: "project_1" });
@@ -866,6 +924,104 @@ describe("FormsService", () => {
         trustMode: PublicSubmitTrustMode.ORIGIN,
       }),
     });
+  });
+
+  it("resolveRuntimeForm uses active custom host records without default-host fallback", async () => {
+    mockPublicSurfaceHostFindFirst.mockResolvedValue({
+      resourceType: "FORM",
+      resourceId: "form_custom",
+      project: {
+        id: "project_1",
+        slug: "acme",
+        name: "Acme",
+        brandColorPrimary: "#0f766e",
+        autoModeration: true,
+        autoApproveVerified: true,
+      },
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(
+      makeForm({ id: "form_custom", isActive: true }),
+    );
+
+    const service = makeService();
+    const result = await service.resolveRuntimeForm(
+      {
+        projectPublicSlug: "feedback",
+        formSlug: null,
+        path: "/",
+      },
+      {
+        headers: {
+          "x-tresta-original-host": "feedback.customer.example",
+        },
+        ip: "198.51.100.20",
+      },
+    );
+
+    expect(mockProjectFindFirst).not.toHaveBeenCalled();
+    expect(mockPublicSurfaceHostFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          hostname: "feedback.customer.example",
+          status: "ACTIVE",
+          feature: "COLLECTION",
+        }),
+      }),
+    );
+    expect(result.project.publicSlug).toBe("acme");
+    expect(result.form.id).toBe("form_custom");
+  });
+
+  it("submitRuntimeForm drops unsafe cross-origin redirect targets", async () => {
+    mockPublicSurfaceHostFindFirst.mockResolvedValue(null);
+    mockProjectFindFirst.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+      autoModeration: true,
+      autoApproveVerified: false,
+    });
+    mockCollectionFormFindFirst.mockResolvedValueOnce(
+      makeForm({
+        isActive: true,
+        config: {
+          content: {
+            successAction: {
+              kind: "redirect",
+              url: "https://evil.example/phish",
+            },
+          },
+        },
+      }),
+    );
+    mockTestimonialCreate.mockResolvedValue(
+      makeTestimonial({ moderationStatus: ModerationStatus.PENDING }),
+    );
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
+
+    const service = makeService();
+    const result = await service.submitRuntimeForm(
+      {
+        context: { projectPublicSlug: "acme", formSlug: null, path: "/" },
+        contentType: "application/x-www-form-urlencoded",
+        body: [
+          "answers%5BauthorName%5D=Ada",
+          "answers%5Bcontent%5D=Great",
+          "answers%5Brating%5D=5",
+        ].join("&"),
+      },
+      {
+        headers: {
+          "x-tresta-original-host": "acme.collect.tresta.app",
+        },
+      },
+    );
+
+    expect(result).toEqual({ redirectTo: null });
   });
 
   it("submitPublic persists answers in a canonical submission and projects a testimonial", async () => {

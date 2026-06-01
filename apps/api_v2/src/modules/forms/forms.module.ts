@@ -12,6 +12,7 @@ import {
   RuntimeFormsController,
 } from "./forms.controller.js";
 import { FormsRuntimeSignatureService } from "./forms-runtime-signature.service.js";
+import { FormsRuntimeThrottlerGuard } from "./forms-runtime-throttler.guard.js";
 import { FormsService } from "./forms.service.js";
 
 @Module({
@@ -25,6 +26,10 @@ import { FormsService } from "./forms.service.js";
     StorageModule,
   ],
   controllers: [FormsController, PublicFormsController, RuntimeFormsController],
-  providers: [FormsService, FormsRuntimeSignatureService],
+  providers: [
+    FormsService,
+    FormsRuntimeSignatureService,
+    FormsRuntimeThrottlerGuard,
+  ],
 })
 export class FormsModule {}

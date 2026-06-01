@@ -7,6 +7,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   MemberRole,
   MediaAssetPurpose,
@@ -172,6 +173,9 @@ export class ProjectsService {
     @Optional()
     @Inject(EmailDeliveryService)
     private readonly emailDeliveryService?: EmailDeliveryService,
+    @Optional()
+    @Inject(ConfigService)
+    private readonly configService?: ConfigService,
   ) {}
 
   async list(
@@ -1179,6 +1183,7 @@ export class ProjectsService {
     slug: string,
   ) {
     const verifiedAt = new Date();
+    const formsRuntimeBaseDomain = this.getFormsRuntimeBaseDomain();
 
     return tx.publicSurfaceHost.createMany({
       data: [
@@ -1195,7 +1200,7 @@ export class ProjectsService {
           projectId,
           feature: "COLLECTION",
           resourceType: "PROJECT",
-          hostname: `${slug}.collect.tresta.app`,
+          hostname: `${slug}.${formsRuntimeBaseDomain}`,
           isDefault: true,
           status: "ACTIVE",
           verifiedAt,
@@ -1212,6 +1217,15 @@ export class ProjectsService {
       ],
       skipDuplicates: true,
     });
+  }
+
+  private getFormsRuntimeBaseDomain() {
+    return (
+      this.configService?.get<string>("FORMS_RUNTIME_PUBLIC_BASE_DOMAIN") ??
+      "collect.tresta.app"
+    )
+      .trim()
+      .toLowerCase();
   }
 
   private buildProjectCreateData(

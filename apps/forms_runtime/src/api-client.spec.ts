@@ -7,6 +7,7 @@ const apiEnv: FormsRuntimeEnv = {
   FORMS_RUNTIME_API_BASE_URL: "https://api.tresta.test/v2",
   FORMS_RUNTIME_SIGNING_SECRET: "s".repeat(32),
   FORMS_RUNTIME_PUBLIC_BASE_DOMAIN: "collect.tresta.test",
+  FORMS_RUNTIME_API_TIMEOUT_MS: 2500,
   PORT: 3007,
 };
 
@@ -73,6 +74,7 @@ describe("runtimeApiPost", () => {
       expect.objectContaining({
         method: "POST",
         body: '{"formId":"form_123"}',
+        signal: expect.any(AbortSignal),
       }),
     );
 
