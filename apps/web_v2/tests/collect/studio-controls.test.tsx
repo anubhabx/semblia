@@ -208,9 +208,7 @@ describe("<StudioControls /> — preset cards", () => {
 describe("<StudioControls /> — form builder surfaces", () => {
   it("renders the question builder add-control", async () => {
     await renderControls();
-    expect(
-      screen.getByRole("button", { name: /Add question/ }),
-    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Add question/ })).not.toBeNull();
   });
 
   it("renders content fields for the form copy", async () => {
