@@ -40,6 +40,29 @@ const RUNTIME_CSS = `
 .tfp-brand img { height:1.4rem; width:auto; display:block; object-fit:contain; }
 .tfp-headline { margin:0; font-family:var(--f-font-head); font-size:calc(var(--f-size-head) * 0.8); font-weight:var(--f-weight-head); letter-spacing:var(--f-tracking-head); line-height:1.1; color:var(--f-ink); }
 .tfp-subhead { margin:0; font-size:var(--f-size-base); line-height:var(--f-body-line-height); color:var(--f-ink-soft); }
+/* layout: stage + containers (boxed / centered / fullbleed / split) */
+.tfp-stage { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding: var(--f-container-pad-y) var(--f-container-pad-x); gap:1rem; }
+.tfp-stage[data-container="fullbleed"], .tfp-stage[data-container="split"] { padding:0; align-items:stretch; }
+.tfp-flow { display:flex; flex-direction:column; gap:var(--f-gap); width:100%; }
+.tfp-bare { width:100%; max-width: min(100%, var(--tfp-col-w, 560px)); margin:0 auto; display:flex; flex-direction:column; gap:var(--f-gap); }
+.tfp-stage[data-container="centered"] .tfp-bare { --tfp-col-w: 460px; }
+.tfp-stage[data-container="fullbleed"] .tfp-bare { --tfp-col-w: 760px; padding: var(--f-container-pad-y) var(--f-container-pad-x); }
+.tfp-hero { display:flex; flex-direction:column; gap:var(--f-gap); }
+.tfp-hero--feature .tfp-headline { font-size:var(--f-size-head); }
+/* split: two-pane — hero panel + form panel, stacks when narrow */
+.tfp-split { display:flex; flex-wrap:wrap; min-height:100%; width:100%; align-items:stretch; }
+.tfp-split-hero { flex:1 1 280px; background:var(--f-surface); border-right:1px solid var(--f-line-50); display:flex; align-items:center; padding: var(--f-container-pad-y) var(--f-container-pad-x); }
+.tfp-split-form { flex:1.4 1 320px; display:flex; align-items:flex-start; justify-content:center; padding: var(--f-container-pad-y) var(--f-container-pad-x); }
+.tfp-split-form .tfp-flow { max-width:440px; }
+/* hero beside the form (side) */
+.tfp-aside { display:flex; flex-wrap:wrap; gap: var(--f-container-pad-x); width:100%; max-width:880px; margin:0 auto; align-items:flex-start; }
+.tfp-aside[data-wide] { max-width:1040px; }
+.tfp-aside-hero { flex:1 1 220px; }
+.tfp-aside > .tfp-card, .tfp-aside > .tfp-bare { flex:2 1 340px; max-width:none; margin:0; }
+/* floating hero above the form shell */
+.tfp-stack { display:flex; flex-direction:column; gap:calc(var(--f-gap) * 1.1); width:100%; max-width: var(--tfp-col-w, 560px); margin:0 auto; }
+.tfp-stack[data-wide] { max-width:760px; }
+.tfp-stack > .tfp-card, .tfp-stack > .tfp-bare { margin:0; max-width:none; }
 .tfp-field { display:flex; flex-direction:column; gap:var(--f-label-gap); }
 .tfp-label { font-size:var(--f-size-sm); font-weight:600; color:var(--f-ink); text-transform:var(--f-label-casing); letter-spacing:var(--f-label-tracking); }
 .tfp-req { color:var(--f-accent); margin-left:.15rem; }
@@ -297,15 +320,19 @@ function FieldBlock({
   );
 }
 
-/* ─── Form header (brand + headline + subhead) ────────────────────────────── */
+/* ─── Hero block (brand + headline + subhead) ─────────────────────────────── */
 
-function FormHeader({ draft }: { draft: FormConfig }) {
+function HeroBlock({
+  draft,
+  feature,
+}: {
+  draft: FormConfig;
+  feature?: boolean;
+}) {
   const brandName =
     draft.brandName.trim() || draft.tokens.brandName.trim() || "Your brand";
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: "var(--f-gap)" }}
-    >
+    <div className={feature ? "tfp-hero tfp-hero--feature" : "tfp-hero"}>
       {draft.layout.showBrandPill && (
         <span className="tfp-brand">
           {draft.logoUrl && <img src={draft.logoUrl} alt="" />}
@@ -318,9 +345,9 @@ function FormHeader({ draft }: { draft: FormConfig }) {
   );
 }
 
-/* ─── Form screen (single-page or stepped) ────────────────────────────────── */
+/* ─── Form body (fields + actions; single-page or stepped) ────────────────── */
 
-export function FormScreen({
+function FormBody({
   draft,
   flow,
   onSubmit,
@@ -345,8 +372,7 @@ export function FormScreen({
 
   if (flow === "all" || visible.length <= 1) {
     return (
-      <div className="tfp-card studio-shell-card">
-        <FormHeader draft={draft} />
+      <>
         {visible.map((q) => (
           <FieldBlock
             key={q.id}
@@ -360,7 +386,7 @@ export function FormScreen({
             {draft.submitLabel || "Submit"}
           </button>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -369,8 +395,7 @@ export function FormScreen({
   const progress = ((clampedStep + 1) / visible.length) * 100;
 
   return (
-    <div className="tfp-card studio-shell-card">
-      {clampedStep === 0 && <FormHeader draft={draft} />}
+    <>
       <div style={{ display: "flex", flexDirection: "column", gap: ".5rem" }}>
         <div className="tfp-progress-track">
           <div
@@ -407,6 +432,84 @@ export function FormScreen({
           {isLast ? draft.submitLabel || "Submit" : "Next"}
         </button>
       </div>
+    </>
+  );
+}
+
+/* ─── Form layout (container × hero placement) ────────────────────────────── */
+
+export function FormScreen({
+  draft,
+  flow,
+  onSubmit,
+}: {
+  draft: FormConfig;
+  flow: "all" | "stepped";
+  onSubmit: () => void;
+}) {
+  const { container, hero } = draft.layout;
+  const showHero = hero !== "none";
+  const body = <FormBody draft={draft} flow={flow} onSubmit={onSubmit} />;
+
+  // Two-pane split — hero lives in its own panel beside the form.
+  if (container === "split" && showHero) {
+    return (
+      <div className="tfp-stage" data-container="split">
+        <div className="tfp-split studio-shell-card">
+          <div className="tfp-split-hero">
+            <HeroBlock draft={draft} feature />
+          </div>
+          <div className="tfp-split-form">
+            <div className="tfp-flow">{body}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Split with no hero collapses to a single full-bleed column.
+  const effContainer = container === "split" ? "fullbleed" : container;
+  const wide = effContainer === "fullbleed";
+  const shellClass =
+    effContainer === "boxed"
+      ? "tfp-card studio-shell-card"
+      : "tfp-bare studio-shell-card";
+
+  // Hero beside the form (side).
+  if (hero === "side") {
+    return (
+      <div className="tfp-stage" data-container={effContainer}>
+        <div className="tfp-aside" data-wide={wide ? "" : undefined}>
+          <div className="tfp-aside-hero">
+            <HeroBlock draft={draft} feature />
+          </div>
+          <div className={shellClass}>{body}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Floating hero above the form shell.
+  if (hero === "floating") {
+    return (
+      <div className="tfp-stage" data-container={effContainer}>
+        <div className="tfp-stack" data-wide={wide ? "" : undefined}>
+          <div className="tfp-float-hero">
+            <HeroBlock draft={draft} feature />
+          </div>
+          <div className={shellClass}>{body}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Hero on top (inside the shell) or no hero at all.
+  return (
+    <div className="tfp-stage" data-container={effContainer}>
+      <div className={shellClass} data-wide={wide ? "" : undefined}>
+        {showHero && <HeroBlock draft={draft} />}
+        {body}
+      </div>
     </div>
   );
 }
@@ -416,13 +519,19 @@ export function FormScreen({
 export function LoaderScreen({ draft }: { draft: FormConfig }) {
   const { loader, logoUrl } = draft;
   const tint = loader.tint === "ink" ? "var(--f-ink)" : "var(--f-accent)";
-  const hasLogo = loader.useLogo && Boolean(logoUrl);
+  // `useLogo` is the master switch: when on (and a logo exists) the loader
+  // shows the brand mark, animated as a draw or pulse. The abstract styles are
+  // used only when the logo is off or unavailable.
+  const wantsLogo = loader.useLogo && Boolean(logoUrl);
 
   let visual: React.ReactNode;
-  if (loader.style === "logo-pulse" && hasLogo) {
-    visual = <img className="tfp-logo-pulse" src={logoUrl!} alt="" />;
-  } else if (loader.style === "logo-draw" && hasLogo) {
-    visual = <img className="tfp-logo-draw" src={logoUrl!} alt="" />;
+  if (wantsLogo) {
+    visual =
+      loader.style === "logo-draw" ? (
+        <img className="tfp-logo-draw" src={logoUrl!} alt="" />
+      ) : (
+        <img className="tfp-logo-pulse" src={logoUrl!} alt="" />
+      );
   } else if (loader.style === "spinner") {
     visual = <span className="tfp-spinner" />;
   } else if (loader.style === "dots") {
@@ -576,14 +685,7 @@ export function FormPreviewRuntime({
       ) : screen === "success" ? (
         <SuccessScreen draft={draft} />
       ) : (
-        <div className="tfp-center" style={{ justifyContent: "flex-start" }}>
-          <FormScreen
-            key={flow}
-            draft={draft}
-            flow={flow}
-            onSubmit={onSubmit}
-          />
-        </div>
+        <FormScreen key={flow} draft={draft} flow={flow} onSubmit={onSubmit} />
       )}
     </div>
   );

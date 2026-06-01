@@ -48,7 +48,13 @@ export function LoaderSection() {
                   key={s.value}
                   type="button"
                   onClick={() => {
-                    setLoader({ style: s.value });
+                    // Selecting a logo style implies "show my logo" so the
+                    // preview reflects the choice immediately.
+                    setLoader(
+                      s.value.startsWith("logo-")
+                        ? { style: s.value, useLogo: true }
+                        : { style: s.value },
+                    );
                     setScreen("loader");
                   }}
                   className={cn(

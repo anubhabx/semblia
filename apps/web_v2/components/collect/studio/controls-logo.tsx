@@ -50,11 +50,34 @@ export function LogoSection() {
       />
       <StudioToggle
         label="Use logo on the loading screen"
+        hint={
+          draft.logoUrl
+            ? "Animate your logo while the form loads."
+            : "Upload a logo above to enable this."
+        }
         checked={draft.loader.useLogo}
-        onChange={(v) => setLoader({ useLogo: v })}
+        onChange={(v) =>
+          setLoader(
+            v
+              ? {
+                  useLogo: true,
+                  // Pair the toggle with a logo loader style so the loading
+                  // screen actually swaps to the mark.
+                  style: draft.loader.style.startsWith("logo-")
+                    ? draft.loader.style
+                    : "logo-pulse",
+                }
+              : { useLogo: false },
+          )
+        }
       />
       <StudioToggle
         label="Use logo on the success screen"
+        hint={
+          draft.logoUrl
+            ? "Show your logo above the thank-you message."
+            : "Upload a logo above to enable this."
+        }
         checked={draft.success.useLogo}
         onChange={(v) => setSuccess({ useLogo: v })}
       />
