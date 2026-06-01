@@ -96,6 +96,16 @@ export function validateApiV2Env(config: Record<string, unknown>): ApiV2Env {
       );
     }
 
+    const missingFormsRuntimeVars = ["FORMS_RUNTIME_SIGNING_SECRET"].filter(
+      (key) => !String(parsed[key as keyof ApiV2Env] ?? "").trim(),
+    );
+
+    if (missingFormsRuntimeVars.length > 0) {
+      throw new Error(
+        `Missing required production forms runtime env vars: ${missingFormsRuntimeVars.join(", ")}`,
+      );
+    }
+
     if (parsed.EMAIL_ENABLED) {
       const missingEmailVars = [
         "RESEND_API_KEY",

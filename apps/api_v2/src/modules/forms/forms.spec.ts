@@ -15,6 +15,7 @@ import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { REQUIRED_CAPABILITIES_KEY } from "../../common/authz/require-capability.decorator.js";
 import { IS_PUBLIC_KEY } from "../../common/decorators/public.decorator.js";
 import { PublicSubmitThrottlerGuard } from "../testimonials/public-submit-throttler.guard.js";
+import { FormsRuntimeThrottlerGuard } from "./forms-runtime-throttler.guard.js";
 import {
   FormsController,
   PublicFormsController,
@@ -236,6 +237,24 @@ describe("FormsController", () => {
         FormsController.prototype.saveDraft,
       ),
     ).toEqual([Capability.MANAGE_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        FormsController.prototype.publishDraft,
+      ),
+    ).toBe(":formId/draft/publish");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        FormsController.prototype.publishDraft,
+      ),
+    ).toBe(RequestMethod.PUT);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        FormsController.prototype.publishDraft,
+      ),
+    ).toEqual([Capability.MANAGE_PROJECT]);
   });
 
   it("declares DELETE /projects/:slug/forms/:formId with manage-project capability", () => {
@@ -361,7 +380,10 @@ describe("RuntimeFormsController", () => {
       "runtime/forms",
     );
     expect(
-      Reflect.getMetadata(PATH_METADATA, RuntimeFormsController.prototype.resolve),
+      Reflect.getMetadata(
+        PATH_METADATA,
+        RuntimeFormsController.prototype.resolve,
+      ),
     ).toBe("resolve");
     expect(
       Reflect.getMetadata(
@@ -370,11 +392,29 @@ describe("RuntimeFormsController", () => {
       ),
     ).toBe(RequestMethod.POST);
     expect(
-      Reflect.getMetadata(IS_PUBLIC_KEY, RuntimeFormsController.prototype.resolve),
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        RuntimeFormsController.prototype.resolve,
+      ),
     ).toBe(true);
+    expect(
+      Reflect.getMetadata(
+        GUARDS_METADATA,
+        RuntimeFormsController.prototype.resolve,
+      ),
+    ).toEqual([FormsRuntimeThrottlerGuard]);
+    expect(
+      Reflect.getMetadata(
+        THROTTLER_LIMIT + "forms-runtime-resolve",
+        RuntimeFormsController.prototype.resolve,
+      ),
+    ).toBe(240);
 
     expect(
-      Reflect.getMetadata(PATH_METADATA, RuntimeFormsController.prototype.submit),
+      Reflect.getMetadata(
+        PATH_METADATA,
+        RuntimeFormsController.prototype.submit,
+      ),
     ).toBe("submit");
     expect(
       Reflect.getMetadata(
@@ -383,8 +423,23 @@ describe("RuntimeFormsController", () => {
       ),
     ).toBe(RequestMethod.POST);
     expect(
-      Reflect.getMetadata(IS_PUBLIC_KEY, RuntimeFormsController.prototype.submit),
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        RuntimeFormsController.prototype.submit,
+      ),
     ).toBe(true);
+    expect(
+      Reflect.getMetadata(
+        GUARDS_METADATA,
+        RuntimeFormsController.prototype.submit,
+      ),
+    ).toEqual([FormsRuntimeThrottlerGuard]);
+    expect(
+      Reflect.getMetadata(
+        THROTTLER_LIMIT + "forms-runtime-submit",
+        RuntimeFormsController.prototype.submit,
+      ),
+    ).toBe(30);
   });
 
   it("verifies runtime signatures before delegating to the forms service", () => {

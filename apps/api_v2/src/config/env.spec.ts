@@ -48,6 +48,22 @@ describe("validateApiV2Env", () => {
     );
   });
 
+  it("requires forms runtime signing in production", () => {
+    expect(() =>
+      validateApiV2Env({
+        ...productionBaseEnv,
+        RAZORPAY_KEY_ID: "rzp_test_key",
+        RAZORPAY_KEY_SECRET: "rzp_test_secret",
+        RAZORPAY_WEBHOOK_SECRET: "rzp_webhook_secret",
+        ADMIN_CLERK_SECRET_KEY: "sk_admin",
+        ADMIN_CLERK_PUBLISHABLE_KEY: "pk_admin",
+        ADMIN_CLERK_AUTHORIZED_PARTIES: "https://admin.tresta.app",
+      }),
+    ).toThrow(
+      "Missing required production forms runtime env vars: FORMS_RUNTIME_SIGNING_SECRET",
+    );
+  });
+
   it("requires Resend email configuration in production when email sending is enabled", () => {
     expect(() =>
       validateApiV2Env({
@@ -58,6 +74,7 @@ describe("validateApiV2Env", () => {
         ADMIN_CLERK_SECRET_KEY: "sk_admin",
         ADMIN_CLERK_PUBLISHABLE_KEY: "pk_admin",
         ADMIN_CLERK_AUTHORIZED_PARTIES: "https://admin.tresta.app",
+        FORMS_RUNTIME_SIGNING_SECRET: "s".repeat(32),
         EMAIL_ENABLED: true,
         RESEND_API_KEY: "re_test",
       }),

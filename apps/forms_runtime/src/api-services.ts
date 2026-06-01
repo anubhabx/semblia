@@ -6,6 +6,18 @@ import type {
   HostedFormResolveResult,
 } from "./types.js";
 
+function toApiContext(context: {
+  projectPublicSlug: string;
+  formSlug: string | null;
+  path: string;
+}) {
+  return {
+    projectPublicSlug: context.projectPublicSlug,
+    formSlug: context.formSlug,
+    path: context.path,
+  };
+}
+
 function runtimeForwardHeaders(
   metadata: HostedFormRequestMetadata | undefined,
 ): Record<string, string> {
@@ -27,9 +39,9 @@ export function createApiRuntimeServices(
       return runtimeApiPost<HostedFormResolveResult>(
         env,
         "/runtime/forms/resolve",
-        context,
+        toApiContext(context),
         {
-          "x-tresta-original-host": `${context.projectPublicSlug}.${env.FORMS_RUNTIME_PUBLIC_BASE_DOMAIN}`,
+          "x-tresta-original-host": context.host,
           "x-tresta-original-path": context.path,
           ...runtimeForwardHeaders(metadata),
         },
@@ -39,9 +51,13 @@ export function createApiRuntimeServices(
       return runtimeApiPost<{ redirectTo: string | null }>(
         env,
         "/runtime/forms/submit",
-        input,
         {
-          "x-tresta-original-host": `${input.context.projectPublicSlug}.${env.FORMS_RUNTIME_PUBLIC_BASE_DOMAIN}`,
+          context: toApiContext(input.context),
+          contentType: input.contentType,
+          body: input.body,
+        },
+        {
+          "x-tresta-original-host": input.context.host,
           "x-tresta-original-path": input.context.path,
           ...runtimeForwardHeaders(input.metadata),
         },

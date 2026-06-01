@@ -26,6 +26,7 @@ import {
   formParamsSchema,
   hostedFormRequestContextSchema,
   projectFormsParamsSchema,
+  publishStudioDraftBodySchema,
   publicFormsListQuerySchema,
   runtimeFormsSubmitBodySchema,
   studioDraftBodySchema,
@@ -34,6 +35,7 @@ import {
   type FormParamsDto,
   type HostedFormRequestContextDto,
   type ProjectFormsParamsDto,
+  type PublishStudioDraftBodyDto,
   type PublicFormsListQueryDto,
   type RuntimeFormsSubmitBodyDto,
   type StudioDraftBodyDto,
@@ -41,6 +43,7 @@ import {
   updateFormBodySchema,
 } from "./forms.dto.js";
 import { FormsRuntimeSignatureService } from "./forms-runtime-signature.service.js";
+import { FormsRuntimeThrottlerGuard } from "./forms-runtime-throttler.guard.js";
 import { FormsService } from "./forms.service.js";
 
 type ProjectRequest = { projectAccess?: { projectId: string } };
@@ -152,6 +155,18 @@ export class FormsController {
   ) {
     return this.formsService.saveDraft(params, body, request, userId);
   }
+
+  @Put(":formId/draft/publish")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PROJECT)
+  publishDraft(
+    @Param(new ZodValidationPipe(formParamsSchema)) params: FormParamsDto,
+    @Body(new ZodValidationPipe(publishStudioDraftBodySchema))
+    body: PublishStudioDraftBodyDto,
+    @Req() request: ProjectRequest,
+  ) {
+    return this.formsService.publishDraft(params, body, request);
+  }
 }
 
 @Controller("forms")
@@ -202,6 +217,8 @@ export class RuntimeFormsController {
 
   @Public()
   @SkipThrottle()
+  @UseGuards(FormsRuntimeThrottlerGuard)
+  @Throttle({ "forms-runtime-resolve": { limit: 240, ttl: seconds(60) } })
   @Post("resolve")
   resolve(
     @Body(new ZodValidationPipe(hostedFormRequestContextSchema))
@@ -214,6 +231,8 @@ export class RuntimeFormsController {
 
   @Public()
   @SkipThrottle()
+  @UseGuards(FormsRuntimeThrottlerGuard)
+  @Throttle({ "forms-runtime-submit": { limit: 30, ttl: seconds(60) } })
   @Post("submit")
   submit(
     @Body(new ZodValidationPipe(runtimeFormsSubmitBodySchema))

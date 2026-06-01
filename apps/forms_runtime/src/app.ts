@@ -4,6 +4,7 @@ import {
 } from "@workspace/forms-core";
 import { renderHostedFormHtml } from "@workspace/forms-core/html";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { createApiRuntimeServices } from "./api-services.js";
 import type { FormsRuntimeEnv } from "./env.js";
 import { createMockRuntimeServices } from "./mock-services.js";
@@ -15,6 +16,31 @@ import {
 import type { FormsRuntimeServices } from "./types.js";
 
 const maxBodyBytes = 64 * 1024;
+const securityHeaders = {
+  "content-security-policy": [
+    "default-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "img-src 'self' https: data:",
+    "style-src 'unsafe-inline'",
+    "font-src 'self' https: data:",
+    "script-src 'none'",
+    "connect-src 'none'",
+  ].join("; "),
+  "permissions-policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+};
+
+function applySecurityHeaders(c: Context): void {
+  for (const [name, value] of Object.entries(securityHeaders)) {
+    c.header(name, value);
+  }
+}
 
 function isLocalDevHost(host: string): boolean {
   if (host.startsWith("[::1]")) return true;
@@ -43,6 +69,17 @@ export function createFormsRuntimeApp(
     : createApiRuntimeServices(env),
 ) {
   const app = new Hono();
+
+  app.use("*", async (c, next) => {
+    await next();
+    applySecurityHeaders(c);
+  });
+
+  app.onError((error, c) => {
+    applySecurityHeaders(c);
+    console.error("forms_runtime request failed", error);
+    return c.text("Hosted form is temporarily unavailable", 503);
+  });
 
   app.get("/health", (c) => c.json({ ok: true }));
 

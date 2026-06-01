@@ -69,11 +69,20 @@ export async function runtimeApiPost<TResponse>(
     ...extraHeaders,
   };
 
-  const response = await fetch(`${env.FORMS_RUNTIME_API_BASE_URL}${path}`, {
-    method: "POST",
-    headers,
-    body: serialized,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${env.FORMS_RUNTIME_API_BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: serialized,
+      signal: AbortSignal.timeout(env.FORMS_RUNTIME_API_TIMEOUT_MS),
+    });
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error("api_v2 request timed out");
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`api_v2 request failed: ${response.status}`);

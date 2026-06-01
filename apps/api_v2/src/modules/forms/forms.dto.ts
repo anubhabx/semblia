@@ -73,6 +73,12 @@ export const runtimeFormsSubmitBodySchema = z
   })
   .strict();
 
+export const publishStudioDraftBodySchema = z
+  .object({
+    expectedVersion: z.number().int().min(1),
+  })
+  .strict();
+
 export type ProjectFormsParamsDto = z.infer<typeof projectFormsParamsSchema>;
 export type FormParamsDto = z.infer<typeof formParamsSchema>;
 export type CreateFormBodyDto = z.infer<typeof createFormBodySchema>;
@@ -88,5 +94,8 @@ export type HostedFormRequestContextDto = z.infer<
 >;
 export type RuntimeFormsSubmitBodyDto = z.infer<
   typeof runtimeFormsSubmitBodySchema
+>;
+export type PublishStudioDraftBodyDto = z.infer<
+  typeof publishStudioDraftBodySchema
 >;
 export { studioDraftBodySchema, type StudioDraftBodyDto };

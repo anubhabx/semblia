@@ -14,6 +14,7 @@ describe("resolveRequestContext", () => {
         baseDomain: "collect.tresta.app",
       }),
     ).toEqual({
+      host: "acme.collect.tresta.app",
       projectPublicSlug: "acme",
       formSlug: null,
       path: "/",
@@ -28,7 +29,23 @@ describe("resolveRequestContext", () => {
         baseDomain: "collect.tresta.app",
       }),
     ).toEqual({
+      host: "acme.collect.tresta.app",
       projectPublicSlug: "acme",
+      formSlug: "customer-feedback",
+      path: "/customer-feedback",
+    });
+  });
+
+  it("accepts custom hosts and preserves the viewer host for API resolution", () => {
+    expect(
+      resolveRequestContext({
+        host: "feedback.customer.example",
+        url: "/customer-feedback?utm=x",
+        baseDomain: "collect.tresta.app",
+      }),
+    ).toEqual({
+      host: "feedback.customer.example",
+      projectPublicSlug: "feedback",
       formSlug: "customer-feedback",
       path: "/customer-feedback",
     });
@@ -37,7 +54,7 @@ describe("resolveRequestContext", () => {
   it("rejects non collect hosts", () => {
     expect(() =>
       resolveRequestContext({
-        host: "app.tresta.app",
+        host: "localhost",
         url: "/",
         baseDomain: "collect.tresta.app",
       }),

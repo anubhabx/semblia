@@ -43,6 +43,7 @@ import {
   type FormParamsDto,
   type HostedFormRequestContextDto,
   type ProjectFormsParamsDto,
+  type PublishStudioDraftBodyDto,
   type RuntimeFormsSubmitBodyDto,
   type StudioDraftBodyDto,
   type UpdateFormBodyDto,
@@ -244,10 +245,7 @@ export class FormsService {
     request: ProjectRequest,
   ) {
     const projectId = this.getProjectIdFromRequest(request);
-    const config = await this.validateFormConfigMedia(
-      body.config,
-      projectId,
-    );
+    const config = await this.validateFormConfigMedia(body.config, projectId);
     const slug = await this.createUniqueFormSlug(
       projectId,
       body.slug ?? body.name,
@@ -389,6 +387,64 @@ export class FormsService {
     });
   }
 
+  async publishDraft(
+    params: FormParamsDto,
+    body: PublishStudioDraftBodyDto,
+    request: ProjectRequest,
+  ) {
+    const projectId = this.getProjectIdFromRequest(request);
+    const form = await this.getOwnedFormOrThrow(params.formId, projectId);
+    const draft = await this.prisma.client.studioDraft.findUnique({
+      where: {
+        projectId_resourceType_resourceId: {
+          projectId,
+          resourceType: StudioDraftResourceType.FORM,
+          resourceId: form.id,
+        },
+      },
+      select: {
+        version: true,
+        draft: true,
+      },
+    });
+
+    if (!draft || draft.version !== body.expectedVersion) {
+      throw new ConflictException("Draft version is stale");
+    }
+
+    const draftConfig = this.toRecord(draft.draft);
+    if (!draftConfig) {
+      throw new BadRequestException("Draft has no publishable form config");
+    }
+
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const published = await tx.collectionForm.update({
+        where: { id: form.id },
+        data: {
+          config: this.toJsonValueInput(draftConfig as Prisma.JsonValue),
+        },
+        select: FORM_SELECT,
+      });
+      const marker = await tx.studioDraft.updateMany({
+        where: {
+          projectId,
+          resourceType: StudioDraftResourceType.FORM,
+          resourceId: form.id,
+          version: body.expectedVersion,
+        },
+        data: { publishedVersion: body.expectedVersion },
+      });
+      if (marker.count !== 1) {
+        throw new ConflictException("Draft version is stale");
+      }
+
+      return published;
+    });
+
+    await this.bustPublicFormsCache(params.slug);
+    return this.toAuthenticatedFormDto(updated);
+  }
+
   async listPublic(params: ProjectFormsParamsDto) {
     const cacheKey = this.getPublicFormsCacheKey(params.slug);
     const cached = await this.redisService.redis.get(cacheKey);
@@ -450,7 +506,7 @@ export class FormsService {
         id: resolution.project.id,
         slug: resolution.project.slug,
         name: resolution.project.name,
-        publicSlug: context.projectPublicSlug,
+        publicSlug: resolution.project.slug,
         brandColorPrimary: resolution.project.brandColorPrimary,
       },
       form: {
@@ -517,7 +573,9 @@ export class FormsService {
       },
     });
 
-    return { redirectTo: this.getRuntimeRedirectTo(resolution.form) };
+    return {
+      redirectTo: this.getRuntimeRedirectTo(resolution.form, originalHost),
+    };
   }
 
   async submitPublic(
@@ -946,7 +1004,7 @@ export class FormsService {
     return value && value.trim() ? value.trim() : null;
   }
 
-  private getRuntimeRedirectTo(form: FormRecord) {
+  private getRuntimeRedirectTo(form: FormRecord, originalHost: string) {
     const config = this.toRecord(form.config);
     const content = this.toRecord(config?.content);
     const successAction = this.toRecord(content?.successAction);
@@ -954,7 +1012,27 @@ export class FormsService {
       successAction?.kind === "redirect" &&
       typeof successAction.url === "string"
     ) {
-      return successAction.url;
+      return this.normalizeRuntimeRedirect(successAction.url, originalHost);
+    }
+
+    return null;
+  }
+
+  private normalizeRuntimeRedirect(value: string, originalHost: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+
+    try {
+      const url = new URL(trimmed);
+      if (
+        url.protocol === "https:" &&
+        normalizeHostname(url.host) === normalizeHostname(originalHost)
+      ) {
+        return url.toString();
+      }
+    } catch {
+      return null;
     }
 
     return null;
@@ -1280,10 +1358,7 @@ export class FormsService {
             projectId: input.projectId,
             formId: input.formId,
             ipAddress:
-              this.readHeader(
-                input.request,
-                "x-tresta-original-forwarded-for",
-              )
+              this.readHeader(input.request, "x-tresta-original-forwarded-for")
                 ?.split(",")[0]
                 ?.trim()
                 .slice(0, 45) ??

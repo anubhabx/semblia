@@ -15,6 +15,8 @@ const THROTTLER_TTL = "THROTTLER:TTL";
 const delegatedRouteScopedBuckets = new Set([
   "public-submit-browser",
   "public-submit-hmac",
+  "forms-runtime-resolve",
+  "forms-runtime-submit",
 ]);
 
 @Injectable()

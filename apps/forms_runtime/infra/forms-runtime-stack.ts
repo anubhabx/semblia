@@ -24,6 +24,25 @@ function readRequiredContext(scope: Construct, key: string): string {
   return value;
 }
 
+function readContextList(scope: Construct, key: string): string[] {
+  const value = scope.node.tryGetContext(key);
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export class FormsRuntimeStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -42,6 +61,12 @@ export class FormsRuntimeStack extends cdk.Stack {
     const certificateArn = readContext(this, "formsRuntimeCertificateArn");
     const distributionDomain =
       readContext(this, "formsRuntimeDomain") ?? `*.${baseDomain}`;
+    const customDomains = readContextList(this, "formsRuntimeCustomDomains");
+    if (customDomains.length > 0) {
+      throw new Error(
+        "FORMS RUNTIME CUSTOM DOMAIN STUB: per-tenant CloudFront alternate-domain/certificate/DNS automation is not implemented yet. Model hosts in api_v2, but do not pass formsRuntimeCustomDomains until that production rollout exists.",
+      );
+    }
 
     const environment: Record<string, string> = {
       FORMS_RUNTIME_MODE: runtimeMode,
@@ -85,6 +110,16 @@ function handler(event) {
       value: request.headers.host.value
     };
   }
+  if (request.headers["user-agent"] && request.headers["user-agent"].value) {
+    request.headers["x-tresta-original-user-agent"] = {
+      value: request.headers["user-agent"].value
+    };
+  }
+  if (event.viewer && event.viewer.ip) {
+    request.headers["x-tresta-original-forwarded-for"] = {
+      value: event.viewer.ip
+    };
+  }
   return request;
 }
 `),
@@ -101,7 +136,8 @@ function handler(event) {
         headerBehavior: cloudfront.CacheHeaderBehavior.allowList(
           "x-tresta-original-host",
         ),
-        queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+        queryStringBehavior:
+          cloudfront.CacheQueryStringBehavior.allowList("submitted"),
         cookieBehavior: cloudfront.CacheCookieBehavior.none(),
         enableAcceptEncodingBrotli: true,
         enableAcceptEncodingGzip: true,
@@ -115,9 +151,42 @@ function handler(event) {
         headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
           "content-type",
           "x-tresta-original-host",
+          "x-tresta-original-user-agent",
+          "x-tresta-original-forwarded-for",
         ),
-        queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
+        queryStringBehavior:
+          cloudfront.OriginRequestQueryStringBehavior.allowList("submitted"),
         cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
+      },
+    );
+
+    const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(
+      this,
+      "HostedFormSecurityHeadersPolicy",
+      {
+        securityHeadersBehavior: {
+          contentSecurityPolicy: {
+            override: true,
+            contentSecurityPolicy:
+              "default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; font-src 'self' https: data:; script-src 'none'; connect-src 'none'",
+          },
+          contentTypeOptions: { override: true },
+          frameOptions: {
+            frameOption: cloudfront.HeadersFrameOption.DENY,
+            override: true,
+          },
+          referrerPolicy: {
+            referrerPolicy:
+              cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+            override: true,
+          },
+          strictTransportSecurity: {
+            accessControlMaxAge: cdk.Duration.days(365),
+            includeSubdomains: true,
+            preload: true,
+            override: true,
+          },
+        },
       },
     );
 
@@ -150,6 +219,7 @@ function handler(event) {
           compress: true,
           cachePolicy,
           originRequestPolicy,
+          responseHeadersPolicy,
           functionAssociations: [
             {
               eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,

@@ -17,6 +17,7 @@ import type { PrismaService } from "../prisma/prisma.service.js";
 import type { OrganizationsService } from "../organizations/organizations.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
 import type { EmailDeliveryService } from "../email/email-delivery.service.js";
+import type { ConfigService } from "@nestjs/config";
 
 const mockProjectFindUnique = vi.fn();
 const mockProjectFindMany = vi.fn();
@@ -109,6 +110,14 @@ const emailDeliveryServiceMock = {
   createProjectInviteDeliveryWith: mockCreateProjectInviteDeliveryWith,
 } as unknown as EmailDeliveryService;
 
+const configServiceMock = {
+  get: vi.fn((key: string) =>
+    key === "FORMS_RUNTIME_PUBLIC_BASE_DOMAIN"
+      ? "collect.staging.tresta.app"
+      : undefined,
+  ),
+} as unknown as ConfigService;
+
 describe("ProjectsService allowed origins", () => {
   let service: ProjectsService;
 
@@ -119,6 +128,8 @@ describe("ProjectsService allowed origins", () => {
       new ProjectActionAuditService(prismaMock),
       undefined,
       notificationsServiceMock,
+      undefined,
+      configServiceMock,
     );
     vi.clearAllMocks();
     mockTransaction.mockImplementation(
@@ -291,7 +302,7 @@ describe("ProjectsService allowed origins", () => {
           projectId: "project_1",
           feature: "COLLECTION",
           resourceType: "PROJECT",
-          hostname: "acme.collect.tresta.app",
+          hostname: "acme.collect.staging.tresta.app",
           isDefault: true,
           status: "ACTIVE",
           verifiedAt: expect.any(Date),
@@ -867,7 +878,10 @@ describe("ProjectsService allowed origins", () => {
     );
     mockProjectFindUnique.mockResolvedValue(projectRecord());
     mockUserFindFirst.mockResolvedValue(null);
-    mockUserFindUnique.mockResolvedValue({ id: "admin_1", email: "admin@example.com" });
+    mockUserFindUnique.mockResolvedValue({
+      id: "admin_1",
+      email: "admin@example.com",
+    });
     mockProjectMemberInviteFindFirst.mockResolvedValue(null);
     mockProjectMemberInviteCreate.mockResolvedValue(
       inviteRecord({
