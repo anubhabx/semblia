@@ -8,6 +8,11 @@ import { StudioControls } from "@/components/collect/studio/studio-controls";
 import { buildDefaultFormConfig } from "@/lib/collect/studio-presets";
 import { fetchForm, fetchFormDraft } from "@/lib/tresta-api";
 
+// The studio mounts a large control tree (radix select/dropdown, sliders,
+// collapsibles). Cold-importing it in jsdom under full parallel suite load can
+// exceed the 5s default; give these renders headroom so the suite is stable.
+vi.setConfig({ testTimeout: 20000, hookTimeout: 20000 });
+
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
     getToken: vi.fn().mockResolvedValue("session-token"),
@@ -19,6 +24,12 @@ vi.mock("@/lib/tresta-api", () => ({
   fetchForm: vi.fn(),
   fetchFormDraft: vi.fn(),
   saveFormDraft: vi.fn(),
+}));
+
+// The logo section mounts the full MediaUploader (motion/react + media hooks),
+// which is irrelevant to control rendering and slow to cold-import in jsdom.
+vi.mock("@/components/media/media-uploader", () => ({
+  MediaUploader: () => null,
 }));
 
 const SLUG = "test-project";
@@ -117,13 +128,18 @@ describe("<StudioControls /> — rendering", () => {
 
   it("renders collapsible sections", async () => {
     await renderControls();
+    // Section titles are unique text nodes (getByText is exact by default).
+    // "Questions" carries a count badge, so it is covered by the add-control
+    // assertion below instead.
+    expect(screen.getByText("Content")).not.toBeNull();
+    expect(screen.getByText("Flow & layout")).not.toBeNull();
+    expect(screen.getByText("Logo")).not.toBeNull();
     expect(screen.getByText("House styles")).not.toBeNull();
     expect(screen.getByText("Typography")).not.toBeNull();
     expect(screen.getByText("Color")).not.toBeNull();
     expect(screen.getByText("Shape & density")).not.toBeNull();
-    expect(screen.queryByText("Layout")).toBeNull();
-    expect(screen.queryByText("Content")).toBeNull();
-    expect(screen.queryByText("Questions & Logic")).toBeNull();
+    expect(screen.getByText("Loading screen")).not.toBeNull();
+    expect(screen.getByText("Success screen")).not.toBeNull();
   });
 });
 
@@ -149,10 +165,11 @@ describe("<StudioControls /> — section collapse/expand", () => {
 describe("<StudioControls /> — color & typography", () => {
   it("renders color inputs for each design token", async () => {
     await renderControls();
+    // "Ink" and "Accent" also appear as loader-tint pills, so allow >= 1.
     expect(screen.getByText("Background")).not.toBeNull();
     expect(screen.getByText("Surface")).not.toBeNull();
-    expect(screen.getByText("Ink")).not.toBeNull();
-    expect(screen.getByText("Accent")).not.toBeNull();
+    expect(screen.getAllByText("Ink").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Accent").length).toBeGreaterThan(0);
   });
 
   it("updates background color via text input", async () => {
@@ -188,12 +205,18 @@ describe("<StudioControls /> — preset cards", () => {
   });
 });
 
-describe("<StudioControls /> — removed form builder surfaces", () => {
-  it("does not render layout thumbnails or question controls", async () => {
+describe("<StudioControls /> — form builder surfaces", () => {
+  it("renders the question builder add-control", async () => {
     await renderControls();
-    expect(screen.queryByText("Classic")).toBeNull();
-    expect(screen.queryByText("Hero Split")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Add question/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Add question/ }),
+    ).not.toBeNull();
+  });
+
+  it("renders content fields for the form copy", async () => {
+    await renderControls();
+    expect(screen.getByText("Headline")).not.toBeNull();
+    expect(screen.getByText("Submit button")).not.toBeNull();
   });
 });
 
