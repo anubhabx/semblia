@@ -18,6 +18,16 @@ type BillingPlanSeedRow = {
     testimonials: number;
     widgets: number;
     projects: number;
+    moderation: {
+      imagesPerMonth: number;
+      audioSecondsPerMonth: number;
+      videoSecondsPerMonth: number;
+      maxMediaAssetsPerSubmission: number;
+      maxImageBytes: number;
+      maxAudioSeconds: number;
+      maxVideoSeconds: number;
+      fullVideoModeration: boolean;
+    };
   };
   razorpayPlanId: string | null;
 };
@@ -31,6 +41,39 @@ type BillingPlanSeedPrisma = {
     }): Promise<unknown>;
   };
 };
+
+const moderationLimits = {
+  FREE: {
+    imagesPerMonth: 10,
+    audioSecondsPerMonth: 600,
+    videoSecondsPerMonth: 120,
+    maxMediaAssetsPerSubmission: 1,
+    maxImageBytes: 4_000_000,
+    maxAudioSeconds: 60,
+    maxVideoSeconds: 30,
+    fullVideoModeration: false,
+  },
+  PRO: {
+    imagesPerMonth: 1_000,
+    audioSecondsPerMonth: 14_400,
+    videoSecondsPerMonth: 3_600,
+    maxMediaAssetsPerSubmission: 5,
+    maxImageBytes: 8_000_000,
+    maxAudioSeconds: 600,
+    maxVideoSeconds: 180,
+    fullVideoModeration: false,
+  },
+  BUSINESS: {
+    imagesPerMonth: 10_000,
+    audioSecondsPerMonth: 72_000,
+    videoSecondsPerMonth: 18_000,
+    maxMediaAssetsPerSubmission: 10,
+    maxImageBytes: 16_000_000,
+    maxAudioSeconds: 1_800,
+    maxVideoSeconds: 600,
+    fullVideoModeration: true,
+  },
+} as const;
 
 export function buildBillingPlans(
   env: BillingPlanSeedEnv = process.env,
@@ -48,6 +91,7 @@ export function buildBillingPlans(
         testimonials: 25,
         widgets: 1,
         projects: 1,
+        moderation: moderationLimits.FREE,
       },
       razorpayPlanId: null,
     },
@@ -63,6 +107,7 @@ export function buildBillingPlans(
         testimonials: 1000,
         widgets: 10,
         projects: 5,
+        moderation: moderationLimits.PRO,
       },
       razorpayPlanId: env.RAZORPAY_PLAN_ID_PRO_MONTHLY?.trim() || null,
     },
@@ -78,6 +123,7 @@ export function buildBillingPlans(
         testimonials: 10000,
         widgets: 100,
         projects: 25,
+        moderation: moderationLimits.BUSINESS,
       },
       razorpayPlanId:
         env.RAZORPAY_PLAN_ID_BUSINESS_MONTHLY?.trim() || null,

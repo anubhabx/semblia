@@ -6,6 +6,7 @@ import {
 } from "@workspace/database/prisma";
 
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const AUDIO_TYPES = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/webm", "audio/mp4"];
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 const CSV_TYPES = ["text/csv", "text/csv; charset=utf-8"];
 
@@ -40,6 +41,8 @@ export class StorageService {
         return `${root}/projects/${this.required(input.projectId, "projectId")}/testimonials/videos/${input.assetId}.${ext}`;
       case MediaAssetPurpose.TESTIMONIAL_MEDIA:
         return `${root}/projects/${this.required(input.projectId, "projectId")}/testimonials/media/${input.assetId}.${ext}`;
+      case MediaAssetPurpose.SUBMISSION_ATTACHMENT:
+        return `${root}/projects/${this.required(input.projectId, "projectId")}/submissions/attachments/${input.assetId}.${ext}`;
       case MediaAssetPurpose.EXPORT_ARTIFACT:
         return `${root}/projects/${this.required(input.projectId, "projectId")}/exports/${input.assetId}.${ext}`;
     }
@@ -49,6 +52,8 @@ export class StorageService {
     switch (purpose) {
       case MediaAssetPurpose.TESTIMONIAL_VIDEO:
         return VIDEO_TYPES;
+      case MediaAssetPurpose.SUBMISSION_ATTACHMENT:
+        return [...IMAGE_TYPES, ...AUDIO_TYPES, ...VIDEO_TYPES];
       case MediaAssetPurpose.EXPORT_ARTIFACT:
         return CSV_TYPES;
       default:
@@ -60,6 +65,8 @@ export class StorageService {
     switch (purpose) {
       case MediaAssetPurpose.TESTIMONIAL_VIDEO:
         return this.numberEnv("S3_MAX_VIDEO_BYTES", 100 * 1024 * 1024);
+      case MediaAssetPurpose.SUBMISSION_ATTACHMENT:
+        return this.numberEnv("S3_MAX_VIDEO_BYTES", 100 * 1024 * 1024);
       case MediaAssetPurpose.EXPORT_ARTIFACT:
         return this.numberEnv("S3_MAX_EXPORT_BYTES", 25 * 1024 * 1024);
       default:
@@ -68,7 +75,8 @@ export class StorageService {
   }
 
   visibilityFor(purpose: MediaAssetPurpose) {
-    return purpose === MediaAssetPurpose.EXPORT_ARTIFACT
+    return purpose === MediaAssetPurpose.EXPORT_ARTIFACT ||
+      purpose === MediaAssetPurpose.SUBMISSION_ATTACHMENT
       ? MediaAssetVisibility.PRIVATE
       : MediaAssetVisibility.PUBLIC;
   }
@@ -95,6 +103,15 @@ export class StorageService {
         return "webm";
       case "video/quicktime":
         return "mov";
+      case "audio/mpeg":
+      case "audio/mp3":
+        return "mp3";
+      case "audio/wav":
+        return "wav";
+      case "audio/webm":
+        return "webm";
+      case "audio/mp4":
+        return "m4a";
       case "text/csv":
       case "text/csv; charset=utf-8":
         return "csv";

@@ -150,6 +150,7 @@ model Project {
   exportDeliveries            ExportDelivery[]
   integrationConnections      IntegrationConnection[]
   mediaAssets                 MediaAsset[] @relation("MediaAssetProject")
+  submissionModerationRuns    SubmissionModerationRun[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -522,6 +523,7 @@ enum MediaAssetPurpose {
   TESTIMONIAL_AUTHOR_AVATAR
   TESTIMONIAL_VIDEO
   TESTIMONIAL_MEDIA
+  SUBMISSION_ATTACHMENT
   EXPORT_ARTIFACT
 }
 
@@ -567,6 +569,7 @@ model MediaAsset {
   testimonialVideoFor          Testimonial?    @relation("TestimonialVideoAsset")
   testimonialMediaFor          Testimonial?    @relation("TestimonialMediaAsset")
   exportArtifactFor            ExportDelivery? @relation("ExportArtifactAsset")
+  moderationRuns               SubmissionModerationRun[]
 
   @@index([projectId, purpose])
   @@index([userId, purpose])
@@ -869,6 +872,7 @@ model Testimonial {
   privateMetadata       TestimonialPrivateMetadata?
   submissionAnnotations CollectionFormSubmissionAnnotation[]
   displayRevisions      TestimonialDisplayRevision[]
+  moderationRuns        SubmissionModerationRun[]
 
   @@index([userId])
   @@index([projectId])
@@ -948,6 +952,7 @@ model CollectionFormSubmission {
   idempotencyHits PublicSubmitIdempotency[]
   annotations     CollectionFormSubmissionAnnotation[]
   mediaAssets     MediaAsset[]
+  moderationRuns  SubmissionModerationRun[]
 
   @@index([projectId, createdAt])
   @@index([formId, createdAt])
@@ -1041,6 +1046,70 @@ enum ModerationStatus {
   APPROVED
   REJECTED
   FLAGGED
+}
+
+enum SubmissionModerationRunStatus {
+  PENDING
+  ENQUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SUPPRESSED
+}
+
+enum SubmissionModerationArtifactType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  VIDEO_FRAME
+  TRANSCRIPT
+}
+
+enum SubmissionModerationDecision {
+  APPROVE
+  REVIEW
+  REJECT
+}
+
+model SubmissionModerationRun {
+  id                  String                           @id @default(cuid())
+  projectId           String
+  submissionId        String
+  testimonialId       String?
+  mediaAssetId        String?
+  artifactType        SubmissionModerationArtifactType
+  artifactHash        String                           @db.VarChar(64)
+  provider            String                           @db.VarChar(64)
+  providerOperation   String                           @db.VarChar(128)
+  providerJobId       String?                          @db.VarChar(255)
+  status              SubmissionModerationRunStatus    @default(PENDING)
+  decision            SubmissionModerationDecision?
+  score               Float?
+  flags               Json?
+  categories          Json?
+  rawResult           Json?
+  estimatedCostMicros Int?
+  attempts            Int                              @default(0)
+  lastAttemptAt       DateTime?
+  nextAttemptAt       DateTime?
+  completedAt         DateTime?
+  errorCode           String?                          @db.VarChar(128)
+  errorMessage        String?                          @db.Text
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+
+  project     Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submission  CollectionFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testimonial Testimonial?             @relation(fields: [testimonialId], references: [id], onDelete: SetNull)
+  mediaAsset  MediaAsset?              @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([submissionId, artifactType, artifactHash, provider, providerOperation])
+  @@index([projectId, status, createdAt])
+  @@index([submissionId, createdAt])
+  @@index([mediaAssetId])
+  @@index([provider, providerJobId])
+  @@index([nextAttemptAt, status])
 }
 
 enum DisplayRevisionStatus {

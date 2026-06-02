@@ -18,6 +18,7 @@ describe("QueueTelemetryService", () => {
     const exportQueue = makeQueue({ waiting: 4, delayed: 5 });
     const integrationQueue = makeQueue({ completed: 6 });
     const emailQueue = makeQueue({ waiting: 7, active: 1 });
+    const moderationQueue = makeQueue({ waiting: 8, failed: 2 });
     const prisma = {
       client: {
         outboundWebhookDelivery: {
@@ -39,6 +40,17 @@ describe("QueueTelemetryService", () => {
             createdAt: new Date("2026-05-28T07:58:30.000Z"),
           }),
         },
+        submissionModerationRun: {
+          groupBy: vi
+            .fn()
+            .mockResolvedValueOnce([
+              { status: "ENQUEUED", _count: { _all: 4 } },
+              { status: "SUPPRESSED", _count: { _all: 1 } },
+            ])
+            .mockResolvedValueOnce([
+              { status: "FAILED", _count: { _all: 2 } },
+            ]),
+        },
         deadLetterJob: {
           count: vi.fn().mockResolvedValue(7),
         },
@@ -50,6 +62,7 @@ describe("QueueTelemetryService", () => {
       exportQueue,
       integrationQueue,
       emailQueue,
+      moderationQueue,
     );
 
     await expect(service.getSnapshot()).resolves.toEqual({
@@ -82,11 +95,20 @@ describe("QueueTelemetryService", () => {
           failed: 0,
           completed: 0,
         },
+        "submission-moderation": {
+          waiting: 8,
+          active: 0,
+          delayed: 0,
+          failed: 2,
+          completed: 0,
+        },
       },
       deliveries: {
         outboundWebhooks: { PENDING: 2, FAILED: 1 },
         exports: { SUCCEEDED: 3 },
         emails: { PENDING: 5 },
+        moderationRuns: { ENQUEUED: 4, SUPPRESSED: 1 },
+        moderationRunsLast24h: { FAILED: 2 },
         oldestPendingEmailDeliveryAgeSeconds: 90,
         deadLetterJobs: 7,
       },

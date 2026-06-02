@@ -62,6 +62,7 @@ type PlanRecord = {
     testimonials: number;
     widgets: number;
     projects: number;
+    moderation?: Record<string, unknown>;
   };
   createdAt: Date;
 };
@@ -367,6 +368,33 @@ describe("BillingService", () => {
     expect(subscription.currentPeriodStart).toBe("2026-05-20T10:00:00.000Z");
     expect(subscription.currentPeriodEnd).toBe("2026-06-20T10:00:00.000Z");
     expect(state.subscriptions).toHaveLength(1);
+  });
+
+  it("keeps nested moderation limits out of current usage reads", async () => {
+    state.plans = [
+      makePlan({
+        id: "plan_pro",
+        type: "PRO",
+        limits: {
+          testimonials: 111,
+          widgets: 22,
+          projects: 3,
+          moderation: {
+            imagesPerMonth: 1_000,
+            audioSecondsPerMonth: 14_400,
+            videoSecondsPerMonth: 3_600,
+            maxMediaAssetsPerSubmission: 5,
+          },
+        },
+      }),
+    ];
+    state.subscriptions = [makeSubscription({ userPlan: "PRO" })];
+
+    await expect(service.getUsage("user_1")).resolves.toEqual({
+      testimonials: { used: 0, limit: 111 },
+      widgets: { used: 0, limit: 22 },
+      projects: { used: 0, limit: 3 },
+    });
   });
 
   it("schedules a paid plan switch for the next billing cycle", async () => {

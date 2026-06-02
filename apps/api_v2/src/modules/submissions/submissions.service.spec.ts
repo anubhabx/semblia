@@ -90,6 +90,7 @@ function makeSubmission(overrides: Record<string, unknown> = {}) {
       updatedAt: new Date("2026-05-08T00:00:00.000Z"),
     },
     annotations: [],
+    moderationRuns: [],
     ...overrides,
   };
 }
@@ -157,6 +158,78 @@ describe("SubmissionsService", () => {
         }),
       }),
     );
+  });
+
+  it("lists safe moderation run summaries without raw provider output", async () => {
+    mockSubmissionCount.mockResolvedValue(1);
+    mockSubmissionFindMany.mockResolvedValue([
+      makeSubmission({
+        moderationRuns: [
+          {
+            id: "run_1",
+            artifactType: "IMAGE",
+            provider: "aws-rekognition",
+            providerOperation: "DetectModerationLabels",
+            status: "SUCCEEDED",
+            decision: "REVIEW",
+            score: 0.82,
+            flags: ["violence"],
+            categories: { violence: 0.82 },
+            errorCode: null,
+            errorMessage: null,
+            rawResult: { private: true },
+            providerJobId: "aws-job-1",
+            createdAt: new Date("2026-06-01T10:00:00.000Z"),
+            completedAt: new Date("2026-06-01T10:01:00.000Z"),
+          },
+        ],
+      }),
+    ]);
+
+    const result = await service.list(
+      { status: "ALL", page: 1, pageSize: 10 },
+      { projectAccess: { projectId: "project_1" } },
+    );
+
+    expect(mockSubmissionFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          moderationRuns: expect.objectContaining({
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            select: expect.not.objectContaining({
+              rawResult: true,
+              providerJobId: true,
+            }),
+          }),
+        }),
+      }),
+    );
+    const item = result.items[0];
+    expect(item).toBeDefined();
+    if (!item) {
+      throw new Error("Expected one submission item");
+    }
+    expect(item.moderationRuns).toEqual([
+      {
+        id: "run_1",
+        artifactType: "IMAGE",
+        provider: "aws-rekognition",
+        providerOperation: "DetectModerationLabels",
+        status: "SUCCEEDED",
+        decision: "REVIEW",
+        score: 0.82,
+        flags: ["violence"],
+        categories: { violence: 0.82 },
+        reason: null,
+        createdAt: "2026-06-01T10:00:00.000Z",
+        completedAt: "2026-06-01T10:01:00.000Z",
+      },
+    ]);
+    const run = item.moderationRuns[0];
+    expect(run).toBeDefined();
+    expect(run).not.toHaveProperty("rawResult");
+    expect(run).not.toHaveProperty("providerJobId");
   });
 
   it("moderates linked submissions and unpublishes flagged testimonials without changing source fields", async () => {

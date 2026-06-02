@@ -8,6 +8,7 @@ import { OUTBOUND_WEBHOOK_QUEUE } from "../outbound-webhooks/outbound-webhooks.s
 import { PrismaModule } from "../prisma/prisma.module.js";
 import { QueueMaintenanceService } from "./queue-maintenance.service.js";
 import { QueueingModule } from "./queueing.module.js";
+import { SUBMISSION_MODERATION_QUEUE } from "./queueing.constants.js";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { QueueingModule } from "./queueing.module.js";
       { name: OUTBOUND_WEBHOOK_QUEUE },
       { name: EXPORT_DELIVERY_QUEUE },
       { name: NATIVE_INTEGRATION_EXPORT_QUEUE },
+      { name: SUBMISSION_MODERATION_QUEUE },
     ),
   ],
   providers: [QueueMaintenanceService],

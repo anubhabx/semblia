@@ -36,6 +36,7 @@ import { StorageModule } from "./modules/storage/storage.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
 import { QueueingModule } from "./modules/queueing/queueing.module.js";
 import { EmailModule } from "./modules/email/email.module.js";
+import { SubmissionModerationModule } from "./modules/submission-moderation/submission-moderation.module.js";
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { EmailModule } from "./modules/email/email.module.js";
     RedisModule,
     QueueingModule,
     EmailModule,
+    SubmissionModerationModule,
     ClerkModule,
     HealthModule,
     UsersModule,

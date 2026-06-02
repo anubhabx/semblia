@@ -275,9 +275,40 @@ export type V2MediaAssetPurpose =
   | "TESTIMONIAL_AUTHOR_AVATAR"
   | "TESTIMONIAL_VIDEO"
   | "TESTIMONIAL_MEDIA"
+  | "SUBMISSION_ATTACHMENT"
   | "EXPORT_ARTIFACT";
 export type V2MediaAssetVisibility = "PUBLIC" | "PRIVATE";
 export type V2MediaAssetStatus = "PENDING" | "ACTIVE" | "DELETED";
+export type V2SubmissionModerationRunStatus =
+  | "PENDING"
+  | "ENQUEUED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "SUPPRESSED";
+export type V2SubmissionModerationArtifactType =
+  | "TEXT"
+  | "IMAGE"
+  | "AUDIO"
+  | "VIDEO"
+  | "VIDEO_FRAME"
+  | "TRANSCRIPT";
+export type V2SubmissionModerationDecision = "APPROVE" | "REVIEW" | "REJECT";
+
+export type V2SubmissionModerationRunDTO = {
+  id: string;
+  artifactType: V2SubmissionModerationArtifactType;
+  provider: string;
+  providerOperation: string;
+  status: V2SubmissionModerationRunStatus;
+  decision: V2SubmissionModerationDecision | null;
+  score: number | null;
+  flags: string[];
+  categories: Record<string, number>;
+  reason: string | null;
+  createdAt: string;
+  completedAt: string | null;
+};
 
 export interface V2PaginatedResponse<T> {
   items: T[];
@@ -613,6 +644,7 @@ export interface V2SubmissionDTO {
     updatedAt: string;
   } | null;
   annotations: V2SubmissionAnnotationDTO[];
+  moderationRuns: V2SubmissionModerationRunDTO[];
 }
 
 export interface V2TestimonialDisplayRevisionDTO {

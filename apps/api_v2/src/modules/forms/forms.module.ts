@@ -5,6 +5,7 @@ import { ProjectsModule } from "../projects/projects.module.js";
 import { RedisModule } from "../redis/redis.module.js";
 import { StudioDraftsModule } from "../studio-drafts/studio-drafts.module.js";
 import { StorageModule } from "../storage/storage.module.js";
+import { SubmissionModerationModule } from "../submission-moderation/submission-moderation.module.js";
 import { TestimonialsModule } from "../testimonials/testimonials.module.js";
 import {
   FormsController,
@@ -24,6 +25,7 @@ import { FormsService } from "./forms.service.js";
     RedisModule,
     StudioDraftsModule,
     StorageModule,
+    SubmissionModerationModule,
   ],
   controllers: [FormsController, PublicFormsController, RuntimeFormsController],
   providers: [

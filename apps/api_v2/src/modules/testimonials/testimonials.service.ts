@@ -24,6 +24,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
 import { MediaService } from "../storage/media.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
 import { TestimonialPrivateMetadataService } from "./testimonial-private-metadata.service.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
 import {
@@ -162,6 +163,9 @@ export class TestimonialsService {
     @Optional()
     @Inject(NotificationsService)
     private readonly notificationsService?: NotificationsService,
+    @Optional()
+    @Inject(SubmissionModerationService)
+    private readonly submissionModerationService?: SubmissionModerationService,
   ) {}
 
   async list(query: TestimonialsListQueryDto, request: ProjectRequest) {
@@ -687,6 +691,12 @@ export class TestimonialsService {
           responseStatusCode: 201,
           responseBody: response as unknown as Prisma.InputJsonValue,
         },
+      });
+    }
+
+    if (created.submission?.id) {
+      await this.submissionModerationService?.enqueueSubmission({
+        submissionId: created.submission.id,
       });
     }
 

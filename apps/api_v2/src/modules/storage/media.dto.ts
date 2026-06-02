@@ -7,6 +7,7 @@ const purposeSchema = z.enum([
   "TESTIMONIAL_AUTHOR_AVATAR",
   "TESTIMONIAL_VIDEO",
   "TESTIMONIAL_MEDIA",
+  "SUBMISSION_ATTACHMENT",
   "EXPORT_ARTIFACT",
 ]);
 
@@ -45,6 +46,11 @@ export const createUploadIntentBodySchema = z.discriminatedUnion("purpose", [
     purpose: z.literal("TESTIMONIAL_MEDIA"),
     projectSlug: z.string().trim().min(1),
   }),
+  baseIntentSchema.extend({
+    purpose: z.literal("SUBMISSION_ATTACHMENT"),
+    projectSlug: z.string().trim().min(1),
+    formId: z.string().trim().min(1).optional(),
+  }),
 ]);
 
 export const publicCreateUploadIntentBodySchema = z.discriminatedUnion(
@@ -58,6 +64,9 @@ export const publicCreateUploadIntentBodySchema = z.discriminatedUnion(
     }),
     baseIntentSchema.extend({
       purpose: z.literal("TESTIMONIAL_MEDIA"),
+    }),
+    baseIntentSchema.extend({
+      purpose: z.literal("SUBMISSION_ATTACHMENT"),
     }),
   ],
 );

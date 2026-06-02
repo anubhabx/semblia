@@ -4,6 +4,7 @@ import { ProjectActionAuditService } from "../../common/audit/project-action-aud
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
 import { StorageModule } from "../storage/storage.module.js";
+import { SubmissionModerationModule } from "../submission-moderation/submission-moderation.module.js";
 import {
   PublicTestimonialsController,
   TestimonialsController,
@@ -14,7 +15,13 @@ import { TestimonialPrivateMetadataService } from "./testimonial-private-metadat
 import { TestimonialsService } from "./testimonials.service.js";
 
 @Module({
-  imports: [AuthzModule, NotificationsModule, ProjectsModule, StorageModule],
+  imports: [
+    AuthzModule,
+    NotificationsModule,
+    ProjectsModule,
+    StorageModule,
+    SubmissionModerationModule,
+  ],
   controllers: [TestimonialsController, PublicTestimonialsController],
   providers: [
     TestimonialsService,

@@ -1,6 +1,6 @@
 # Locked Decisions
 
-Last updated: 2026-05-31
+Last updated: 2026-06-02
 
 This file records decisions that future sessions should treat as settled unless the user explicitly reopens them.
 
@@ -63,6 +63,8 @@ This file records decisions that future sessions should treat as settled unless 
 | 2026-05-28 | Resend is the launch transactional email provider.                                                                                 | Email sending is durable through `EmailDelivery`, deterministic BullMQ job ids, and Resend idempotency keys. `EMAIL_ENABLED=false` remains the default until the production domain, sender, and daily quota are explicitly configured.                                                                                                                                                        | Worker pool implementation checkpoint   |
 | 2026-05-28 | Worker cron handlers are worker-only, not shared API-module providers.                                                            | The shared `QueueingModule` exposes locks and telemetry, while `QueueMaintenanceModule` is imported only by `WorkerModule` to avoid duplicate cron execution in HTTP API processes.                                                                                                                                                                                                           | Worker pool implementation checkpoint   |
 | 2026-05-30 | Hosted forms use a separate public runtime app plus a shared renderer package.                                                    | `packages/forms-core` owns shared schema/normalization/view-model/rendering for hosted runtime and `web_v2` studio previews. `apps/forms_runtime` owns public HTTP routing, request signing, local mock dev, and AWS CloudFront + Lambda Function URL deployment; `api_v2` remains the canonical source of truth for resolution, submissions, analytics, notifications, and trust validation. | Hosted forms scaffold                   |
+| 2026-06-02 | Submission moderation is AWS-first while AWS credits are available.                                                               | For the next 3-4 months, use AWS for most provider-backed moderation: Comprehend toxicity detection for text, Rekognition for images and video moderation, and Transcribe for audio/transcript/toxicity work. Keep local heuristics before provider calls, make all provider work queue-based and budget-gated, and reserve OpenAI/Azure/Google as non-primary fallbacks unless the user reopens provider choice. | Current moderation planning             |
+| 2026-06-02 | Provider moderation can add risk annotations, but human moderation remains authoritative.                                         | Moderation runs are queued and persisted; successful provider decisions may approve clean verified submissions or flag risky content, but worker reconciliation must not override reviewer-set `REJECTED` or reviewer-set `APPROVED` states. Raw provider output stays private and review DTOs expose only safe run summaries.                                                                                 | AWS-first moderation implementation     |
 
 ## Superseded Decisions
 

@@ -75,6 +75,25 @@ const SUBMISSION_SELECT = {
       updatedAt: true,
     },
   },
+  moderationRuns: {
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      artifactType: true,
+      provider: true,
+      providerOperation: true,
+      status: true,
+      decision: true,
+      score: true,
+      flags: true,
+      categories: true,
+      errorCode: true,
+      errorMessage: true,
+      createdAt: true,
+      completedAt: true,
+    },
+  },
 } satisfies Prisma.CollectionFormSubmissionSelect;
 
 const ANNOTATION_SELECT = {
@@ -357,11 +376,48 @@ export class SubmissionsService {
       annotations: submission.annotations.map((annotation) =>
         this.toAnnotationDto(annotation),
       ),
+      moderationRuns: submission.moderationRuns.map((run) =>
+        this.toModerationRunDto(run),
+      ),
     };
   }
 
   private toAnnotationDto(annotation: AnnotationRecord) {
     return annotation;
+  }
+
+  private toModerationRunDto(run: SubmissionRecord["moderationRuns"][number]) {
+    return {
+      id: run.id,
+      artifactType: run.artifactType,
+      provider: run.provider,
+      providerOperation: run.providerOperation,
+      status: run.status,
+      decision: run.decision,
+      score: run.score,
+      flags: this.toStringArray(run.flags),
+      categories: this.toNumberRecord(run.categories),
+      reason: run.errorMessage ?? run.errorCode ?? null,
+      createdAt: run.createdAt.toISOString(),
+      completedAt: run.completedAt?.toISOString() ?? null,
+    };
+  }
+
+  private toStringArray(value: Prisma.JsonValue | null) {
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
+  }
+
+  private toNumberRecord(value: Prisma.JsonValue | null) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(value).filter(
+        (entry): entry is [string, number] => typeof entry[1] === "number",
+      ),
+    );
   }
 
   private displayActorId(actor: ActorContext | null | undefined) {

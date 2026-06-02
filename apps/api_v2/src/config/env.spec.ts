@@ -82,4 +82,21 @@ describe("validateApiV2Env", () => {
       "Missing required production email env vars: EMAIL_FROM, APP_PUBLIC_URL",
     );
   });
+
+  it("defaults AWS moderation to a disabled cost-capped local posture", () => {
+    const parsed = validateApiV2Env({
+      NODE_ENV: "test",
+      DATABASE_URL: "postgresql://appuser:apppassword@localhost:5432/appdb",
+      REDIS_URL: "redis://localhost:6379",
+    });
+
+    expect(parsed.MODERATION_AWS_ENABLED).toBe(false);
+    expect(parsed.MODERATION_AWS_REGION).toBe("us-east-1");
+    expect(parsed.MODERATION_AWS_DAILY_BUDGET_CENTS).toBe(500);
+    expect(parsed.MODERATION_AWS_MONTHLY_BUDGET_CENTS).toBe(5000);
+    expect(parsed.MODERATION_IMAGE_MIN_CONFIDENCE).toBe(70);
+    expect(parsed.MODERATION_QUEUE_CONCURRENCY).toBe(3);
+    expect(parsed.MODERATION_FULL_VIDEO_ENABLED).toBe(false);
+    expect(parsed.MODERATION_FULL_VIDEO_MIN_PLAN).toBe("BUSINESS");
+  });
 });

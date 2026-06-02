@@ -9,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import {
   EMAIL_DELIVERY_QUEUE,
   QUEUE_COUNT_STATUSES,
+  SUBMISSION_MODERATION_QUEUE,
   type QueueCounts,
 } from "./queueing.constants.js";
 
@@ -31,6 +32,8 @@ export class QueueTelemetryService {
     private readonly nativeIntegrationQueue: Queue,
     @InjectQueue(EMAIL_DELIVERY_QUEUE)
     private readonly emailDeliveryQueue: Queue,
+    @InjectQueue(SUBMISSION_MODERATION_QUEUE)
+    private readonly submissionModerationQueue: Queue,
   ) {}
 
   async getSnapshot() {
@@ -39,9 +42,12 @@ export class QueueTelemetryService {
       exportQueue,
       integrationQueue,
       emailQueue,
+      moderationQueue,
       outboundDeliveryCounts,
       exportDeliveryCounts,
       emailDeliveryCounts,
+      moderationRunCounts,
+      moderationRunCountsLast24h,
       oldestPendingEmailDelivery,
       deadLetterJobs,
     ] = await Promise.all([
@@ -49,6 +55,7 @@ export class QueueTelemetryService {
       this.getQueueCounts(this.exportDeliveryQueue),
       this.getQueueCounts(this.nativeIntegrationQueue),
       this.getQueueCounts(this.emailDeliveryQueue),
+      this.getQueueCounts(this.submissionModerationQueue),
       this.prisma.client.outboundWebhookDelivery.groupBy({
         by: ["status"],
         _count: { _all: true },
@@ -59,6 +66,17 @@ export class QueueTelemetryService {
       }),
       this.prisma.client.emailDelivery.groupBy({
         by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.client.submissionModerationRun.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.client.submissionModerationRun.groupBy({
+        by: ["status"],
+        where: {
+          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
         _count: { _all: true },
       }),
       this.prisma.client.emailDelivery.findFirst({
@@ -79,11 +97,16 @@ export class QueueTelemetryService {
         [EXPORT_DELIVERY_QUEUE]: exportQueue,
         [NATIVE_INTEGRATION_EXPORT_QUEUE]: integrationQueue,
         [EMAIL_DELIVERY_QUEUE]: emailQueue,
+        [SUBMISSION_MODERATION_QUEUE]: moderationQueue,
       },
       deliveries: {
         outboundWebhooks: this.toStatusCounts(outboundDeliveryCounts),
         exports: this.toStatusCounts(exportDeliveryCounts),
         emails: this.toStatusCounts(emailDeliveryCounts),
+        moderationRuns: this.toStatusCounts(moderationRunCounts),
+        moderationRunsLast24h: this.toStatusCounts(
+          moderationRunCountsLast24h,
+        ),
         oldestPendingEmailDeliveryAgeSeconds:
           oldestPendingEmailDelivery === null
             ? null

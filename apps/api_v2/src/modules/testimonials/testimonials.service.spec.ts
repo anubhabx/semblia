@@ -19,6 +19,7 @@ import type { PrismaService } from "../prisma/prisma.service.js";
 import type { RedisService } from "../redis/redis.service.js";
 import type { SigningSecretService } from "../projects/signing-secret.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
+import type { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
 
 const mockProjectFindUnique = vi.fn();
 const mockTestimonialFindMany = vi.fn();
@@ -46,6 +47,7 @@ const mockSigningSecretGetActiveDecrypted = vi.fn();
 const mockSigningSecretMarkUsed = vi.fn();
 const mockActionAuditRecordWith = vi.fn();
 const mockCreateForProjectReviewers = vi.fn();
+const mockEnqueueSubmission = vi.fn();
 
 const prismaMock = {
   client: {
@@ -108,6 +110,10 @@ const signingSecretServiceMock = {
 const notificationsServiceMock = {
   createForProjectReviewers: mockCreateForProjectReviewers,
 } as unknown as NotificationsService;
+
+const submissionModerationServiceMock = {
+  enqueueSubmission: mockEnqueueSubmission,
+} as unknown as SubmissionModerationService;
 
 describe("PublicSubmitTrustService", () => {
   let service: PublicSubmitTrustService;
@@ -292,9 +298,11 @@ describe("TestimonialsService", () => {
       actionAuditServiceMock,
       undefined,
       notificationsServiceMock,
+      submissionModerationServiceMock,
     );
     vi.clearAllMocks();
     mockCreatePrivateMetadataForPublicSubmit.mockResolvedValue(null);
+    mockEnqueueSubmission.mockResolvedValue([]);
     mockDecryptAuthorEmail.mockReturnValue(null);
     mockTransaction.mockImplementation(
       async (callback: (tx: unknown) => Promise<unknown>) =>
@@ -396,6 +404,7 @@ describe("TestimonialsService", () => {
 
     expect(result).toEqual(expect.objectContaining({ id: "testimonial_1" }));
     expect(mockTestimonialCreate).not.toHaveBeenCalled();
+    expect(mockEnqueueSubmission).not.toHaveBeenCalled();
   });
 
   it("rejects idempotency key reuse with a different payload", async () => {
@@ -523,6 +532,7 @@ describe("TestimonialsService", () => {
       autoPublished: true,
       createdAt: new Date("2026-04-30T00:00:00.000Z"),
       updatedAt: new Date("2026-04-30T00:00:00.000Z"),
+      submission: { id: "submission_1" },
     });
 
     await service.createPublic(
@@ -594,6 +604,9 @@ describe("TestimonialsService", () => {
         }),
       }),
     );
+    expect(mockEnqueueSubmission).toHaveBeenCalledWith({
+      submissionId: "submission_1",
+    });
   });
 
   it("auto-approves verified origin submissions only when the project allows it", async () => {

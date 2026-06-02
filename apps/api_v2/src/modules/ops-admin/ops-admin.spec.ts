@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BadRequestException, RequestMethod } from "@nestjs/common";
 import { OpsAdminController } from "./ops-admin.controller.js";
 import { OpsAdminService } from "./ops-admin.service.js";
-import { EMAIL_DELIVERY_QUEUE } from "../queueing/queueing.constants.js";
+import {
+  EMAIL_DELIVERY_QUEUE,
+  SUBMISSION_MODERATION_QUEUE,
+} from "../queueing/queueing.constants.js";
 
 const PATH_METADATA = "path";
 const METHOD_METADATA = "method";
@@ -83,6 +86,12 @@ describe("OpsAdminController", () => {
           alertHistory: {
             count: vi.fn().mockResolvedValue(2),
           },
+          submissionModerationRun: {
+            count: vi.fn().mockResolvedValue(3),
+            findFirst: vi.fn().mockResolvedValue({
+              createdAt: new Date("2026-05-28T07:55:00.000Z"),
+            }),
+          },
         },
       } as never,
       {
@@ -102,6 +111,10 @@ describe("OpsAdminController", () => {
           yesterday: { date: "2026-05-27", count: 3 },
         },
         unresolvedAlertCount: 2,
+        moderationBudget: {
+          budgetSuppressedCount: 3,
+          lastBudgetSuppressedAt: "2026-05-28T07:55:00.000Z",
+        },
       }),
     );
   });
@@ -166,6 +179,45 @@ describe("OpsAdminController", () => {
       expect.objectContaining({
         where: { id: "dlq_1" },
         data: expect.objectContaining({ retried: true }),
+      }),
+    );
+  });
+
+  it("retries submission moderation dead-letter jobs by run id", async () => {
+    const moderationQueue = { add: vi.fn().mockResolvedValue({ id: "job_1" }) };
+    const update = vi.fn().mockResolvedValue({ id: "dlq_1", retried: true });
+    const service = new OpsAdminService(
+      {
+        client: {
+          deadLetterJob: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: "dlq_1",
+              queue: SUBMISSION_MODERATION_QUEUE,
+              retried: false,
+              data: { runId: "run_1" },
+              retryHistory: null,
+            }),
+            update,
+          },
+        },
+      } as never,
+      {} as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      moderationQueue as never,
+    );
+
+    await expect(service.retryDeadLetter("dlq_1")).resolves.toEqual({
+      retried: true,
+      jobId: "retry:submission-moderation:dlq_1:run_1",
+    });
+    expect(moderationQueue.add).toHaveBeenCalledWith(
+      SUBMISSION_MODERATION_QUEUE,
+      { runId: "run_1" },
+      expect.objectContaining({
+        jobId: "retry:submission-moderation:dlq_1:run_1",
       }),
     );
   });

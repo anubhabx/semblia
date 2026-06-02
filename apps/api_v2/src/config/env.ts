@@ -47,6 +47,28 @@ export const apiV2EnvSchema = z.object({
   S3_MAX_IMAGE_BYTES: z.coerce.number().int().positive().optional(),
   S3_MAX_VIDEO_BYTES: z.coerce.number().int().positive().optional(),
   S3_MAX_EXPORT_BYTES: z.coerce.number().int().positive().optional(),
+  MODERATION_AWS_ENABLED: z.coerce.boolean().default(false),
+  MODERATION_AWS_REGION: z.string().default("us-east-1"),
+  MODERATION_AWS_DAILY_BUDGET_CENTS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(500),
+  MODERATION_AWS_MONTHLY_BUDGET_CENTS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(5000),
+  MODERATION_IMAGE_MIN_CONFIDENCE: z.coerce
+    .number()
+    .min(0)
+    .max(100)
+    .default(70),
+  MODERATION_QUEUE_CONCURRENCY: z.coerce.number().int().positive().default(3),
+  MODERATION_FULL_VIDEO_ENABLED: z.coerce.boolean().default(false),
+  MODERATION_FULL_VIDEO_MIN_PLAN: z
+    .enum(["FREE", "PRO", "BUSINESS"])
+    .default("BUSINESS"),
 });
 
 export type ApiV2Env = z.infer<typeof apiV2EnvSchema>;

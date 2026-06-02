@@ -55,6 +55,7 @@ export const createFormSubmissionBodySchema =
   createPublicTestimonialBodySchema.extend({
     rating: z.number().int().min(1).max(10).nullable().optional(),
     answers: z.record(z.string(), z.unknown()).optional(),
+    mediaAssetIds: z.array(z.string().trim().min(1)).max(10).optional(),
   });
 
 export const hostedFormRequestContextSchema = z

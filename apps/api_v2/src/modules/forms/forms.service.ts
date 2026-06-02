@@ -20,6 +20,7 @@ import {
   PublicSubmitTrustMode,
   StudioDraftResourceType,
   TestimonialType,
+  UserPlan,
 } from "@workspace/database/prisma";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
@@ -29,8 +30,12 @@ import {
   PublicSubmitTrustService,
   type PublicSubmitTrustResult,
 } from "../testimonials/public-submit-trust.service.js";
-import { MediaService } from "../storage/media.service.js";
+import {
+  MediaService,
+  type SubmissionAttachmentModerationLimits,
+} from "../storage/media.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
 import {
   publicSubmitIdempotencyWhere,
   replayCompletedPublicSubmit,
@@ -61,6 +66,30 @@ const FORM_SELECT = {
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.CollectionFormSelect;
+
+const SUBMIT_PROJECT_SELECT = {
+  id: true,
+  slug: true,
+  name: true,
+  brandColorPrimary: true,
+  autoModeration: true,
+  autoApproveVerified: true,
+  user: {
+    select: {
+      plan: true,
+      subscription: {
+        select: {
+          userPlan: true,
+          plan: {
+            select: {
+              limits: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProjectSelect;
 
 const TESTIMONIAL_SELECT = {
   id: true,
@@ -143,11 +172,9 @@ const EMPTY_FORM_METRICS: FormMetrics = {
   lastSubmissionAt: null,
 };
 
-type SubmitProjectPolicy = {
-  id: string;
-  autoModeration: boolean;
-  autoApproveVerified: boolean;
-};
+type SubmitProjectPolicy = Prisma.ProjectGetPayload<{
+  select: typeof SUBMIT_PROJECT_SELECT;
+}>;
 
 type SubmissionModerationDecision = {
   status: ModerationStatus;
@@ -194,6 +221,27 @@ const ABUSIVE_LANGUAGE_PATTERNS = [
   /\bgo die\b/i,
 ];
 
+const DEFAULT_ATTACHMENT_MODERATION_LIMITS: Record<
+  UserPlan,
+  SubmissionAttachmentModerationLimits
+> = {
+  [UserPlan.FREE]: {
+    imagesPerMonth: 10,
+    maxMediaAssetsPerSubmission: 1,
+    maxImageBytes: 4_000_000,
+  },
+  [UserPlan.PRO]: {
+    imagesPerMonth: 1_000,
+    maxMediaAssetsPerSubmission: 5,
+    maxImageBytes: 8_000_000,
+  },
+  [UserPlan.BUSINESS]: {
+    imagesPerMonth: 10_000,
+    maxMediaAssetsPerSubmission: 10,
+    maxImageBytes: 16_000_000,
+  },
+};
+
 @Injectable()
 export class FormsService {
   private readonly logger = new Logger(FormsService.name);
@@ -213,6 +261,9 @@ export class FormsService {
     @Optional()
     @Inject(NotificationsService)
     private readonly notificationsService?: NotificationsService,
+    @Optional()
+    @Inject(SubmissionModerationService)
+    private readonly submissionModerationService?: SubmissionModerationService,
   ) {}
 
   async list(params: ProjectFormsParamsDto, request: ProjectRequest) {
@@ -603,11 +654,7 @@ export class FormsService {
 
     const project = await this.prisma.client.project.findUnique({
       where: { id: trust.projectId },
-      select: {
-        id: true,
-        autoModeration: true,
-        autoApproveVerified: true,
-      },
+      select: SUBMIT_PROJECT_SELECT,
     });
     if (!project) {
       throw new NotFoundException("Project not found");
@@ -655,6 +702,16 @@ export class FormsService {
     }
 
     const moderation = this.resolveInitialModeration(project, trust, body);
+    const submissionMediaAssetIds = this.normalizeSubmissionMediaAssetIds(
+      body.mediaAssetIds,
+    );
+    const moderationLimits =
+      this.resolveSubmissionAttachmentModerationLimits(project);
+    if (submissionMediaAssetIds.length > 0 && !this.mediaService) {
+      throw new InternalServerErrorException(
+        "FormsService requires MediaService for submission attachments",
+      );
+    }
 
     const clientIp = this.publicSubmitTrustService.getClientIp(request);
     const userAgent = this.readHeader(request, "user-agent") ?? null;
@@ -669,6 +726,7 @@ export class FormsService {
             body.authorAvatarAssetId,
             body.videoAssetId,
             body.mediaAssetId,
+            ...submissionMediaAssetIds,
           ],
         });
         const testimonial = await tx.testimonial.create({
@@ -742,6 +800,16 @@ export class FormsService {
               : {}),
           },
         });
+
+        await this.mediaService?.attachPublicSubmissionAssets({
+          tx,
+          projectId: trust.projectId,
+          formId: form.id,
+          submissionId: submission.id,
+          principal: trust.principal,
+          assetIds: submissionMediaAssetIds,
+          limits: moderationLimits,
+        });
         const day = startOfUtcDay(new Date());
         await tx.projectAnalyticsDaily.upsert({
           where: {
@@ -788,6 +856,10 @@ export class FormsService {
         },
       });
     }
+
+    await this.submissionModerationService?.enqueueSubmission({
+      submissionId: submission.id,
+    });
 
     await this.notificationsService?.createForProjectReviewers(
       trust.projectId,
@@ -850,14 +922,7 @@ export class FormsService {
         resourceType: true,
         resourceId: true,
         project: {
-          select: {
-            id: true,
-            slug: true,
-            name: true,
-            brandColorPrimary: true,
-            autoModeration: true,
-            autoApproveVerified: true,
-          },
+          select: SUBMIT_PROJECT_SELECT,
         },
       },
     });
@@ -867,14 +932,7 @@ export class FormsService {
       (normalizedHost === defaultHost
         ? await this.prisma.client.project.findFirst({
             where: { slug: context.projectPublicSlug, isActive: true },
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              brandColorPrimary: true,
-              autoModeration: true,
-              autoApproveVerified: true,
-            },
+            select: SUBMIT_PROJECT_SELECT,
           })
         : null);
 
@@ -1191,6 +1249,47 @@ export class FormsService {
       flags: [],
       reason: null,
     };
+  }
+
+  private normalizeSubmissionMediaAssetIds(assetIds: string[] | undefined) {
+    return assetIds ?? [];
+  }
+
+  private resolveSubmissionAttachmentModerationLimits(
+    project: SubmitProjectPolicy,
+  ): SubmissionAttachmentModerationLimits {
+    const plan =
+      project.user?.subscription?.userPlan ?? project.user?.plan ?? UserPlan.FREE;
+    const fallback =
+      DEFAULT_ATTACHMENT_MODERATION_LIMITS[plan] ??
+      DEFAULT_ATTACHMENT_MODERATION_LIMITS[UserPlan.FREE];
+    const planLimits = project.user?.subscription?.plan?.limits;
+    const moderationLimits = this.toRecord(planLimits)?.moderation;
+    const moderation = this.toRecord(moderationLimits);
+    if (!moderation) {
+      return fallback;
+    }
+
+    return {
+      imagesPerMonth: this.numberLimit(
+        moderation.imagesPerMonth,
+        fallback.imagesPerMonth,
+      ),
+      maxMediaAssetsPerSubmission: this.numberLimit(
+        moderation.maxMediaAssetsPerSubmission,
+        fallback.maxMediaAssetsPerSubmission,
+      ),
+      maxImageBytes: this.numberLimit(
+        moderation.maxImageBytes,
+        fallback.maxImageBytes,
+      ),
+    };
+  }
+
+  private numberLimit(value: unknown, fallback: number) {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0
+      ? value
+      : fallback;
   }
 
   private async assertNotRecentDuplicateSubmit(input: {

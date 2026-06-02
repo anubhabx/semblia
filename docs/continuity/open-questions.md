@@ -1,6 +1,6 @@
 # Open Questions
 
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 This file is for user-owned or architecture-sensitive questions. Do not silently decide these during implementation.
 
@@ -14,6 +14,9 @@ This file is for user-owned or architecture-sensitive questions. Do not silently
 | Phase 1e analytics               | Which analytics KPIs are required for launch versus later?                                                                                 | The current baseline is form views, form submissions, widget loads, testimonial impressions, hosted page views, API requests, and agent actions.                                                                       | Baseline summary/event capture implemented; revisit only if dashboard commitments expand.    |
 | Native integrations              | Which provider should be implemented first after the generic export foundation?                                                            | Slack, Notion, Linear, and GitHub are implemented as thin one-way export destinations. Provider app setup, OAuth consent, and live account rollout remain deployment/product setup concerns, not current API blockers. | Implemented; no longer blocking.                                                             |
 | Clerk SMS delivery               | Which SMS provider should own `sms.created` delivery if Clerk SMS delivery is disabled?                                                    | `api_v2` now accepts and ledgers `sms.created`, but the current delivery stack is Resend/email-only. Disabling Clerk SMS before an SMS provider exists would drop OTP SMS messages.                                    | Open; keep Clerk SMS delivery enabled until provider is chosen and implemented.              |
+| Moderation quotas                | Are the starter media moderation caps acceptable for launch: FREE 10 images / 10 audio minutes / 2 video minutes per month, PRO 1,000 images / 4 audio hours / 1 video hour, BUSINESS 10,000 images / 20 audio hours / 5 video hours? | These caps keep AWS credit burn controlled while still allowing images, audio, and short videos on paid plans. They are implementation seed values, not final marketing copy. | Implemented as seed/enforcement defaults in the AWS-first moderation pass; user can still adjust before launch. |
+| Moderation media durations       | Where should trusted audio/video duration metadata be captured for plan-limit enforcement?                                        | `MediaAsset` has byte size and content type, but no duration field. The first implementation enforces per-submission attachment count, image monthly count, and image byte caps; audio/video duration caps need duration metadata or provider-side accounting before strict enforcement. | Open; do not invent duration metadata without a schema/product decision. |
+| Direct testimonial moderation    | Should direct public testimonial submits create a canonical `CollectionFormSubmission`, or should moderation runs allow testimonial-only records? | `SubmissionModerationRun.submissionId` is required and form/hosted submissions are canonical. Direct public testimonial submits currently create only `Testimonial`; the enqueue hook can process linked canonical submissions, but changing direct testimonials into submission-backed records is a feedback-model decision. | Open; form and hosted submission paths are covered by the implemented queue. |
 
 ## Watch Items
 

@@ -6,7 +6,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
-import { Prisma } from "@workspace/database/prisma";
+import { Prisma, SubmissionModerationRunStatus } from "@workspace/database/prisma";
 import type { Queue } from "bullmq";
 import {
   EXPORT_DELIVERY_QUEUE,
@@ -26,8 +26,10 @@ import {
   DEFAULT_DELIVERY_ATTEMPTS,
   DEFAULT_DELIVERY_BACKOFF_MS,
   EMAIL_DELIVERY_QUEUE,
+  SUBMISSION_MODERATION_QUEUE,
 } from "../queueing/queueing.constants.js";
 import type { EmailDeliveryJob } from "../email/email.types.js";
+import type { SubmissionModerationJob } from "../submission-moderation/submission-moderation.service.js";
 
 @Injectable()
 export class OpsAdminService {
@@ -46,6 +48,9 @@ export class OpsAdminService {
     @Optional()
     @InjectQueue(NATIVE_INTEGRATION_EXPORT_QUEUE)
     private readonly nativeIntegrationQueue?: Queue<NativeIntegrationDeliveryJob>,
+    @Optional()
+    @InjectQueue(SUBMISSION_MODERATION_QUEUE)
+    private readonly submissionModerationQueue?: Queue<SubmissionModerationJob>,
   ) {}
 
   getStatus() {
@@ -61,8 +66,14 @@ export class OpsAdminService {
     yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
     const yesterday = yesterdayDate.toISOString().slice(0, 10);
 
-    const [snapshot, todayUsage, yesterdayUsage, unresolvedAlertCount] =
-      await Promise.all([
+    const [
+      snapshot,
+      todayUsage,
+      yesterdayUsage,
+      unresolvedAlertCount,
+      budgetSuppressedCount,
+      latestBudgetSuppressed,
+    ] = await Promise.all([
         this.queueTelemetry.getSnapshot(),
         this.prisma.client.emailUsage.findUnique({ where: { date: today } }),
         this.prisma.client.emailUsage.findUnique({
@@ -70,6 +81,20 @@ export class OpsAdminService {
         }),
         this.prisma.client.alertHistory.count({
           where: { resolved: false },
+        }),
+        this.prisma.client.submissionModerationRun.count({
+          where: {
+            status: SubmissionModerationRunStatus.SUPPRESSED,
+            errorCode: "BUDGET_SUPPRESSED",
+          },
+        }),
+        this.prisma.client.submissionModerationRun.findFirst({
+          where: {
+            status: SubmissionModerationRunStatus.SUPPRESSED,
+            errorCode: "BUDGET_SUPPRESSED",
+          },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
         }),
       ]);
 
@@ -80,6 +105,11 @@ export class OpsAdminService {
         yesterday: { date: yesterday, count: yesterdayUsage?.count ?? 0 },
       },
       unresolvedAlertCount,
+      moderationBudget: {
+        budgetSuppressedCount,
+        lastBudgetSuppressedAt:
+          latestBudgetSuppressed?.createdAt.toISOString() ?? null,
+      },
     };
   }
 
@@ -96,13 +126,13 @@ export class OpsAdminService {
       return { retried: false, reason: "already_retried" as const };
     }
 
-    const deliveryId = getDeliveryId(deadLetter.data);
-    if (!deliveryId) {
-      throw new BadRequestException("Dead-letter job is missing deliveryId");
+    const targetId = getRetryTargetId(deadLetter.queue, deadLetter.data);
+    if (!targetId) {
+      throw new BadRequestException("Dead-letter job is missing retry target id");
     }
 
-    const retry = this.getRetryTarget(deadLetter.queue, deadLetter.id, deliveryId);
-    await retry.queue.add(retry.name, { deliveryId }, retry.options);
+    const retry = this.getRetryTarget(deadLetter.queue, deadLetter.id, targetId);
+    await (retry.queue as Queue).add(retry.name, retry.data, retry.options);
 
     const retriedAt = new Date();
     await this.prisma.client.deadLetterJob.update({
@@ -114,7 +144,7 @@ export class OpsAdminService {
           retriedAt: retriedAt.toISOString(),
           jobId: retry.options.jobId,
           queue: deadLetter.queue,
-          deliveryId,
+          targetId,
         }),
       },
     });
@@ -122,7 +152,7 @@ export class OpsAdminService {
     return { retried: true, jobId: retry.options.jobId };
   }
 
-  private getRetryTarget(queue: string, deadLetterId: string, deliveryId: string) {
+  private getRetryTarget(queue: string, deadLetterId: string, targetId: string) {
     const commonOptions = {
       attempts: DEFAULT_DELIVERY_ATTEMPTS,
       backoff: { type: "exponential" as const, delay: DEFAULT_DELIVERY_BACKOFF_MS },
@@ -134,9 +164,10 @@ export class OpsAdminService {
       return {
         queue: this.emailQueue,
         name: "send",
+        data: { deliveryId: targetId },
         options: {
           ...commonOptions,
-          jobId: `retry:email-delivery:${deadLetterId}:${deliveryId}`,
+          jobId: `retry:email-delivery:${deadLetterId}:${targetId}`,
         },
       };
     }
@@ -145,9 +176,10 @@ export class OpsAdminService {
       return {
         queue: this.outboundWebhookQueue,
         name: "deliver",
+        data: { deliveryId: targetId },
         options: {
           ...commonOptions,
-          jobId: `retry:outbound-webhook:${deadLetterId}:${deliveryId}`,
+          jobId: `retry:outbound-webhook:${deadLetterId}:${targetId}`,
         },
       };
     }
@@ -156,9 +188,10 @@ export class OpsAdminService {
       return {
         queue: this.exportDeliveryQueue,
         name: "csv",
+        data: { deliveryId: targetId },
         options: {
           ...commonOptions,
-          jobId: `retry:export-delivery:${deadLetterId}:${deliveryId}`,
+          jobId: `retry:export-delivery:${deadLetterId}:${targetId}`,
         },
       };
     }
@@ -167,9 +200,22 @@ export class OpsAdminService {
       return {
         queue: this.nativeIntegrationQueue,
         name: "deliver",
+        data: { deliveryId: targetId },
         options: {
           ...commonOptions,
-          jobId: `retry:native-integration-export:${deadLetterId}:${deliveryId}`,
+          jobId: `retry:native-integration-export:${deadLetterId}:${targetId}`,
+        },
+      };
+    }
+
+    if (queue === SUBMISSION_MODERATION_QUEUE && this.submissionModerationQueue) {
+      return {
+        queue: this.submissionModerationQueue,
+        name: SUBMISSION_MODERATION_QUEUE,
+        data: { runId: targetId },
+        options: {
+          ...commonOptions,
+          jobId: `retry:submission-moderation:${deadLetterId}:${targetId}`,
         },
       };
     }
@@ -178,13 +224,14 @@ export class OpsAdminService {
   }
 }
 
-function getDeliveryId(data: Prisma.JsonValue) {
+function getRetryTargetId(queue: string, data: Prisma.JsonValue) {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
 
-  const deliveryId = (data as Record<string, unknown>).deliveryId;
-  return typeof deliveryId === "string" && deliveryId ? deliveryId : null;
+  const key = queue === SUBMISSION_MODERATION_QUEUE ? "runId" : "deliveryId";
+  const value = (data as Record<string, unknown>)[key];
+  return typeof value === "string" && value ? value : null;
 }
 
 function buildRetryHistory(

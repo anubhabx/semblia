@@ -14,6 +14,8 @@ import type { StudioDraftsService } from "../studio-drafts/studio-drafts.service
 import type { TestimonialPrivateMetadataService } from "../testimonials/testimonial-private-metadata.service.js";
 import type { PublicSubmitTrustService } from "../testimonials/public-submit-trust.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
+import type { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
+import type { MediaService } from "../storage/media.service.js";
 import { hashIdempotencyPayload } from "../testimonials/testimonials.dto.js";
 
 const mockCollectionFormFindMany = vi.fn();
@@ -46,7 +48,10 @@ const mockGetClientIp = vi.fn();
 const mockCreatePrivateMetadataForPublicSubmit = vi.fn();
 const mockGetStudioDraft = vi.fn();
 const mockSaveStudioDraft = vi.fn();
+const mockActivatePublicSubmitAssets = vi.fn();
+const mockAttachPublicSubmissionAssets = vi.fn();
 const mockCreateForProjectReviewers = vi.fn();
+const mockEnqueueSubmission = vi.fn();
 
 const prismaMock = {
   client: {
@@ -115,9 +120,19 @@ const studioDraftsServiceMock = {
   saveDraft: mockSaveStudioDraft,
 } as unknown as StudioDraftsService;
 
+const mediaServiceMock = {
+  activatePublicSubmitAssets: mockActivatePublicSubmitAssets,
+  attachPublicSubmissionAssets: mockAttachPublicSubmissionAssets,
+  toDto: vi.fn(() => null),
+} as unknown as MediaService;
+
 const notificationsServiceMock = {
   createForProjectReviewers: mockCreateForProjectReviewers,
 } as unknown as NotificationsService;
+
+const submissionModerationServiceMock = {
+  enqueueSubmission: mockEnqueueSubmission,
+} as unknown as SubmissionModerationService;
 
 const configServiceMock = {
   get: vi.fn((key: string) =>
@@ -127,7 +142,7 @@ const configServiceMock = {
   ),
 } as unknown as ConfigService;
 
-function makeService() {
+function makeService(mediaService?: MediaService) {
   return new FormsService(
     prismaMock,
     configServiceMock,
@@ -135,8 +150,9 @@ function makeService() {
     trustServiceMock,
     privateMetadataServiceMock,
     studioDraftsServiceMock,
-    undefined,
+    mediaService,
     notificationsServiceMock,
+    submissionModerationServiceMock,
   );
 }
 
@@ -228,6 +244,9 @@ describe("FormsService", () => {
     mockFormImpressionGroupBy.mockResolvedValue([]);
     mockStudioDraftFindUnique.mockResolvedValue(null);
     mockStudioDraftUpdateMany.mockResolvedValue({ count: 1 });
+    mockActivatePublicSubmitAssets.mockResolvedValue(undefined);
+    mockAttachPublicSubmissionAssets.mockResolvedValue(undefined);
+    mockEnqueueSubmission.mockResolvedValue([]);
   });
 
   it("list returns forms for the project ordered by createdAt asc", async () => {
@@ -710,14 +729,15 @@ describe("FormsService", () => {
 
     expect(mockProjectFindFirst).toHaveBeenCalledWith({
       where: { slug: "acme", isActive: true },
-      select: {
+      select: expect.objectContaining({
         id: true,
         slug: true,
         name: true,
         brandColorPrimary: true,
         autoModeration: true,
         autoApproveVerified: true,
-      },
+        user: expect.any(Object),
+      }),
     });
     expect(mockCollectionFormFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1119,6 +1139,9 @@ describe("FormsService", () => {
         userAgent: "Vitest",
       }),
     );
+    expect(mockEnqueueSubmission).toHaveBeenCalledWith({
+      submissionId: "submission_1",
+    });
     expect(result).toMatchObject({
       formId: "form_1",
       moderationStatus: ModerationStatus.APPROVED,
@@ -1126,6 +1149,81 @@ describe("FormsService", () => {
     });
     expect(result).not.toHaveProperty("authorEmail");
     expect(mockRedisScan).toHaveBeenCalled();
+  });
+
+  it("submitPublic attaches uploaded submission media using moderation plan caps", async () => {
+    mockEvaluateTrust.mockResolvedValue({
+      projectId: "project_1",
+      trust: "hmac",
+      principal: "project:project_1",
+      signingSecretId: "secret_1",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockProjectFindUnique.mockResolvedValue({
+      id: "project_1",
+      autoModeration: true,
+      autoApproveVerified: true,
+      user: {
+        plan: "PRO",
+        subscription: {
+          userPlan: "PRO",
+          plan: {
+            limits: {
+              moderation: {
+                imagesPerMonth: 50,
+                maxMediaAssetsPerSubmission: 3,
+                maxImageBytes: 6_000_000,
+              },
+            },
+          },
+        },
+      },
+    });
+    mockTestimonialCreate.mockResolvedValue(makeTestimonial());
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+      testimonialId: "testimonial_1",
+    });
+
+    const service = makeService(mediaServiceMock);
+    await service.submitPublic(
+      { slug: "acme", formId: "form_1" },
+      {
+        authorName: "Ada",
+        content: "Loved it",
+        mediaAssetIds: ["asset_image_1", "asset_audio_1"],
+      },
+      {
+        headers: {},
+        rawBody: JSON.stringify({
+          authorName: "Ada",
+          content: "Loved it",
+          mediaAssetIds: ["asset_image_1", "asset_audio_1"],
+        }),
+      },
+    );
+
+    expect(mockActivatePublicSubmitAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project_1",
+        principal: "project:project_1",
+        assetIds: expect.arrayContaining(["asset_image_1", "asset_audio_1"]),
+      }),
+    );
+    expect(mockAttachPublicSubmissionAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project_1",
+        formId: "form_1",
+        submissionId: "submission_1",
+        principal: "project:project_1",
+        assetIds: ["asset_image_1", "asset_audio_1"],
+        limits: {
+          imagesPerMonth: 50,
+          maxMediaAssetsPerSubmission: 3,
+          maxImageBytes: 6_000_000,
+        },
+      }),
+    );
   });
 
   it("submitPublic origin trust auto-approves only verified submissions when enabled", async () => {
@@ -1227,6 +1325,7 @@ describe("FormsService", () => {
         },
       ),
     ).resolves.toEqual({ id: "testimonial_cached" });
+    expect(mockEnqueueSubmission).not.toHaveBeenCalled();
   });
 
   it("submitPublic reserves form idempotency keys under the form surface", async () => {
@@ -1440,6 +1539,9 @@ describe("FormsService", () => {
     expect(result).toMatchObject({
       moderationStatus: ModerationStatus.FLAGGED,
       autoPublished: false,
+    });
+    expect(mockEnqueueSubmission).toHaveBeenCalledWith({
+      submissionId: "submission_1",
     });
   });
 

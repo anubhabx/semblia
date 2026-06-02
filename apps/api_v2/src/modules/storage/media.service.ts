@@ -32,6 +32,12 @@ import { StorageService } from "./storage.service.js";
 const CONFIRM_WINDOW_MS = 10 * 60 * 1000;
 const PUBLIC_SUBMIT_WINDOW_MS = 30 * 60 * 1000;
 
+export type SubmissionAttachmentModerationLimits = {
+  imagesPerMonth: number;
+  maxMediaAssetsPerSubmission: number;
+  maxImageBytes: number;
+};
+
 @Injectable()
 export class MediaService {
   constructor(
@@ -163,6 +169,10 @@ export class MediaService {
     if (!source || source.status !== MediaAssetStatus.ACTIVE) {
       throw new NotFoundException("Media asset not found");
     }
+    if (!source.storageKey) {
+      throw new NotFoundException("Media asset storage key not found");
+    }
+    const sourceStorageKey = source.storageKey;
 
     const created = await this.prisma.client.mediaAsset.create({
       data: {
@@ -188,7 +198,7 @@ export class MediaService {
       contentType: source.contentType,
       projectId: input.projectId,
     });
-    await this.s3.copyObject(source.storageKey, storageKey);
+    await this.s3.copyObject(sourceStorageKey, storageKey);
     return this.prisma.client.mediaAsset.update({
       where: { id: created.id },
       data: { storageKey },
@@ -249,6 +259,102 @@ export class MediaService {
     await input.tx.mediaAsset.updateMany({
       where: { id: { in: ids }, status: MediaAssetStatus.PENDING },
       data: { status: MediaAssetStatus.ACTIVE, confirmedAt: new Date() },
+    });
+  }
+
+  async attachPublicSubmissionAssets(input: {
+    tx: Prisma.TransactionClient;
+    assetIds: string[];
+    projectId: string;
+    formId: string;
+    submissionId: string;
+    principal: string;
+    limits: SubmissionAttachmentModerationLimits;
+  }) {
+    if (input.assetIds.length === 0) return;
+    const uniqueAssetIds = Array.from(new Set(input.assetIds));
+    if (uniqueAssetIds.length !== input.assetIds.length) {
+      throw new BadRequestException("Duplicate submission media assets");
+    }
+    if (uniqueAssetIds.length > input.limits.maxMediaAssetsPerSubmission) {
+      throw new BadRequestException("Submission media asset limit exceeded");
+    }
+
+    const assets = await input.tx.mediaAsset.findMany({
+      where: { id: { in: uniqueAssetIds } },
+    });
+    if (assets.length !== uniqueAssetIds.length) {
+      throw new NotFoundException("Media asset not found");
+    }
+
+    const imageAssets = assets.filter((asset) =>
+      asset.contentType.toLowerCase().startsWith("image/"),
+    );
+    if (imageAssets.length > 0) {
+      const attachedImagesThisMonth = await input.tx.mediaAsset.count({
+        where: {
+          id: { notIn: uniqueAssetIds },
+          projectId: input.projectId,
+          purpose: MediaAssetPurpose.SUBMISSION_ATTACHMENT,
+          status: MediaAssetStatus.ACTIVE,
+          contentType: { startsWith: "image/" },
+          submissionId: { not: null },
+          createdAt: { gte: startOfUtcMonth(new Date()) },
+        },
+      });
+      if (
+        attachedImagesThisMonth + imageAssets.length >
+        input.limits.imagesPerMonth
+      ) {
+        throw new BadRequestException("Monthly image moderation limit exceeded");
+      }
+    }
+
+    const allowedTypes = this.storage.allowedContentTypes(
+      MediaAssetPurpose.SUBMISSION_ATTACHMENT,
+    );
+    for (const asset of assets) {
+      if (asset.purpose !== MediaAssetPurpose.SUBMISSION_ATTACHMENT) {
+        throw new BadRequestException("Media asset purpose does not match");
+      }
+      if (asset.projectId !== input.projectId) {
+        throw new BadRequestException("Media asset belongs to another project");
+      }
+      if (asset.formId && asset.formId !== input.formId) {
+        throw new BadRequestException("Media asset belongs to another form");
+      }
+      if (
+        asset.createdByActorType !== "public" ||
+        asset.createdByActorId !== input.principal
+      ) {
+        throw new BadRequestException("Invalid submission media asset");
+      }
+      if (asset.status !== MediaAssetStatus.ACTIVE) {
+        throw new ConflictException("Media asset is not ready");
+      }
+      if (asset.visibility !== MediaAssetVisibility.PRIVATE) {
+        throw new BadRequestException("Submission media asset must be private");
+      }
+      if (!allowedTypes.includes(asset.contentType)) {
+        throw new BadRequestException("Content type is not allowed");
+      }
+      if (
+        asset.contentType.toLowerCase().startsWith("image/") &&
+        (asset.byteSize ?? 0) > input.limits.maxImageBytes
+      ) {
+        throw new BadRequestException("Image exceeds plan moderation limit");
+      }
+      if (asset.submissionId && asset.submissionId !== input.submissionId) {
+        throw new ConflictException("Media asset is already attached");
+      }
+    }
+
+    await input.tx.mediaAsset.updateMany({
+      where: { id: { in: uniqueAssetIds } },
+      data: {
+        formId: input.formId,
+        submissionId: input.submissionId,
+      },
     });
   }
 
@@ -355,6 +461,14 @@ export class MediaService {
       if (!form) throw new NotFoundException("Form not found");
       return { projectId: access.project.id, formId: form.id };
     }
+    if (body.purpose === "SUBMISSION_ATTACHMENT" && body.formId) {
+      const form = await this.prisma.client.collectionForm.findFirst({
+        where: { id: body.formId, projectId: access.project.id },
+        select: { id: true },
+      });
+      if (!form) throw new NotFoundException("Form not found");
+      return { projectId: access.project.id, formId: form.id };
+    }
     return { projectId: access.project.id };
   }
 
@@ -401,4 +515,8 @@ export class MediaService {
       purpose === MediaAssetPurpose.TESTIMONIAL_MEDIA
     );
   }
+}
+
+function startOfUtcMonth(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
