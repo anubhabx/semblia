@@ -1,11 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Funnel as FilterIcon,
   CaretDown as ChevronDownIcon,
+  Export as ExportIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +21,7 @@ import {
   RefreshingDataBadge,
   SearchField,
 } from "@/components/shared";
+import { useCreateCsvExport } from "@/hooks/api";
 import type { V2ModerationStatus } from "@workspace/types";
 
 // ── Compact result summary the filter bar needs from its consumer ─────────────
@@ -49,6 +54,7 @@ export const SORT_OPTIONS: { key: SortOption; label: string }[] = [
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface FilterBarProps {
+  slug: string;
   sort: SortOption;
   setSort: (s: SortOption) => void;
   search: string;
@@ -60,6 +66,7 @@ interface FilterBarProps {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function ResponsesFilterBar({
+  slug,
   sort,
   setSort,
   search,
@@ -67,7 +74,26 @@ export function ResponsesFilterBar({
   result,
   refreshing,
 }: FilterBarProps) {
+  const router = useRouter();
+  const createExport = useCreateCsvExport(slug);
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort";
+
+  function handleExport() {
+    createExport.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Export queued", {
+          description: "Your CSV will be ready on the Exports page shortly.",
+          action: {
+            label: "View exports",
+            onClick: () => router.push(`/projects/${slug}/developers/exports`),
+          },
+        });
+      },
+      onError: () => {
+        toast.error("Could not start export. Please try again.");
+      },
+    });
+  }
 
   return (
     <PageToolbar
@@ -111,16 +137,32 @@ export function ResponsesFilterBar({
         </>
       }
       trailing={
-        result || refreshing ? (
-          <>
-            <RefreshingDataBadge show={refreshing} />
-            {result && (
-              <span className="text-[11px] tabular-nums text-muted-foreground">
-                {result.total} {result.total === 1 ? "result" : "results"}
-              </span>
+        <>
+          <RefreshingDataBadge show={refreshing} />
+          {result && (
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {result.total} {result.total === 1 ? "result" : "results"}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="xs"
+            className="gap-1.5"
+            onClick={handleExport}
+            disabled={createExport.isPending}
+          >
+            {createExport.isPending ? (
+              <Spinner className="size-3" />
+            ) : (
+              <ExportIcon
+                className="size-3 shrink-0"
+                weight="bold"
+                aria-hidden
+              />
             )}
-          </>
-        ) : undefined
+            Export CSV
+          </Button>
+        </>
       }
     />
   );

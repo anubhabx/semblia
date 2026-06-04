@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import {
   createCsvExport,
+  downloadExport,
   fetchExportDeliveries,
   fetchExportDelivery,
   type ExportDeliveriesParams,
@@ -58,6 +59,22 @@ export function useCreateCsvExport(slug: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.exports.deliveries(slug) });
+    },
+  });
+}
+
+/**
+ * Fetches a completed export artifact. The caller is responsible for turning
+ * the returned blob into a browser download (object URL + anchor click) so the
+ * hook stays free of DOM side-effects and remains testable.
+ */
+export function useDownloadExport(slug: string) {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async (deliveryId: string) => {
+      const token = await getToken();
+      return downloadExport(token, slug, deliveryId);
     },
   });
 }

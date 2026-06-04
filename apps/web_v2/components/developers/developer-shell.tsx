@@ -14,6 +14,7 @@ import {
   HouseIcon,
   KeyIcon,
   RobotIcon,
+  ExportIcon,
   BookOpenTextIcon,
   ArrowSquareOutIcon,
   type Icon as PhosphorIcon,
@@ -21,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/shared";
 
-export type DeveloperSection = "overview" | "keys" | "agents";
+export type DeveloperSection = "overview" | "keys" | "agents" | "exports";
 
 const EXTERNAL_DOCS_URL = "https://docs.tresta.app";
 
@@ -64,6 +65,13 @@ const SUB_TABS: SubTabSpec[] = [
     label: "Agents",
     href: (slug) => `/projects/${slug}/developers/agents`,
     icon: RobotIcon,
+  },
+  {
+    kind: "internal",
+    id: "exports",
+    label: "Exports",
+    href: (slug) => `/projects/${slug}/developers/exports`,
+    icon: ExportIcon,
   },
   {
     kind: "external",

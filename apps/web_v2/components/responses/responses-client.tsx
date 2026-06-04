@@ -135,6 +135,7 @@ export function ResponsesClient({
   return (
     <div className="flex flex-1 flex-col">
       <ResponsesFilterBar
+        slug={slug}
         sort={sort}
         setSort={setSort}
         search={search}

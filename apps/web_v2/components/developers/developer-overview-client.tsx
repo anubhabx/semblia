@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   KeyIcon,
   RobotIcon,
+  ExportIcon,
   BookOpenTextIcon,
   ArrowRightIcon,
   ArrowSquareOutIcon,
@@ -14,7 +15,11 @@ import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import { PageBody } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApiKeysList, useAgentAccessOverview } from "@/hooks/api";
+import {
+  useApiKeysList,
+  useAgentAccessOverview,
+  useExportDeliveries,
+} from "@/hooks/api";
 import { DeveloperShell } from "./developer-shell";
 
 const EXTERNAL_DOCS_URL = "https://docs.tresta.app";
@@ -107,12 +112,17 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
   const { data: keys, isLoading: keysLoading } = useApiKeysList(slug);
   const { data: agentOverview, isLoading: agentsLoading } =
     useAgentAccessOverview(slug);
+  const { data: exports, isLoading: exportsLoading } = useExportDeliveries(
+    slug,
+    { pageSize: 1 },
+  );
 
   const activeKeys =
     keys?.filter((k) => k.isActive && k.status === "ACTIVE").length ?? null;
   const activeAgents =
     agentOverview?.keys.filter((k) => k.isActive && k.status === "ACTIVE")
       .length ?? null;
+  const exportCount = exports?.total ?? null;
 
   const cards: (InternalCardSpec | ExternalCardSpec)[] = [
     {
@@ -130,6 +140,14 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
       title: "Agent keys",
       count: agentsLoading ? null : (activeAgents ?? 0),
       countLabel: "active",
+    },
+    {
+      kind: "internal",
+      href: `/projects/${slug}/developers/exports`,
+      icon: ExportIcon,
+      title: "Exports",
+      count: exportsLoading ? null : (exportCount ?? 0),
+      countLabel: "total",
     },
     {
       kind: "external",

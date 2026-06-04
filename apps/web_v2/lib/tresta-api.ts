@@ -1043,6 +1043,41 @@ export function fetchExportDelivery(
   );
 }
 
+/**
+ * Fetches a completed export's CSV artifact. The API responds with a 302 to a
+ * signed storage URL; `fetch` follows it transparently (and strips the bearer
+ * header on the cross-origin hop), so we read the artifact body straight off
+ * the resolved response. Returns the blob plus a filename derived from
+ * `Content-Disposition` when the storage layer provides one.
+ */
+export async function downloadExport(
+  token: string | null,
+  slug: string,
+  deliveryId: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(
+    `${API_BASE}/v2/projects/${encodeURIComponent(slug)}/exports/deliveries/${encodeURIComponent(deliveryId)}/download`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+
+  if (!res.ok) {
+    let body: V2ErrorResponse | null = null;
+    try {
+      body = (await res.json()) as V2ErrorResponse;
+    } catch {
+      // non-JSON error body
+    }
+    throw new ApiError(res.status, body);
+  }
+
+  const disposition = res.headers.get("content-disposition");
+  const filename =
+    disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1] ??
+    `export-${deliveryId.slice(0, 8)}.csv`;
+
+  return { blob: await res.blob(), filename: decodeURIComponent(filename) };
+}
+
 // ── Native integrations ────────────────────────────────────────────────────
 
 export function fetchIntegrationConnections(

@@ -18,9 +18,14 @@ vi.mock("@clerk/nextjs", () => ({
   }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+}));
+
 vi.mock("@/lib/tresta-api", () => ({
   fetchProjects: vi.fn(),
   fetchResponses: vi.fn(),
+  createCsvExport: vi.fn(),
 }));
 
 function makeApiProject(overrides: Partial<V2ProjectDTO> = {}): V2ProjectDTO {
