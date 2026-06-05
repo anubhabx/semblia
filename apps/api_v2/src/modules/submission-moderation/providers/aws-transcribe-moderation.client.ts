@@ -1,29 +1,15 @@
-import {
-  GetTranscriptionJobCommand,
-  StartTranscriptionJobCommand,
-  ToxicityCategory,
-  TranscribeClient,
-  type GetTranscriptionJobCommandOutput,
-  type LanguageCode,
-  type MediaFormat,
-  type StartTranscriptionJobCommandOutput,
+import type {
+  GetTranscriptionJobCommandOutput,
+  LanguageCode,
+  MediaFormat,
+  StartTranscriptionJobCommandOutput,
 } from "@aws-sdk/client-transcribe";
 import type { ConfigService } from "@nestjs/config";
 import { normalizeAwsModerationLabel } from "../submission-moderation.policy.js";
 import type { ModerationProviderResult } from "../submission-moderation.types.js";
 
-type TranscribeCommand =
-  | StartTranscriptionJobCommand
-  | GetTranscriptionJobCommand;
-
 type TranscribeSender = {
-  send(
-    command: StartTranscriptionJobCommand,
-  ): Promise<StartTranscriptionJobCommandOutput>;
-  send(
-    command: GetTranscriptionJobCommand,
-  ): Promise<GetTranscriptionJobCommandOutput>;
-  send(command: TranscribeCommand): Promise<unknown>;
+  send(command: unknown): Promise<unknown>;
 };
 
 type TranscriptFetch = (url: string) => Promise<unknown>;
@@ -52,7 +38,12 @@ export class AwsTranscribeModerationClient {
     outputKey?: string;
   }): Promise<{ providerJobId: string | null }> {
     const languageCode = input.languageCode ?? "en-US";
-    const response = await this.getClient().send(
+    const { StartTranscriptionJobCommand, ToxicityCategory } = await import(
+      "@aws-sdk/client-transcribe"
+    );
+    const response = (await (
+      await this.getClient()
+    ).send(
       new StartTranscriptionJobCommand({
         TranscriptionJobName: input.jobName,
         LanguageCode: languageCode,
@@ -70,7 +61,7 @@ export class AwsTranscribeModerationClient {
             }
           : {}),
       }),
-    );
+    )) as StartTranscriptionJobCommandOutput;
 
     return {
       providerJobId: response.TranscriptionJob?.TranscriptionJobName ?? null,
@@ -80,9 +71,14 @@ export class AwsTranscribeModerationClient {
   async getTranscriptionResult(
     jobName: string,
   ): Promise<TranscribeModerationResult> {
-    const response = await this.getClient().send(
-      new GetTranscriptionJobCommand({ TranscriptionJobName: jobName }),
+    const { GetTranscriptionJobCommand } = await import(
+      "@aws-sdk/client-transcribe"
     );
+    const response = (await (
+      await this.getClient()
+    ).send(
+      new GetTranscriptionJobCommand({ TranscriptionJobName: jobName }),
+    )) as GetTranscriptionJobCommandOutput;
     const job = response.TranscriptionJob;
     const transcriptUri = job?.Transcript?.TranscriptFileUri ?? null;
     const transcriptJson =
@@ -116,9 +112,10 @@ export class AwsTranscribeModerationClient {
     };
   }
 
-  private getClient(): TranscribeSender {
+  private async getClient(): Promise<TranscribeSender> {
     if (this.client) return this.client;
 
+    const { TranscribeClient } = await import("@aws-sdk/client-transcribe");
     this.client = new TranscribeClient({
       region:
         this.configService.get<string>("MODERATION_AWS_REGION") ?? "us-east-1",
@@ -183,7 +180,9 @@ function asRecord(value: unknown): Record<string, unknown> {
 async function fetchTranscriptJson(url: string): Promise<unknown> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch Transcribe transcript: ${response.status}`);
+    throw new Error(
+      `Failed to fetch Transcribe transcript: ${response.status}`,
+    );
   }
   return response.json();
 }

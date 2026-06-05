@@ -1,32 +1,14 @@
-import {
-  DetectModerationLabelsCommand,
-  GetContentModerationCommand,
-  RekognitionClient,
-  StartContentModerationCommand,
-  type DetectModerationLabelsCommandOutput,
-  type GetContentModerationCommandOutput,
-  type StartContentModerationCommandOutput,
+import type {
+  DetectModerationLabelsCommandOutput,
+  GetContentModerationCommandOutput,
+  StartContentModerationCommandOutput,
 } from "@aws-sdk/client-rekognition";
 import type { ConfigService } from "@nestjs/config";
 import { normalizeAwsModerationLabel } from "../submission-moderation.policy.js";
 import type { ModerationProviderResult } from "../submission-moderation.types.js";
 
-type RekognitionCommand =
-  | DetectModerationLabelsCommand
-  | StartContentModerationCommand
-  | GetContentModerationCommand;
-
 type RekognitionSender = {
-  send(
-    command: DetectModerationLabelsCommand,
-  ): Promise<DetectModerationLabelsCommandOutput>;
-  send(
-    command: StartContentModerationCommand,
-  ): Promise<StartContentModerationCommandOutput>;
-  send(
-    command: GetContentModerationCommand,
-  ): Promise<GetContentModerationCommandOutput>;
-  send(command: RekognitionCommand): Promise<unknown>;
+  send(command: unknown): Promise<unknown>;
 };
 
 type S3ObjectRef = {
@@ -46,12 +28,17 @@ export class AwsRekognitionModerationClient {
   }
 
   async moderateImage(ref: S3ObjectRef): Promise<ModerationProviderResult> {
-    const response = await this.getClient().send(
+    const { DetectModerationLabelsCommand } = await import(
+      "@aws-sdk/client-rekognition"
+    );
+    const response = (await (
+      await this.getClient()
+    ).send(
       new DetectModerationLabelsCommand({
         Image: { S3Object: this.toS3Object(ref) },
         MinConfidence: this.minConfidence,
       }),
-    );
+    )) as DetectModerationLabelsCommandOutput;
 
     const normalized = normalizeModerationLabels(
       response.ModerationLabels ?? [],
@@ -74,7 +61,12 @@ export class AwsRekognitionModerationClient {
   async startVideoModeration(
     ref: S3ObjectRef & { clientRequestToken?: string; jobTag?: string },
   ): Promise<{ providerJobId: string | null }> {
-    const response = await this.getClient().send(
+    const { StartContentModerationCommand } = await import(
+      "@aws-sdk/client-rekognition"
+    );
+    const response = (await (
+      await this.getClient()
+    ).send(
       new StartContentModerationCommand({
         Video: { S3Object: this.toS3Object(ref) },
         MinConfidence: this.minConfidence,
@@ -83,7 +75,7 @@ export class AwsRekognitionModerationClient {
           : {}),
         ...(ref.jobTag ? { JobTag: ref.jobTag } : {}),
       }),
-    );
+    )) as StartContentModerationCommandOutput;
 
     return { providerJobId: response.JobId ?? null };
   }
@@ -91,12 +83,17 @@ export class AwsRekognitionModerationClient {
   async getVideoModerationResult(
     providerJobId: string,
   ): Promise<ModerationProviderResult> {
-    const response = await this.getClient().send(
+    const { GetContentModerationCommand } = await import(
+      "@aws-sdk/client-rekognition"
+    );
+    const response = (await (
+      await this.getClient()
+    ).send(
       new GetContentModerationCommand({
         JobId: providerJobId,
         SortBy: "TIMESTAMP",
       }),
-    );
+    )) as GetContentModerationCommandOutput;
     const labels = (response.ModerationLabels ?? [])
       .map((entry) => entry.ModerationLabel)
       .filter((label): label is NonNullable<typeof label> => Boolean(label));
@@ -119,9 +116,10 @@ export class AwsRekognitionModerationClient {
     };
   }
 
-  private getClient(): RekognitionSender {
+  private async getClient(): Promise<RekognitionSender> {
     if (this.client) return this.client;
 
+    const { RekognitionClient } = await import("@aws-sdk/client-rekognition");
     this.client = new RekognitionClient({
       region:
         this.configService.get<string>("MODERATION_AWS_REGION") ?? "us-east-1",
@@ -130,7 +128,9 @@ export class AwsRekognitionModerationClient {
   }
 
   private get minConfidence() {
-    return this.configService.get<number>("MODERATION_IMAGE_MIN_CONFIDENCE") ?? 70;
+    return (
+      this.configService.get<number>("MODERATION_IMAGE_MIN_CONFIDENCE") ?? 70
+    );
   }
 
   private toS3Object(ref: S3ObjectRef) {

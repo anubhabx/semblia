@@ -1,7 +1,7 @@
 {
   "extends": "@workspace/typescript-config/base.json",
   "compilerOptions": {
-    // "baseUrl": ".",
+    "baseUrl": ".",
     // "ignoreDeprecations": "6.0",
     "lib": ["ES2022"],
     "module": "NodeNext",
@@ -11,11 +11,7 @@
     "strictPropertyInitialization": false,
     "useDefineForClassFields": false,
     "outDir": "dist",
-    "rootDir": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@workspace/database/*": ["../../packages/database/dist/*"]
-    }
+    "rootDir": "."
   },
   "include": ["src/**/*"]
 }

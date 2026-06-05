@@ -1,8 +1,7 @@
-import {
-  ComprehendClient,
+import type {
   DetectToxicContentCommand,
-  type DetectToxicContentCommandOutput,
-  type LanguageCode,
+  DetectToxicContentCommandOutput,
+  LanguageCode,
 } from "@aws-sdk/client-comprehend";
 import type { ConfigService } from "@nestjs/config";
 import { normalizeAwsModerationLabel } from "../submission-moderation.policy.js";
@@ -34,9 +33,13 @@ export class AwsComprehendModerationClient {
     let score = 0;
     let resultCount = 0;
     const errors: Array<Record<string, unknown>> = [];
+    const { DetectToxicContentCommand } = await import(
+      "@aws-sdk/client-comprehend"
+    );
+    const client = await this.getClient();
 
     for (const batch of chunkArray(chunks, 10)) {
-      const response = await this.getClient().send(
+      const response = await client.send(
         new DetectToxicContentCommand({
           TextSegments: batch.map((segment) => ({ Text: segment })),
           LanguageCode: languageCode,
@@ -70,9 +73,10 @@ export class AwsComprehendModerationClient {
     };
   }
 
-  private getClient(): ComprehendSender {
+  private async getClient(): Promise<ComprehendSender> {
     if (this.client) return this.client;
 
+    const { ComprehendClient } = await import("@aws-sdk/client-comprehend");
     this.client = new ComprehendClient({
       region:
         this.configService.get<string>("MODERATION_AWS_REGION") ?? "us-east-1",
