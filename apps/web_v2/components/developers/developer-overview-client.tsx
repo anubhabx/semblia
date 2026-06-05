@@ -7,6 +7,7 @@ import {
   RobotIcon,
   WebhooksLogoIcon,
   ExportIcon,
+  ClockCounterClockwiseIcon,
   BookOpenTextIcon,
   ArrowRightIcon,
   ArrowSquareOutIcon,
@@ -21,6 +22,7 @@ import {
   useAgentAccessOverview,
   useOutboundWebhookEndpoints,
   useExportDeliveries,
+  useProjectActionAudit,
 } from "@/hooks/api";
 import { DeveloperShell } from "./developer-shell";
 
@@ -120,6 +122,9 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
   );
   const { data: webhookEndpoints, isLoading: webhooksLoading } =
     useOutboundWebhookEndpoints(slug);
+  const { data: audit, isLoading: auditLoading } = useProjectActionAudit(slug, {
+    pageSize: 1,
+  });
 
   const activeKeys =
     keys?.filter((k) => k.isActive && k.status === "ACTIVE").length ?? null;
@@ -129,6 +134,7 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
   const exportCount = exports?.total ?? null;
   const activeWebhooks =
     webhookEndpoints?.filter((e) => e.status === "ACTIVE").length ?? null;
+  const auditCount = audit?.total ?? null;
 
   const cards: (InternalCardSpec | ExternalCardSpec)[] = [
     {
@@ -162,6 +168,14 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
       title: "Exports",
       count: exportsLoading ? null : (exportCount ?? 0),
       countLabel: "total",
+    },
+    {
+      kind: "internal",
+      href: `/projects/${slug}/developers/audit`,
+      icon: ClockCounterClockwiseIcon,
+      title: "Activity",
+      count: auditLoading ? null : (auditCount ?? 0),
+      countLabel: "events",
     },
     {
       kind: "external",

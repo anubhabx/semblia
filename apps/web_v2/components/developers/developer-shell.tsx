@@ -16,6 +16,7 @@ import {
   RobotIcon,
   WebhooksLogoIcon,
   ExportIcon,
+  ClockCounterClockwiseIcon,
   BookOpenTextIcon,
   ArrowSquareOutIcon,
   type Icon as PhosphorIcon,
@@ -28,7 +29,9 @@ export type DeveloperSection =
   | "keys"
   | "agents"
   | "webhooks"
-  | "exports";
+  | "exports"
+  | "integrations"
+  | "audit";
 
 const EXTERNAL_DOCS_URL = "https://docs.tresta.app";
 
@@ -85,6 +88,13 @@ const SUB_TABS: SubTabSpec[] = [
     label: "Exports",
     href: (slug) => `/projects/${slug}/developers/exports`,
     icon: ExportIcon,
+  },
+  {
+    kind: "internal",
+    id: "audit",
+    label: "Activity",
+    href: (slug) => `/projects/${slug}/developers/audit`,
+    icon: ClockCounterClockwiseIcon,
   },
   {
     kind: "external",
