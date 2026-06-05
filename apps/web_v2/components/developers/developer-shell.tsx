@@ -14,6 +14,7 @@ import {
   HouseIcon,
   KeyIcon,
   RobotIcon,
+  WebhooksLogoIcon,
   ExportIcon,
   BookOpenTextIcon,
   ArrowSquareOutIcon,
@@ -22,7 +23,12 @@ import {
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/shared";
 
-export type DeveloperSection = "overview" | "keys" | "agents" | "exports";
+export type DeveloperSection =
+  | "overview"
+  | "keys"
+  | "agents"
+  | "webhooks"
+  | "exports";
 
 const EXTERNAL_DOCS_URL = "https://docs.tresta.app";
 
@@ -65,6 +71,13 @@ const SUB_TABS: SubTabSpec[] = [
     label: "Agents",
     href: (slug) => `/projects/${slug}/developers/agents`,
     icon: RobotIcon,
+  },
+  {
+    kind: "internal",
+    id: "webhooks",
+    label: "Webhooks",
+    href: (slug) => `/projects/${slug}/developers/webhooks`,
+    icon: WebhooksLogoIcon,
   },
   {
     kind: "internal",

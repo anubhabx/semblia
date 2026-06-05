@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   KeyIcon,
   RobotIcon,
+  WebhooksLogoIcon,
   ExportIcon,
   BookOpenTextIcon,
   ArrowRightIcon,
@@ -18,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useApiKeysList,
   useAgentAccessOverview,
+  useOutboundWebhookEndpoints,
   useExportDeliveries,
 } from "@/hooks/api";
 import { DeveloperShell } from "./developer-shell";
@@ -116,6 +118,8 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
     slug,
     { pageSize: 1 },
   );
+  const { data: webhookEndpoints, isLoading: webhooksLoading } =
+    useOutboundWebhookEndpoints(slug);
 
   const activeKeys =
     keys?.filter((k) => k.isActive && k.status === "ACTIVE").length ?? null;
@@ -123,6 +127,8 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
     agentOverview?.keys.filter((k) => k.isActive && k.status === "ACTIVE")
       .length ?? null;
   const exportCount = exports?.total ?? null;
+  const activeWebhooks =
+    webhookEndpoints?.filter((e) => e.status === "ACTIVE").length ?? null;
 
   const cards: (InternalCardSpec | ExternalCardSpec)[] = [
     {
@@ -139,6 +145,14 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
       icon: RobotIcon,
       title: "Agent keys",
       count: agentsLoading ? null : (activeAgents ?? 0),
+      countLabel: "active",
+    },
+    {
+      kind: "internal",
+      href: `/projects/${slug}/developers/webhooks`,
+      icon: WebhooksLogoIcon,
+      title: "Webhooks",
+      count: webhooksLoading ? null : (activeWebhooks ?? 0),
       countLabel: "active",
     },
     {
