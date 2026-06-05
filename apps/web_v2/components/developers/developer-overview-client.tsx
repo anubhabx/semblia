@@ -7,6 +7,7 @@ import {
   RobotIcon,
   WebhooksLogoIcon,
   ExportIcon,
+  PlugsConnectedIcon,
   ClockCounterClockwiseIcon,
   BookOpenTextIcon,
   ArrowRightIcon,
@@ -23,6 +24,7 @@ import {
   useOutboundWebhookEndpoints,
   useExportDeliveries,
   useProjectActionAudit,
+  useIntegrationConnections,
 } from "@/hooks/api";
 import { DeveloperShell } from "./developer-shell";
 
@@ -125,6 +127,8 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
   const { data: audit, isLoading: auditLoading } = useProjectActionAudit(slug, {
     pageSize: 1,
   });
+  const { data: integrations, isLoading: integrationsLoading } =
+    useIntegrationConnections(slug);
 
   const activeKeys =
     keys?.filter((k) => k.isActive && k.status === "ACTIVE").length ?? null;
@@ -135,6 +139,8 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
   const activeWebhooks =
     webhookEndpoints?.filter((e) => e.status === "ACTIVE").length ?? null;
   const auditCount = audit?.total ?? null;
+  const activeIntegrations =
+    integrations?.filter((c) => c.status === "ACTIVE").length ?? null;
 
   const cards: (InternalCardSpec | ExternalCardSpec)[] = [
     {
@@ -168,6 +174,14 @@ export function DeveloperOverviewClient({ slug }: { slug: string }) {
       title: "Exports",
       count: exportsLoading ? null : (exportCount ?? 0),
       countLabel: "total",
+    },
+    {
+      kind: "internal",
+      href: `/projects/${slug}/developers/integrations`,
+      icon: PlugsConnectedIcon,
+      title: "Integrations",
+      count: integrationsLoading ? null : (activeIntegrations ?? 0),
+      countLabel: "active",
     },
     {
       kind: "internal",

@@ -16,6 +16,7 @@ import {
   RobotIcon,
   WebhooksLogoIcon,
   ExportIcon,
+  PlugsConnectedIcon,
   ClockCounterClockwiseIcon,
   BookOpenTextIcon,
   ArrowSquareOutIcon,
@@ -88,6 +89,13 @@ const SUB_TABS: SubTabSpec[] = [
     label: "Exports",
     href: (slug) => `/projects/${slug}/developers/exports`,
     icon: ExportIcon,
+  },
+  {
+    kind: "internal",
+    id: "integrations",
+    label: "Integrations",
+    href: (slug) => `/projects/${slug}/developers/integrations`,
+    icon: PlugsConnectedIcon,
   },
   {
     kind: "internal",
