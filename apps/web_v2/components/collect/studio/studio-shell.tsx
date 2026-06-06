@@ -76,7 +76,16 @@ function StudioShellInner({ slug }: { slug: string }) {
   const router = useRouter();
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
-  const { draft, dirty, save, reset, isSaving } = useStudioDraft();
+  const {
+    draft,
+    dirty,
+    save,
+    reset,
+    isSaving,
+    publish,
+    isPublishing,
+    hasUnpublishedChanges,
+  } = useStudioDraft();
 
   // Mobile: which tab is active
   const [mobileTab, setMobileTab] = React.useState<MobileTab>("preview");
@@ -125,6 +134,19 @@ function StudioShellInner({ slug }: { slug: string }) {
     reset();
     toast("Studio changes reset");
   }, [reset]);
+
+  const handlePublish = React.useCallback(async () => {
+    try {
+      await publish();
+      toast.success("Form published", {
+        description: "Your changes are now live for visitors.",
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to publish form";
+      toast.error(message);
+    }
+  }, [publish]);
 
   const handleClose = React.useCallback(() => {
     if (dirtyRef.current) {
@@ -189,8 +211,11 @@ function StudioShellInner({ slug }: { slug: string }) {
         setSidebarOpen={setSidebarOpen}
         dirty={dirty}
         isSaving={isSaving}
+        isPublishing={isPublishing}
+        hasUnpublishedChanges={hasUnpublishedChanges}
         onReset={handleReset}
         onSave={handleSave}
+        onPublish={handlePublish}
       />
 
       {/* ─── Body ───────────────────────────────────────────────────────────── */}

@@ -15,10 +15,12 @@ import {
   TrashIcon,
   PauseIcon,
   PlayIcon,
+  Percent as PercentIcon,
   PencilSimpleLine as RenameIcon,
 } from "@phosphor-icons/react";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
+import { AbWeightDialog } from "./ab-weight-dialog";
 
 /* ─── Skeleton loader ─────────────────────────────────────────────────────── */
 
@@ -61,6 +63,7 @@ export const FormItem = React.memo(function FormItem({
   onDelete,
   onToggleActive,
   onRename,
+  onSetWeight,
 }: {
   entry: FormConfigEntry;
   hasDirtyDraft: boolean;
@@ -69,8 +72,10 @@ export const FormItem = React.memo(function FormItem({
   onDelete: () => void;
   onToggleActive: () => void;
   onRename: (name: string) => void;
+  onSetWeight: (weight: number) => void;
 }) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [weightOpen, setWeightOpen] = React.useState(false);
   const [renaming, setRenaming] = React.useState(false);
   const inactive = !entry.isActive;
 
@@ -93,6 +98,12 @@ export const FormItem = React.memo(function FormItem({
       label: "Duplicate",
       icon: CopyIcon,
       onSelect: onDuplicate,
+    },
+    {
+      id: "weight",
+      label: "A/B weight",
+      icon: PercentIcon,
+      onSelect: () => setWeightOpen(true),
     },
     {
       id: "toggle",
@@ -221,6 +232,14 @@ export const FormItem = React.memo(function FormItem({
         cancelLabel="Keep form"
         confirmLabel="Delete form"
         onConfirm={onDelete}
+      />
+
+      <AbWeightDialog
+        name={entry.name}
+        currentWeight={entry.abWeight}
+        open={weightOpen}
+        onOpenChange={setWeightOpen}
+        onSubmit={onSetWeight}
       />
     </>
   );

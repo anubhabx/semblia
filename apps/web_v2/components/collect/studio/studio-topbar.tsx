@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowLeft as ArrowLeftIcon,
   FloppyDisk as SaveIcon,
+  CloudArrowUp as PublishIcon,
   ArrowCounterClockwise as RotateCcwIcon,
   SidebarSimple as PanelLeftCloseIcon,
   SidebarSimple as PanelLeftOpenIcon,
@@ -19,8 +20,11 @@ interface StudioTopbarProps {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   dirty: boolean;
   isSaving?: boolean;
+  isPublishing?: boolean;
+  hasUnpublishedChanges?: boolean;
   onReset: () => void;
   onSave: () => void;
+  onPublish: () => void;
 }
 
 export function StudioTopbar({
@@ -30,9 +34,13 @@ export function StudioTopbar({
   setSidebarOpen,
   dirty,
   isSaving = false,
+  isPublishing = false,
+  hasUnpublishedChanges = false,
   onReset,
   onSave,
+  onPublish,
 }: StudioTopbarProps) {
+  const canPublish = (dirty || hasUnpublishedChanges) && !isPublishing;
   return (
     <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-2 sm:px-4">
       {/* Left: back + sidebar toggle (desktop) */}
@@ -80,17 +88,24 @@ export function StudioTopbar({
         <span className="truncate text-xs font-medium sm:text-sm">
           Form Studio
         </span>
-        {dirty && (
+        {dirty ? (
           <span
             className="size-1.5 shrink-0 rounded-full bg-amber-500"
             title="Unsaved changes"
             aria-label="Unsaved changes"
             role="status"
           />
-        )}
+        ) : hasUnpublishedChanges ? (
+          <span
+            className="hidden shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-amber-700 sm:inline dark:text-amber-400"
+            role="status"
+          >
+            Unpublished
+          </span>
+        ) : null}
       </div>
 
-      {/* Right: save/reset */}
+      {/* Right: reset / save / publish */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <Button
           variant="ghost"
@@ -103,6 +118,7 @@ export function StudioTopbar({
           <span className="hidden sm:inline">Reset</span>
         </Button>
         <Button
+          variant="outline"
           size="sm"
           onClick={onSave}
           disabled={!dirty || isSaving}
@@ -110,6 +126,15 @@ export function StudioTopbar({
         >
           <SaveIcon className="size-3.5" aria-hidden="true" />
           {isSaving ? "Saving…" : "Save"}
+        </Button>
+        <Button
+          size="sm"
+          onClick={onPublish}
+          disabled={!canPublish}
+          className="gap-1.5 text-xs"
+        >
+          <PublishIcon className="size-3.5" aria-hidden="true" />
+          {isPublishing ? "Publishing…" : "Publish"}
         </Button>
       </div>
     </div>

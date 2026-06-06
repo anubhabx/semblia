@@ -7,7 +7,6 @@ import type { V2IntegrationConnectionDTO } from "@workspace/types";
 import {
   fetchIntegrationConnections,
   createIntegrationConnection,
-  updateIntegrationConnection,
   disableIntegrationConnection,
   createNativeIntegrationExport,
 } from "@/lib/tresta-api";

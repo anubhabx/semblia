@@ -786,6 +786,19 @@ export function saveFormDraft(
   );
 }
 
+export function publishFormDraft(
+  token: string | null,
+  slug: string,
+  formId: string,
+  body: { expectedVersion: number },
+) {
+  return put<V2StudioDraftDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft/publish`,
+    token,
+    body,
+  );
+}
+
 // ── Widgets ─────────────────────────────────────────────────────────────────
 
 export function fetchWidgets(token: string | null, slug: string) {

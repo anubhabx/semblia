@@ -1,6 +1,6 @@
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { V2CollectionFormDTO, V2FormConfigEntry } from "@workspace/types";
@@ -149,6 +149,31 @@ describe("<FormConfigList />", () => {
         "launchpad",
         "form_1",
         { isActive: false },
+      ),
+    );
+  });
+
+  it("sets a form's A/B weight through the weight dialog", async () => {
+    vi.mocked(fetchForms).mockResolvedValue([dto()]);
+    vi.mocked(updateForm).mockResolvedValueOnce(dto({ abWeight: 25 }));
+
+    render(<FormConfigList slug="launchpad" />, { wrapper });
+
+    expect(await screen.findByText("Welcome Survey")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /a\/b weight/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "25" }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /save weight/i }),
+    );
+
+    await waitFor(() =>
+      expect(updateForm).toHaveBeenCalledWith(
+        "session-token",
+        "launchpad",
+        "form_1",
+        { abWeight: 25 },
       ),
     );
   });

@@ -10,6 +10,7 @@ import {
   TrashIcon,
   PauseIcon,
   PlayIcon,
+  Percent as PercentIcon,
   PencilSimpleLine as RenameIcon,
 } from "@phosphor-icons/react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -18,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
 import { FormCardPreview } from "./form-card-preview";
+import { AbWeightDialog } from "./ab-weight-dialog";
 
 const FLOW_LABEL: Record<LayoutConfig["flow"], string> = {
   all: "All fields",
@@ -52,6 +54,7 @@ export const FormItemCard = React.memo(function FormItemCard({
   onDelete,
   onToggleActive,
   onRename,
+  onSetWeight,
 }: {
   entry: FormConfigEntry;
   layout: LayoutConfig | null;
@@ -61,8 +64,10 @@ export const FormItemCard = React.memo(function FormItemCard({
   onDelete: () => void;
   onToggleActive: () => void;
   onRename: (name: string) => void;
+  onSetWeight: (weight: number) => void;
 }) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [weightOpen, setWeightOpen] = React.useState(false);
   const [renaming, setRenaming] = React.useState(false);
   const inactive = !entry.isActive;
 
@@ -85,6 +90,12 @@ export const FormItemCard = React.memo(function FormItemCard({
       label: "Duplicate",
       icon: CopyIcon,
       onSelect: onDuplicate,
+    },
+    {
+      id: "weight",
+      label: "A/B weight",
+      icon: PercentIcon,
+      onSelect: () => setWeightOpen(true),
     },
     {
       id: "toggle",
@@ -217,6 +228,14 @@ export const FormItemCard = React.memo(function FormItemCard({
         cancelLabel="Keep form"
         confirmLabel="Delete form"
         onConfirm={onDelete}
+      />
+
+      <AbWeightDialog
+        name={entry.name}
+        currentWeight={entry.abWeight}
+        open={weightOpen}
+        onOpenChange={setWeightOpen}
+        onSubmit={onSetWeight}
       />
     </>
   );

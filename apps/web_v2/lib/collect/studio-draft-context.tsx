@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { V2MediaAssetDTO } from "@workspace/types";
 import { useForm, useFormDraft } from "@/hooks/api";
 import { queryKeys } from "@/hooks/api/keys";
-import { saveFormDraft } from "@/lib/tresta-api";
+import { saveFormDraft, publishFormDraft } from "@/lib/tresta-api";
 import type {
   DesignTokens,
   FormConfig,
@@ -40,6 +40,9 @@ interface StudioDraftCtxValue {
   previewFlow: PreviewFlow;
   dirty: boolean;
   isSaving: boolean;
+  isPublishing: boolean;
+  /** Saved draft is newer than the live published config. */
+  hasUnpublishedChanges: boolean;
   // ── tokens / style ──
   setToken: <K extends keyof DesignTokens>(
     key: K,
@@ -70,6 +73,8 @@ interface StudioDraftCtxValue {
   setPreviewFlow: (flow: PreviewFlow) => void;
   // ── persistence ──
   save: () => Promise<void>;
+  /** Save any pending edits, then promote the draft to the live form. */
+  publish: () => Promise<void>;
   reset: () => void;
 }
 
@@ -173,10 +178,32 @@ export function StudioDraftProvider({
     },
   });
 
+  const publishMutation = useMutation({
+    mutationFn: async (expectedVersion: number) => {
+      const token = await getToken();
+      return publishFormDraft(token, slug, formId, { expectedVersion });
+    },
+    onSuccess: (data) => {
+      qc.setQueryData(queryKeys.forms.draft(slug, formId), data);
+      // The live form config changed — refresh it so the published baseline
+      // and any list-level previews reflect the promotion.
+      qc.invalidateQueries({ queryKey: queryKeys.forms.detail(slug, formId) });
+      qc.invalidateQueries({ queryKey: queryKeys.forms.list(slug) });
+    },
+  });
+
   const dirty = React.useMemo(() => {
     if (!draft || !savedBaseline) return false;
     return JSON.stringify(draft) !== JSON.stringify(savedBaseline);
   }, [draft, savedBaseline]);
+
+  // A saved draft is "unpublished" when its version is ahead of the live
+  // published version. Local unsaved edits are tracked separately by `dirty`.
+  const hasUnpublishedChanges = React.useMemo(() => {
+    const data = draftQuery.data;
+    if (!data?.draft) return false;
+    return data.version > (data.publishedVersion ?? 0);
+  }, [draftQuery.data]);
 
   const value = React.useMemo<StudioDraftCtxValue | null>(() => {
     if (!draft) return null;
@@ -194,6 +221,8 @@ export function StudioDraftProvider({
       previewFlow,
       dirty,
       isSaving: saveMutation.isPending,
+      isPublishing: publishMutation.isPending,
+      hasUnpublishedChanges,
       setToken: (key, value) =>
         patch((d) => ({
           ...d,
@@ -282,6 +311,18 @@ export function StudioDraftProvider({
         if (!draft) return;
         await saveMutation.mutateAsync(draft);
       },
+      publish: async () => {
+        if (!draft) return;
+        // Persist any pending edits first so we publish exactly what's on
+        // screen, then promote that version to the live form.
+        let version = draftQuery.data?.version ?? 0;
+        if (dirty) {
+          const saved = await saveMutation.mutateAsync(draft);
+          version = saved.version;
+        }
+        if (version < 1) return;
+        await publishMutation.mutateAsync(version);
+      },
       reset: () => {
         if (savedBaseline) setDraft(savedBaseline);
       },
@@ -292,7 +333,10 @@ export function StudioDraftProvider({
     screen,
     previewFlow,
     dirty,
+    hasUnpublishedChanges,
     saveMutation,
+    publishMutation,
+    draftQuery.data,
     savedBaseline,
     slug,
     formId,

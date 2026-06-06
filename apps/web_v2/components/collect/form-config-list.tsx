@@ -184,6 +184,13 @@ export function FormConfigList({ slug }: { slug: string }) {
     [updateMutation],
   );
 
+  const handleSetWeight = React.useCallback(
+    (formId: string, abWeight: number) => {
+      updateMutation.mutate({ formId, body: { abWeight } });
+    },
+    [updateMutation],
+  );
+
   const totalActiveWeight = normalizedForms
     .filter((f) => f.isActive)
     .reduce((sum, f) => sum + f.abWeight, 0);
@@ -284,6 +291,7 @@ export function FormConfigList({ slug }: { slug: string }) {
                   handleToggleActive(entry.id, entry.isActive)
                 }
                 onRename={(name) => handleRename(entry.id, name)}
+                onSetWeight={(weight) => handleSetWeight(entry.id, weight)}
               />
             ))}
           </div>
@@ -306,6 +314,7 @@ export function FormConfigList({ slug }: { slug: string }) {
                     handleToggleActive(entry.id, entry.isActive)
                   }
                   onRename={(name) => handleRename(entry.id, name)}
+                  onSetWeight={(weight) => handleSetWeight(entry.id, weight)}
                 />
               </div>
             ))}
