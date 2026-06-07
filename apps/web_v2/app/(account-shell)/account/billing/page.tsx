@@ -343,10 +343,7 @@ function InvoiceDownloadButton({ invoice }: { invoice: V2InvoiceDTO }) {
 export default function BillingPage() {
   return (
     <>
-      <PageHeader
-        title="Billing"
-        description="Manage your subscription, usage, and payment history."
-      />
+      <PageHeader title="Billing" />
       <PageBody padding="default" withFooter className="space-y-8">
         <SettingsSection
           id="plan"

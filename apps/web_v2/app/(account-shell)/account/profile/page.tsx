@@ -434,10 +434,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader
-        title="Profile"
-        description="Manage your personal information."
-      />
+      <PageHeader title="Profile" />
 
       <PageBody padding="default" withFooter className="space-y-8">
         {/* Identity — photo + name merged */}

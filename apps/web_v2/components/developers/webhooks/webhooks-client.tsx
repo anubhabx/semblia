@@ -137,7 +137,6 @@ export function WebhooksClient({ slug }: { slug: string }) {
     <DeveloperShell
       slug={slug}
       active="webhooks"
-      description="Deliver signed event payloads to your own HTTP endpoints, with automatic retries."
       actions={tab === "endpoints" ? newButton : undefined}
     >
       <PageToolbar

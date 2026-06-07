@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageHeader,
-  HeaderSep,
   HeaderCaption,
   FilterPills as SharedFilterPills,
   RefreshingDataBadge,
@@ -199,19 +198,6 @@ export function WidgetList({ project }: WidgetListProps) {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Widgets"
-        description={
-          loading ? (
-            project.name
-          ) : (
-            <>
-              <span>
-                {list.length} widget{list.length === 1 ? "" : "s"}
-              </span>
-              <HeaderSep />
-              <span>{project.name}</span>
-            </>
-          )
-        }
         actions={
           showToolbar ? (
             <div className="flex items-center gap-2">

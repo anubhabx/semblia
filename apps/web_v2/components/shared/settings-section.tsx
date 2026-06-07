@@ -5,6 +5,10 @@ import * as React from "react";
 export interface SettingsSectionProps {
   id: string;
   title: string;
+  /**
+   * @deprecated Section helper lines were removed for a flatter, consistent
+   * hierarchy across tabs. Per-control helper text still lives on the controls.
+   */
   description?: string;
   /** Optional right-side actions (e.g. "Add email" button). */
   actions?: React.ReactNode;
@@ -15,7 +19,6 @@ export interface SettingsSectionProps {
 export function SettingsSection({
   id,
   title,
-  description,
   actions,
   children,
   staggerIndex = 0,
@@ -28,19 +31,12 @@ export function SettingsSection({
       style={{ animationDelay: `${staggerIndex * 60}ms` }}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h2
-            id={`${id}-heading`}
-            className="text-sm font-semibold tracking-tight text-foreground"
-          >
-            {title}
-          </h2>
-          {description && (
-            <p className="max-w-[65ch] text-[13px] leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-          )}
-        </div>
+        <h2
+          id={`${id}-heading`}
+          className="text-sm font-semibold tracking-tight text-foreground"
+        >
+          {title}
+        </h2>
         {actions && <div className="shrink-0">{actions}</div>}
       </div>
       {children}

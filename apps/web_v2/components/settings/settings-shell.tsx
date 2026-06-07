@@ -138,15 +138,14 @@ function SubTabs({ slug, active }: { slug: string; active: SettingsSection }) {
 
 export function SettingsShell({
   slug,
-  projectName,
   active,
-  description,
   actions,
   children,
 }: {
   slug: string;
   projectName: string;
   active: SettingsSection;
+  /** @deprecated Page subheadings were removed for cross-tab consistency. */
   description?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
@@ -155,7 +154,6 @@ export function SettingsShell({
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Settings"
-        description={description ?? projectName}
         actions={actions}
         toolbar={<SubTabs slug={slug} active={active} />}
       />

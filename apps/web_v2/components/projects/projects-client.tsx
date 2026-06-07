@@ -5,7 +5,6 @@ import { Plus as PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   PageHeader,
-  HeaderSep,
   PageBody,
   FilterPills,
   RefreshingDataBadge,
@@ -35,31 +34,7 @@ export function ProjectsClient() {
     typeFilter,
     setTypeFilter,
     typeCounts,
-    totalResponses,
-    totalPending,
   } = useProjects();
-
-  const description = loading ? (
-    "Loading…"
-  ) : projects.length === 0 ? (
-    "Get started by creating your first project."
-  ) : (
-    <>
-      <span>
-        {projects.length} project{projects.length !== 1 ? "s" : ""}
-      </span>
-      <HeaderSep />
-      <span>
-        {totalResponses} response{totalResponses !== 1 ? "s" : ""}
-      </span>
-      {totalPending > 0 && (
-        <>
-          <HeaderSep />
-          <span className="text-warning">{totalPending} pending</span>
-        </>
-      )}
-    </>
-  );
 
   // Build filter pill options from data
   const filterOptions: { id: ProjectFilter; label: string; count: number }[] = [
@@ -82,7 +57,6 @@ export function ProjectsClient() {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Projects"
-        description={description}
         actions={
           <Button size="sm" className="gap-1.5 shrink-0" asChild>
             <Link href="/projects/new">

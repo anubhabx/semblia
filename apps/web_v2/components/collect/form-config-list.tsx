@@ -197,21 +197,10 @@ export function FormConfigList({ slug }: { slug: string }) {
 
   const loading = isWaitingForLiveData;
 
-  const activeCount = normalizedForms.filter((f) => f.isActive).length;
-  const pausedCount = normalizedForms.length - activeCount;
-  const headerDescription = (() => {
-    if (loading || normalizedForms.length === 0) return undefined;
-    const parts: string[] = [];
-    if (activeCount > 0) parts.push(`${activeCount} active`);
-    if (pausedCount > 0) parts.push(`${pausedCount} paused`);
-    return parts.join(" · ");
-  })();
-
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Forms"
-        description={headerDescription}
         actions={
           normalizedForms.length > 0 ? (
             <div className="flex items-center gap-2">

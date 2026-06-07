@@ -186,14 +186,9 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Analytics"
-        description={
-          <span className="inline-flex items-center gap-2">
-            {data.project.name}
-            <RefreshingDataBadge show={dashboardState.isBackgroundRefreshing} />
-          </span>
-        }
         actions={
           <>
+            <RefreshingDataBadge show={dashboardState.isBackgroundRefreshing} />
             <Button
               variant="outline"
               size="sm"

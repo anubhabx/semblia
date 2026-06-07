@@ -4,10 +4,7 @@ import { NotificationsClient } from "@/components/notifications/notifications-cl
 export default function NotificationsPage() {
   return (
     <>
-      <PageHeader
-        title="Notifications"
-        description="Review recent Tresta notifications from your live account."
-      />
+      <PageHeader title="Notifications" />
       <NotificationsClient />
     </>
   );

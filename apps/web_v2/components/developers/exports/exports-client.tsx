@@ -108,7 +108,6 @@ export function ExportsClient({ slug }: { slug: string }) {
     <DeveloperShell
       slug={slug}
       active="exports"
-      description="Generate CSV exports of your responses and download past deliveries."
       actions={
         <Button
           size="sm"

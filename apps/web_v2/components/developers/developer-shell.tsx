@@ -184,12 +184,12 @@ function SubTabs({ slug, active }: { slug: string; active: DeveloperSection }) {
 export function DeveloperShell({
   slug,
   active,
-  description,
   actions,
   children,
 }: {
   slug: string;
   active: DeveloperSection;
+  /** @deprecated Page subheadings were removed for cross-tab consistency. */
   description?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
@@ -198,7 +198,6 @@ export function DeveloperShell({
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Developers"
-        description={description}
         actions={actions}
         toolbar={<SubTabs slug={slug} active={active} />}
       />

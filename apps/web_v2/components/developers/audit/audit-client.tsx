@@ -21,7 +21,7 @@ import {
   FilterPills,
   type FilterPillOption,
 } from "@/components/shared";
-import { useProjectActionAudit } from "@/hooks/api";
+import { useProjectActionAudit, useProjectMembers } from "@/hooks/api";
 import { DeveloperShell } from "@/components/developers/developer-shell";
 import { AuditEventRow, AuditEventRowSkeleton } from "./audit-event-item";
 
@@ -47,6 +47,20 @@ export function AuditClient({ slug }: { slug: string }) {
     actorType: filter === "all" ? undefined : filter,
   });
 
+  // Resolve user-actor ids to a member name/email so rows never show raw ids.
+  const membersQuery = useProjectMembers(slug);
+  const memberNames = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of membersQuery.data ?? []) {
+      const name = [m.user.firstName, m.user.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      map.set(m.userId, name || m.user.email);
+    }
+    return map;
+  }, [membersQuery.data]);
+
   const events = auditQuery.data?.items ?? [];
   const totalPages = auditQuery.data?.totalPages ?? 1;
   const total = auditQuery.data?.total ?? 0;
@@ -58,11 +72,7 @@ export function AuditClient({ slug }: { slug: string }) {
   }, [filter]);
 
   return (
-    <DeveloperShell
-      slug={slug}
-      active="audit"
-      description="A chronological record of who changed what in this project — moderation, key rotations, member changes, and integration activity."
-    >
+    <DeveloperShell slug={slug} active="audit">
       <PageToolbar
         leading={
           <FilterPills
@@ -118,7 +128,14 @@ export function AuditClient({ slug }: { slug: string }) {
             >
               {events.map((event) => (
                 <div key={event.id} role="listitem">
-                  <AuditEventRow event={event} />
+                  <AuditEventRow
+                    event={event}
+                    actorName={
+                      event.actorId
+                        ? (memberNames.get(event.actorId) ?? null)
+                        : null
+                    }
+                  />
                 </div>
               ))}
             </div>

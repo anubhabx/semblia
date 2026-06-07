@@ -54,7 +54,6 @@ export function ProjectCreateClient() {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="New project"
-        description="Create a workspace for one product, service, or brand."
         actions={
           <Button variant="ghost" size="sm" className="gap-1.5" asChild>
             <Link href="/projects">

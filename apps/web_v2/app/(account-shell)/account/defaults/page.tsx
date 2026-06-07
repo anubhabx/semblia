@@ -242,10 +242,7 @@ export default function DefaultsPage() {
   if (defaultsQuery.isLoading) {
     return (
       <>
-        <PageHeader
-          title="Defaults"
-          description="Set default preferences applied to new projects."
-        />
+        <PageHeader title="Defaults" />
         <PageBody padding="default" className="space-y-8">
           {Array.from({ length: 4 }, (_, index) => (
             <SettingsSection
@@ -264,10 +261,7 @@ export default function DefaultsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Defaults"
-        description="Set default preferences applied to new projects."
-      />
+      <PageHeader title="Defaults" />
 
       <PageBody padding="default" withFooter className="space-y-8">
         <SettingsSection
