@@ -6,9 +6,13 @@ import {
   createIntegrationConnection,
   createNativeIntegrationExport,
   disableIntegrationConnection,
+  enableIntegrationConnection,
   fetchIntegrationConnections,
+  fetchIntegrationResources,
+  revokeIntegrationConnection,
   updateIntegrationConnection,
 } from "@/lib/tresta-api";
+import type { V2IntegrationProvider } from "@workspace/types";
 import { queryKeys } from "./keys";
 import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
 
@@ -25,6 +29,33 @@ export function useIntegrationConnections(
       return fetchIntegrationConnections(token, slug);
     },
     enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
+  });
+}
+
+export function useIntegrationResources(
+  slug: string,
+  provider: V2IntegrationProvider | null,
+  params?: { cursor?: string; query?: string },
+  options?: ApiQueryOptions & { enabled?: boolean },
+) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: provider
+      ? queryKeys.integrations.resources(slug, provider, params)
+      : queryKeys.integrations.resources(slug, "none", params),
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchIntegrationResources(
+        token,
+        slug,
+        provider as V2IntegrationProvider,
+        params,
+      );
+    },
+    enabled:
+      options?.enabled !== false && isSignedIn === true && !!slug && !!provider,
     ...liveQueryOptions(options),
   });
 }
@@ -70,6 +101,23 @@ export function useUpdateIntegrationConnection(
   });
 }
 
+export function useEnableIntegrationConnection(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (connectionId: string) => {
+      const token = await getToken();
+      return enableIntegrationConnection(token, slug, connectionId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.integrations.connections(slug),
+      });
+    },
+  });
+}
+
 export function useDisableIntegrationConnection(slug: string) {
   const { getToken } = useAuth();
   const qc = useQueryClient();
@@ -78,6 +126,23 @@ export function useDisableIntegrationConnection(slug: string) {
     mutationFn: async (connectionId: string) => {
       const token = await getToken();
       return disableIntegrationConnection(token, slug, connectionId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.integrations.connections(slug),
+      });
+    },
+  });
+}
+
+export function useRevokeIntegrationConnection(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (connectionId: string) => {
+      const token = await getToken();
+      return revokeIntegrationConnection(token, slug, connectionId);
     },
     onSuccess: () => {
       qc.invalidateQueries({

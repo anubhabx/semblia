@@ -44,6 +44,7 @@ const mockAuditCreate = vi.fn();
 const mockQueueAdd = vi.fn();
 const mockGetToken = vi.fn();
 const mockProviderDeliver = vi.fn();
+const mockProviderListResources = vi.fn();
 
 const prismaMock = {
   client: {
@@ -149,6 +150,7 @@ function makeService() {
   const slackProvider = {
     provider: IntegrationProvider.SLACK,
     deliver: mockProviderDeliver,
+    listResources: mockProviderListResources,
   } as unknown as SlackExportProvider;
 
   return new IntegrationsService(
@@ -195,28 +197,60 @@ describe("IntegrationsController", () => {
         IntegrationsController.prototype.disableConnection,
       ),
     ).toBe(RequestMethod.POST);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        IntegrationsController.prototype.enableConnection,
+      ),
+    ).toBe("connections/:connectionId/enable");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        IntegrationsController.prototype.revokeConnection,
+      ),
+    ).toBe(RequestMethod.DELETE);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        IntegrationsController.prototype.listResources,
+      ),
+    ).toBe("providers/:provider/resources");
   });
 });
 
 describe("integration DTOs", () => {
-  it("requires provider-specific destination config", () => {
-    expect(() =>
+  it("allows Clerk OAuth connections to be created before destination selection", () => {
+    expect(
       createIntegrationConnectionBodySchema.parse({
         provider: "SLACK",
-        config: {},
       }),
-    ).toThrow(/channelId/);
+    ).toMatchObject({
+      provider: "SLACK",
+      authStrategy: "CLERK_OAUTH",
+      config: {},
+    });
 
     expect(
       createIntegrationConnectionBodySchema.parse({
         provider: "GITHUB",
+        authStrategy: "MANUAL_SECRET",
         config: { owner: "tresta", repo: "web" },
       }),
     ).toMatchObject({
       provider: "GITHUB",
-      authStrategy: "CLERK_OAUTH",
+      authStrategy: "MANUAL_SECRET",
       config: { owner: "tresta", repo: "web" },
     });
+  });
+
+  it("still requires provider-specific config for manual connections", () => {
+    expect(() =>
+      createIntegrationConnectionBodySchema.parse({
+        provider: "SLACK",
+        authStrategy: "MANUAL_SECRET",
+        config: {},
+      }),
+    ).toThrow(/channelId/);
   });
 
   it("strips private fields from native export payloads", () => {
@@ -248,6 +282,10 @@ describe("IntegrationsService", () => {
   });
 
   it("creates a Clerk OAuth connection with an audit row", async () => {
+    mockGetToken.mockResolvedValue({
+      accessToken: "xoxb-token",
+      scopes: ["chat:write", "channels:read", "groups:read"],
+    });
     mockConnectionCreate.mockImplementation(async ({ data }) =>
       makeConnection({
         provider: data.provider,
@@ -264,22 +302,165 @@ describe("IntegrationsService", () => {
       {
         provider: "SLACK",
         authStrategy: "CLERK_OAUTH",
-        scopes: ["chat:write"],
-        config: { channelId: "C123" },
+        scopes: [],
+        config: {},
       },
       actor,
     );
 
+    expect(mockGetToken).toHaveBeenCalledWith({
+      userId: "user_1",
+      provider: "slack",
+      requiredScopes: ["chat:write", "channels:read", "groups:read"],
+    });
     expect(created).toMatchObject({
       provider: IntegrationProvider.SLACK,
       connectedByUserId: "user_1",
       clerkProvider: "slack",
+      scopes: ["chat:write", "channels:read", "groups:read"],
     });
     expect(mockAuditCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         projectId: "project_1",
         action: "integration_connection.created",
         targetType: "integration_connection",
+      }),
+    });
+  });
+
+  it("normalizes empty OAuth scope updates before saving", async () => {
+    mockConnectionFindFirst.mockResolvedValue(makeConnection());
+    mockGetToken.mockResolvedValue({
+      accessToken: "xoxb-token",
+      scopes: ["chat:write", "channels:read", "groups:read"],
+    });
+    mockConnectionUpdate.mockImplementation(async ({ data }) =>
+      makeConnection({
+        scopes: data.scopes,
+        config: data.config,
+      }),
+    );
+
+    const updated = await service.updateConnection(
+      "project_1",
+      "iconn_1",
+      {
+        scopes: [],
+        config: { channelId: "C456" },
+      },
+      actor,
+    );
+
+    expect(mockGetToken).toHaveBeenCalledWith({
+      userId: "user_1",
+      provider: "slack",
+      requiredScopes: ["chat:write", "channels:read", "groups:read"],
+    });
+    expect(mockConnectionUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          scopes: ["chat:write", "channels:read", "groups:read"],
+          config: { channelId: "C456" },
+        }),
+      }),
+    );
+    expect(updated.scopes).toEqual([
+      "chat:write",
+      "channels:read",
+      "groups:read",
+    ]);
+  });
+
+  it("lists OAuth-discovered provider resources for destination selection", async () => {
+    mockProviderListResources.mockResolvedValue({
+      provider: "SLACK",
+      items: [
+        {
+          id: "C123",
+          label: "customer-love",
+          config: { channelId: "C123" },
+          metadata: { isPrivate: false },
+        },
+      ],
+      nextCursor: null,
+    });
+    mockGetToken.mockResolvedValue({
+      accessToken: "xoxb-token",
+      scopes: ["chat:write", "channels:read", "groups:read"],
+    });
+
+    const resources = await service.listResources(
+      "SLACK",
+      { query: "customer", cursor: undefined },
+      actor,
+    );
+
+    expect(mockGetToken).toHaveBeenCalledWith({
+      userId: "user_1",
+      provider: "slack",
+      requiredScopes: ["chat:write", "channels:read", "groups:read"],
+    });
+    expect(mockProviderListResources).toHaveBeenCalledWith({
+      token: expect.objectContaining({ accessToken: "xoxb-token" }),
+      query: "customer",
+      cursor: undefined,
+    });
+    expect(resources.items[0]).toMatchObject({
+      id: "C123",
+      label: "customer-love",
+      config: { channelId: "C123" },
+    });
+  });
+
+  it("re-enables a disabled Clerk OAuth connection after token and scope proof", async () => {
+    mockConnectionFindFirst.mockResolvedValue(
+      makeConnection({ status: "DISABLED" }),
+    );
+    mockGetToken.mockResolvedValue({
+      accessToken: "xoxb-token",
+      scopes: ["chat:write"],
+    });
+    mockConnectionUpdate.mockImplementation(async ({ data }) =>
+      makeConnection({ status: data.status }),
+    );
+
+    const enabled = await service.enableConnection(
+      "project_1",
+      "iconn_1",
+      actor,
+    );
+
+    expect(mockGetToken).toHaveBeenCalledWith({
+      userId: "user_1",
+      provider: "slack",
+      requiredScopes: ["chat:write"],
+    });
+    expect(enabled.status).toBe("ACTIVE");
+    expect(mockAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "integration_connection.enabled",
+        targetId: "iconn_1",
+      }),
+    });
+  });
+
+  it("revokes a connection instead of only disabling it", async () => {
+    mockConnectionFindFirst.mockResolvedValue(makeConnection());
+    mockConnectionUpdate.mockImplementation(async ({ data }) =>
+      makeConnection({ status: data.status }),
+    );
+
+    const revoked = await service.revokeConnection(
+      "project_1",
+      "iconn_1",
+      actor,
+    );
+
+    expect(revoked.status).toBe("REVOKED");
+    expect(mockAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "integration_connection.revoked",
+        targetId: "iconn_1",
       }),
     });
   });
@@ -389,6 +570,23 @@ describe("ClerkConnectedAccountTokenProvider", () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it("throws a reconnect-required error when granted scopes are insufficient", async () => {
+    const provider = new ClerkConnectedAccountTokenProvider({
+      getUserOauthAccessToken: vi.fn().mockResolvedValue({
+        accessToken: "oauth-token",
+        scopes: ["channels:read"],
+      }),
+    } as unknown as ClerkService);
+
+    await expect(
+      provider.getToken({
+        userId: "user_1",
+        provider: "slack",
+        requiredScopes: ["chat:write", "channels:read"],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 });
 
 describe("native provider adapters", () => {
@@ -430,6 +628,52 @@ describe("native provider adapters", () => {
         channel: "C123",
         text: expect.stringContaining("Tresta helped us ship."),
       }),
+    });
+  });
+
+  it("maps Slack resource discovery to conversations.list channel choices", async () => {
+    const getJson = vi.fn().mockResolvedValue({
+      status: 200,
+      body: {
+        ok: true,
+        channels: [
+          { id: "C123", name: "customer-love", is_private: false },
+          { id: "C999", name: "random", is_private: false },
+        ],
+        response_metadata: { next_cursor: "next-page" },
+      },
+    });
+    const provider = new SlackExportProvider({
+      getJson,
+    } as unknown as IntegrationHttpClient);
+
+    const resources = await provider.listResources({
+      token,
+      query: "customer",
+      cursor: "page-1",
+    });
+
+    expect(getJson).toHaveBeenCalledWith({
+      url: "https://slack.com/api/conversations.list",
+      token: "oauth-token",
+      params: {
+        cursor: "page-1",
+        exclude_archived: "true",
+        limit: "100",
+        types: "public_channel,private_channel",
+      },
+    });
+    expect(resources).toEqual({
+      provider: "SLACK",
+      items: [
+        {
+          id: "C123",
+          label: "customer-love",
+          config: { channelId: "C123" },
+          metadata: { isPrivate: false },
+        },
+      ],
+      nextCursor: "next-page",
     });
   });
 

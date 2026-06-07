@@ -58,6 +58,8 @@ import type {
   V2CreateCsvExportBody,
   V2ExportDeliveryDTO,
   V2IntegrationConnectionDTO,
+  V2IntegrationProvider,
+  V2IntegrationResourceListDTO,
   V2CreateIntegrationConnectionBody,
   V2UpdateIntegrationConnectionBody,
   V2CreateNativeIntegrationExportBody,
@@ -1115,6 +1117,19 @@ export function createIntegrationConnection(
   );
 }
 
+export function fetchIntegrationResources(
+  token: string | null,
+  slug: string,
+  provider: V2IntegrationProvider,
+  params?: { cursor?: string; query?: string },
+) {
+  return api<V2IntegrationResourceListDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/providers/${encodeURIComponent(provider)}/resources`,
+    token,
+    { params },
+  );
+}
+
 export function updateIntegrationConnection(
   token: string | null,
   slug: string,
@@ -1128,6 +1143,17 @@ export function updateIntegrationConnection(
   );
 }
 
+export function enableIntegrationConnection(
+  token: string | null,
+  slug: string,
+  connectionId: string,
+) {
+  return post<V2IntegrationConnectionDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}/enable`,
+    token,
+  );
+}
+
 export function disableIntegrationConnection(
   token: string | null,
   slug: string,
@@ -1135,6 +1161,17 @@ export function disableIntegrationConnection(
 ) {
   return post<V2IntegrationConnectionDTO>(
     `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}/disable`,
+    token,
+  );
+}
+
+export function revokeIntegrationConnection(
+  token: string | null,
+  slug: string,
+  connectionId: string,
+) {
+  return del<V2IntegrationConnectionDTO>(
+    `/projects/${encodeURIComponent(slug)}/integrations/connections/${encodeURIComponent(connectionId)}`,
     token,
   );
 }

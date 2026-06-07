@@ -1026,6 +1026,20 @@ export interface V2UpdateIntegrationConnectionBody {
   config?: Record<string, unknown>;
 }
 
+export interface V2IntegrationResourceDTO {
+  id: string;
+  provider: V2IntegrationProvider;
+  label: string;
+  config: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface V2IntegrationResourceListDTO {
+  provider: V2IntegrationProvider;
+  items: V2IntegrationResourceDTO[];
+  nextCursor: string | null;
+}
+
 export interface V2CreateNativeIntegrationExportBody {
   eventType: V2OutboundWebhookEventType;
   payload: {

@@ -6,23 +6,42 @@ import userEvent from "@testing-library/user-event";
 import type { V2IntegrationConnectionDTO } from "@workspace/types";
 import {
   fetchIntegrationConnections,
+  fetchIntegrationResources,
   createIntegrationConnection,
+  enableIntegrationConnection,
+  revokeIntegrationConnection,
   disableIntegrationConnection,
   createNativeIntegrationExport,
 } from "@/lib/tresta-api";
 import { IntegrationsClient } from "@/components/developers/integrations/integrations-client";
+
+const clerkMocks = vi.hoisted(() => ({
+  createExternalAccount: vi.fn(),
+  externalAccounts: [] as Array<{ provider: string }>,
+}));
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
     getToken: vi.fn().mockResolvedValue("session-token"),
     isSignedIn: true,
   }),
+  useUser: () => ({
+    isLoaded: true,
+    user: {
+      externalAccounts: clerkMocks.externalAccounts,
+      createExternalAccount: clerkMocks.createExternalAccount,
+    },
+  }),
+  useReverification: (callback: unknown) => callback,
 }));
 
 vi.mock("@/lib/tresta-api", () => ({
   fetchIntegrationConnections: vi.fn(),
+  fetchIntegrationResources: vi.fn(),
   createIntegrationConnection: vi.fn(),
   updateIntegrationConnection: vi.fn(),
+  enableIntegrationConnection: vi.fn(),
+  revokeIntegrationConnection: vi.fn(),
   disableIntegrationConnection: vi.fn(),
   createNativeIntegrationExport: vi.fn(),
 }));
@@ -69,6 +88,7 @@ function renderWithQuery(ui: React.ReactElement) {
 describe("IntegrationsClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clerkMocks.externalAccounts = [{ provider: "slack" }];
   });
 
   it("renders an empty state and provider cards when nothing is connected", async () => {
@@ -95,27 +115,78 @@ describe("IntegrationsClient", () => {
     ).toBeTruthy();
   });
 
-  it("connects a provider through the connect dialog", async () => {
+  it("starts provider OAuth when the user has not connected that product", async () => {
+    clerkMocks.externalAccounts = [];
     vi.mocked(fetchIntegrationConnections).mockResolvedValue([]);
-    vi.mocked(createIntegrationConnection).mockResolvedValue(connection());
+    clerkMocks.createExternalAccount.mockResolvedValue({
+      verification: {
+        externalVerificationRedirectURL: {
+          href: "https://slack.com/oauth",
+        },
+      },
+    });
+
+    renderWithQuery(<IntegrationsClient slug="launchpad" />);
+
+    await screen.findByText("No integrations connected");
+    await userEvent.click(screen.getByText("Slack"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /authorize slack/i }),
+    );
+
+    await waitFor(() => {
+      expect(clerkMocks.createExternalAccount).toHaveBeenCalledWith({
+        strategy: "oauth_slack",
+        additionalScopes: ["chat:write", "channels:read", "groups:read"],
+        redirectUrl: expect.any(String),
+      });
+    });
+  });
+
+  it("connects a provider through an OAuth-discovered resource choice", async () => {
+    vi.mocked(fetchIntegrationConnections).mockResolvedValue([]);
+    vi.mocked(fetchIntegrationResources).mockResolvedValue({
+      provider: "SLACK",
+      items: [
+        {
+          id: "C9999999999",
+          provider: "SLACK",
+          label: "customer-love",
+          config: { channelId: "C9999999999" },
+          metadata: { isPrivate: false },
+        },
+      ],
+      nextCursor: null,
+    });
+    vi.mocked(createIntegrationConnection).mockResolvedValue(
+      connection({ config: { channelId: "C9999999999" } }),
+    );
 
     renderWithQuery(<IntegrationsClient slug="launchpad" />);
 
     await screen.findByText("No integrations connected");
 
-    // Open the Slack connect dialog.
     await userEvent.click(screen.getByText("Slack"));
-    const channelInput = await screen.findByLabelText(/channel id/i);
-    await userEvent.type(channelInput, "C9999999999");
+    await userEvent.click(await screen.findByText("customer-love"));
     await userEvent.click(
       screen.getByRole("button", { name: /connect slack/i }),
     );
 
     await waitFor(() => {
+      expect(fetchIntegrationResources).toHaveBeenCalledWith(
+        "session-token",
+        "launchpad",
+        "SLACK",
+        undefined,
+      );
       expect(createIntegrationConnection).toHaveBeenCalledWith(
         "session-token",
         "launchpad",
-        { provider: "SLACK", config: { channelId: "C9999999999" } },
+        {
+          provider: "SLACK",
+          scopes: ["chat:write", "channels:read", "groups:read"],
+          config: { channelId: "C9999999999" },
+        },
       );
     });
   });
@@ -158,6 +229,43 @@ describe("IntegrationsClient", () => {
 
     await waitFor(() => {
       expect(disableIntegrationConnection).toHaveBeenCalledWith(
+        "session-token",
+        "launchpad",
+        "conn_1",
+      );
+    });
+  });
+
+  it("re-enables a disabled connection and can revoke it", async () => {
+    vi.mocked(fetchIntegrationConnections).mockResolvedValue([
+      connection({ status: "DISABLED" }),
+    ]);
+    vi.mocked(enableIntegrationConnection).mockResolvedValue(connection());
+    vi.mocked(revokeIntegrationConnection).mockResolvedValue(
+      connection({ status: "REVOKED" }),
+    );
+
+    renderWithQuery(<IntegrationsClient slug="launchpad" />);
+
+    await screen.findByText("#C0123456789");
+    await userEvent.click(screen.getByRole("button", { name: /^enable$/i }));
+
+    await waitFor(() => {
+      expect(enableIntegrationConnection).toHaveBeenCalledWith(
+        "session-token",
+        "launchpad",
+        "conn_1",
+      );
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /^revoke$/i }));
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /^revoke$/i }),
+    );
+
+    await waitFor(() => {
+      expect(revokeIntegrationConnection).toHaveBeenCalledWith(
         "session-token",
         "launchpad",
         "conn_1",

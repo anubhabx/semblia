@@ -48,6 +48,15 @@ export const integrationConnectionParamsSchema = projectSlugParamsSchema.extend(
   },
 );
 
+export const integrationProviderParamsSchema = projectSlugParamsSchema.extend({
+  provider: integrationProviderSchema,
+});
+
+export const listIntegrationResourcesQuerySchema = z.object({
+  cursor: z.string().trim().min(1).max(512).optional(),
+  query: z.string().trim().min(1).max(120).optional(),
+});
+
 export const nativeIntegrationExportPayloadSchema = z.object({
   title: z.string().trim().min(1).max(180),
   summary: z.string().trim().max(2000).optional(),
@@ -73,14 +82,28 @@ export type UpdateIntegrationConnectionBodyDto = z.infer<
 export type IntegrationConnectionParamsDto = z.infer<
   typeof integrationConnectionParamsSchema
 >;
+export type IntegrationProviderParamsDto = z.infer<
+  typeof integrationProviderParamsSchema
+>;
+export type ListIntegrationResourcesQueryDto = z.infer<
+  typeof listIntegrationResourcesQuerySchema
+>;
 export type CreateNativeIntegrationExportBodyDto = z.infer<
   typeof createNativeIntegrationExportBodySchema
 >;
 
 function validateProviderConfig(
-  value: { provider: string; config: Record<string, unknown> },
+  value: {
+    provider: string;
+    authStrategy: string;
+    config: Record<string, unknown>;
+  },
   ctx: z.RefinementCtx,
 ) {
+  if (value.authStrategy === "CLERK_OAUTH") {
+    return;
+  }
+
   switch (value.provider) {
     case "SLACK":
       requireConfigString(value.config, "channelId", ctx);

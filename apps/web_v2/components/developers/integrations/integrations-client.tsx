@@ -14,7 +14,9 @@ import { cn } from "@/lib/utils";
 import { PageBody } from "@/components/shared";
 import {
   useIntegrationConnections,
+  useEnableIntegrationConnection,
   useDisableIntegrationConnection,
+  useRevokeIntegrationConnection,
   useCreateNativeIntegrationExport,
 } from "@/hooks/api";
 import { DeveloperShell } from "@/components/developers/developer-shell";
@@ -74,7 +76,9 @@ function ProviderCard({
 
 export function IntegrationsClient({ slug }: { slug: string }) {
   const connectionsQuery = useIntegrationConnections(slug);
+  const enableConnection = useEnableIntegrationConnection(slug);
   const disableConnection = useDisableIntegrationConnection(slug);
+  const revokeConnection = useRevokeIntegrationConnection(slug);
   const sendTest = useCreateNativeIntegrationExport(slug);
 
   const [connectSpec, setConnectSpec] = React.useState<ProviderSpec | null>(
@@ -110,6 +114,20 @@ export function IntegrationsClient({ slug }: { slug: string }) {
     disableConnection.mutate(connectionId, {
       onSuccess: () => toast.success("Integration disabled"),
       onError: () => toast.error("Could not disable integration."),
+    });
+  }
+
+  function handleEnable(connectionId: string) {
+    enableConnection.mutate(connectionId, {
+      onSuccess: () => toast.success("Integration enabled"),
+      onError: () => toast.error("Could not enable integration."),
+    });
+  }
+
+  function handleRevoke(connectionId: string) {
+    revokeConnection.mutate(connectionId, {
+      onSuccess: () => toast.success("Integration revoked"),
+      onError: () => toast.error("Could not revoke integration."),
     });
   }
 
@@ -172,7 +190,9 @@ export function IntegrationsClient({ slug }: { slug: string }) {
                     slug={slug}
                     connection={connection}
                     onSendTest={handleSendTest}
+                    onEnable={handleEnable}
                     onDisable={handleDisable}
+                    onRevoke={handleRevoke}
                     isSendingTest={
                       sendTest.isPending &&
                       sendTest.variables?.connectionId === connection.id

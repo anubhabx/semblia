@@ -6,15 +6,16 @@ import { fmtRelative } from "@/lib/format";
 import type {
   V2IntegrationConnectionDTO,
   V2IntegrationConnectionStatus,
+  V2IntegrationResourceDTO,
 } from "@workspace/types";
 import {
   PencilSimpleIcon,
   PaperPlaneTiltIcon,
   PauseIcon,
+  PlayIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
@@ -26,13 +27,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
-import { useUpdateIntegrationConnection } from "@/hooks/api";
 import {
-  getProviderSpec,
-  isProviderConfigValid,
-  cleanConfig,
-  type ProviderSpec,
-} from "./integration-providers";
+  useIntegrationResources,
+  useUpdateIntegrationConnection,
+} from "@/hooks/api";
+import { getProviderSpec } from "./integration-providers";
 
 /* ─── Status chip ─────────────────────────────────────────────────────────── */
 
@@ -73,56 +72,7 @@ function ConnectionStatusChip({
   );
 }
 
-/* ─── Config fields editor (shared by connect + edit) ─────────────────────── */
-
-export function ProviderConfigFields({
-  spec,
-  config,
-  onChange,
-  idPrefix,
-}: {
-  spec: ProviderSpec;
-  config: Record<string, string>;
-  onChange: (next: Record<string, string>) => void;
-  idPrefix: string;
-}) {
-  return (
-    <div className="space-y-3">
-      {spec.fields.map((field) => (
-        <div key={field.key} className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-${field.key}`}>{field.label}</Label>
-          <Input
-            id={`${idPrefix}-${field.key}`}
-            value={config[field.key] ?? ""}
-            onChange={(e) =>
-              onChange({ ...config, [field.key]: e.target.value })
-            }
-            placeholder={field.placeholder}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {field.helper && (
-            <p className="text-[11px] text-muted-foreground">{field.helper}</p>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* ─── Edit dialog ─────────────────────────────────────────────────────────── */
-
-function configToDraft(
-  spec: ProviderSpec,
-  config: Record<string, unknown> | null,
-): Record<string, string> {
-  const draft: Record<string, string> = {};
-  for (const field of spec.fields) {
-    const value = config?.[field.key];
-    draft[field.key] = typeof value === "string" ? value : "";
-  }
-  return draft;
-}
 
 function EditConnectionDialog({
   slug,
@@ -137,18 +87,38 @@ function EditConnectionDialog({
 }) {
   const spec = getProviderSpec(connection.provider);
   const update = useUpdateIntegrationConnection(slug, connection.id);
-  const [draft, setDraft] = React.useState<Record<string, string>>(() =>
-    configToDraft(spec, connection.config),
+  const resourcesQuery = useIntegrationResources(
+    slug,
+    connection.provider,
+    undefined,
+    { enabled: open },
+  );
+  const [selectedResourceId, setSelectedResourceId] = React.useState<
+    string | null
+  >(
+    () =>
+      resourcesQuery.data?.items.find((resource) =>
+        isSameResourceConfig(resource.config, connection.config),
+      )?.id ?? null,
   );
 
   React.useEffect(() => {
-    if (open) setDraft(configToDraft(spec, connection.config));
-  }, [open, connection, spec]);
+    if (!open) return;
+    setSelectedResourceId(
+      resourcesQuery.data?.items.find((resource) =>
+        isSameResourceConfig(resource.config, connection.config),
+      )?.id ?? null,
+    );
+  }, [open, connection.config, resourcesQuery.data?.items]);
 
-  const valid = isProviderConfigValid(spec, draft);
+  const selectedResource =
+    resourcesQuery.data?.items.find(
+      (resource) => resource.id === selectedResourceId,
+    ) ?? null;
 
   async function handleSubmit() {
-    await update.mutateAsync({ config: cleanConfig(draft) });
+    if (!selectedResource) return;
+    await update.mutateAsync({ config: selectedResource.config });
     onOpenChange(false);
   }
 
@@ -158,22 +128,24 @@ function EditConnectionDialog({
         <DialogHeader>
           <DialogTitle>Edit {spec.label} destination</DialogTitle>
           <DialogDescription>
-            Update where this integration delivers exports.
+            Current destination: {spec.summarize(connection.config) ?? "none"}
           </DialogDescription>
         </DialogHeader>
 
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (valid && !update.isPending) handleSubmit();
+            if (selectedResource && !update.isPending) {
+              handleSubmit();
+            }
           }}
           className="space-y-4"
         >
-          <ProviderConfigFields
-            spec={spec}
-            config={draft}
-            onChange={setDraft}
-            idPrefix={`int-edit-${connection.id}`}
+          <ResourceChoices
+            resources={resourcesQuery.data?.items ?? []}
+            selectedResourceId={selectedResourceId}
+            isLoading={resourcesQuery.isLoading}
+            onSelect={setSelectedResourceId}
           />
 
           {update.isError && (
@@ -194,7 +166,7 @@ function EditConnectionDialog({
             <Button
               type="submit"
               size="sm"
-              disabled={!valid || update.isPending}
+              disabled={!selectedResource || update.isPending}
             >
               {update.isPending ? "Saving…" : "Save changes"}
             </Button>
@@ -203,6 +175,69 @@ function EditConnectionDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function ResourceChoices({
+  resources,
+  selectedResourceId,
+  isLoading,
+  onSelect,
+}: {
+  resources: V2IntegrationResourceDTO[];
+  selectedResourceId: string | null;
+  isLoading: boolean;
+  onSelect: (resourceId: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <div className="h-9 rounded-md border border-border bg-muted/40" />
+        <div className="h-9 rounded-md border border-border bg-muted/20" />
+      </div>
+    );
+  }
+
+  if (resources.length === 0) {
+    return (
+      <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+        No destinations available.
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-h-64 space-y-2 overflow-y-auto">
+      {resources.map((resource) => {
+        const selected = selectedResourceId === resource.id;
+        return (
+          <button
+            key={resource.id}
+            type="button"
+            onClick={() => onSelect(resource.id)}
+            className={cn(
+              "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
+              selected
+                ? "border-brand/50 bg-brand/10 text-foreground"
+                : "border-border bg-background hover:bg-muted/40",
+            )}
+          >
+            <span className="truncate">{resource.label}</span>
+            <span className="ml-3 shrink-0 font-mono text-[10px] uppercase text-muted-foreground">
+              {selected ? "selected" : resource.id.slice(0, 8)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function isSameResourceConfig(
+  left: Record<string, unknown>,
+  right: Record<string, unknown> | null,
+) {
+  if (!right) return false;
+  return Object.entries(left).every(([key, value]) => right[key] === value);
 }
 
 /* ─── Row skeleton ────────────────────────────────────────────────────────── */
@@ -227,21 +262,27 @@ export const IntegrationConnectionRow = React.memo(
     slug,
     connection,
     onSendTest,
+    onEnable,
     onDisable,
+    onRevoke,
     isSendingTest,
   }: {
     slug: string;
     connection: V2IntegrationConnectionDTO;
     onSendTest: (connectionId: string) => void;
+    onEnable: (connectionId: string) => void;
     onDisable: (connectionId: string) => void;
+    onRevoke: (connectionId: string) => void;
     isSendingTest: boolean;
   }) {
     const spec = getProviderSpec(connection.provider);
     const Icon = spec.icon;
     const [editOpen, setEditOpen] = React.useState(false);
     const [disableOpen, setDisableOpen] = React.useState(false);
+    const [revokeOpen, setRevokeOpen] = React.useState(false);
 
     const isActive = connection.status === "ACTIVE";
+    const isDisabled = connection.status === "DISABLED";
     const isRevoked = connection.status === "REVOKED";
     const destination = spec.summarize(connection.config);
 
@@ -273,6 +314,23 @@ export const IntegrationConnectionRow = React.memo(
                 },
               ]
             : []),
+          ...(isDisabled
+            ? [
+                {
+                  id: "enable",
+                  label: "Enable",
+                  icon: PlayIcon,
+                  onSelect: () => onEnable(connection.id),
+                },
+              ]
+            : []),
+          {
+            id: "revoke",
+            label: "Revoke",
+            icon: TrashIcon,
+            tone: "danger" as const,
+            onSelect: () => setRevokeOpen(true),
+          },
         ];
 
     return (
@@ -345,6 +403,16 @@ export const IntegrationConnectionRow = React.memo(
           cancelLabel="Cancel"
           confirmLabel="Disable"
           onConfirm={() => onDisable(connection.id)}
+        />
+        <ConfirmationDialog
+          open={revokeOpen}
+          onOpenChange={setRevokeOpen}
+          intent="danger"
+          title={<>Revoke {spec.label} integration?</>}
+          description="This disconnects the integration from Tresta and stops all future exports through this connection."
+          cancelLabel="Cancel"
+          confirmLabel="Revoke"
+          onConfirm={() => onRevoke(connection.id)}
         />
       </>
     );

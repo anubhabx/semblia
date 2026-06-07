@@ -115,5 +115,18 @@ export const queryKeys = {
   integrations: {
     connections: (slug: string) =>
       ["projects", slug, "integrations", "connections"] as const,
+    resources: (
+      slug: string,
+      provider: string,
+      params?: Record<string, unknown>,
+    ) =>
+      [
+        "projects",
+        slug,
+        "integrations",
+        "resources",
+        provider,
+        params ?? {},
+      ] as const,
   },
 } as const;

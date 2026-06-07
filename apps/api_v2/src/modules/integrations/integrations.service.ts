@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -21,6 +22,7 @@ import { generateDeliveryId } from "../outbound-webhooks/outbound-webhooks.servi
 import type {
   CreateIntegrationConnectionBodyDto,
   CreateNativeIntegrationExportBodyDto,
+  ListIntegrationResourcesQueryDto,
   UpdateIntegrationConnectionBodyDto,
 } from "./integrations.dto.js";
 import {
@@ -96,6 +98,13 @@ const DELIVERY_WITH_DESTINATION_SELECT = {
   },
 } satisfies Prisma.ExportDeliverySelect;
 
+const DEFAULT_PROVIDER_SCOPES: Record<IntegrationProvider, string[]> = {
+  [IntegrationProvider.SLACK]: ["chat:write", "channels:read", "groups:read"],
+  [IntegrationProvider.NOTION]: [],
+  [IntegrationProvider.LINEAR]: ["write"],
+  [IntegrationProvider.GITHUB]: ["repo"],
+};
+
 type IntegrationConnectionRecord = Prisma.IntegrationConnectionGetPayload<{
   select: typeof CONNECTION_SELECT;
 }>;
@@ -154,18 +163,23 @@ export class IntegrationsService {
         "Clerk OAuth integration connections require a user actor",
       );
     }
+    const provider = body.provider as IntegrationProvider;
+    const scopes = normalizeScopes(provider, body.scopes);
+    if (body.authStrategy === "CLERK_OAUTH") {
+      await this.verifyConnectedAccountToken(provider, scopes, actor);
+    }
 
     const created = await this.prisma.client.$transaction(async (tx) => {
       const connection = await tx.integrationConnection.create({
         data: {
           projectId,
-          provider: body.provider as IntegrationProvider,
+          provider,
           authStrategy: body.authStrategy as IntegrationAuthStrategy,
           connectedByUserId: actor?.userId ?? null,
           clerkProvider:
             body.clerkProvider ?? defaultClerkProvider(body.provider),
           externalAccountId: body.externalAccountId ?? null,
-          scopes: body.scopes,
+          scopes,
           config: body.config as Prisma.InputJsonObject,
         },
         select: CONNECTION_SELECT,
@@ -189,13 +203,49 @@ export class IntegrationsService {
     return this.toConnectionDto(created);
   }
 
+  async listResources(
+    providerValue: string,
+    query: ListIntegrationResourcesQueryDto,
+    actor: ActorContext | null | undefined,
+  ) {
+    const provider = providerValue as IntegrationProvider;
+    const scopes = normalizeScopes(provider, undefined);
+    const token = await this.verifyConnectedAccountToken(
+      provider,
+      scopes,
+      actor,
+    );
+
+    return this.getProvider(provider).listResources({
+      token,
+      query: query.query,
+      cursor: query.cursor,
+    });
+  }
+
   async updateConnection(
     projectId: string,
     connectionId: string,
     body: UpdateIntegrationConnectionBodyDto,
     actor: ActorContext | null | undefined,
   ) {
-    await this.getOwnedConnectionOrThrow(projectId, connectionId);
+    const existing = await this.getOwnedConnectionOrThrow(
+      projectId,
+      connectionId,
+    );
+    const scopes =
+      body.scopes !== undefined
+        ? normalizeScopes(existing.provider, body.scopes)
+        : existing.scopes;
+    if (existing.authStrategy === IntegrationAuthStrategy.CLERK_OAUTH) {
+      await this.verifyConnectedAccountToken(
+        existing.provider,
+        scopes,
+        actor,
+        existing.connectedByUserId,
+      );
+    }
+
     const updated = await this.prisma.client.$transaction(async (tx) => {
       const connection = await tx.integrationConnection.update({
         where: { id: connectionId },
@@ -203,7 +253,7 @@ export class IntegrationsService {
           ...(body.externalAccountId !== undefined
             ? { externalAccountId: body.externalAccountId }
             : {}),
-          ...(body.scopes !== undefined ? { scopes: body.scopes } : {}),
+          ...(body.scopes !== undefined ? { scopes } : {}),
           ...(body.config !== undefined
             ? { config: body.config as Prisma.InputJsonObject }
             : {}),
@@ -246,6 +296,79 @@ export class IntegrationsService {
         projectId,
         actor,
         action: "integration_connection.disabled",
+        targetType: "integration_connection",
+        targetId: connection.id,
+        metadata: { provider: connection.provider },
+      });
+
+      return connection;
+    });
+
+    return this.toConnectionDto(updated);
+  }
+
+  async enableConnection(
+    projectId: string,
+    connectionId: string,
+    actor: ActorContext | null | undefined,
+  ) {
+    const existing = await this.getOwnedConnectionOrThrow(
+      projectId,
+      connectionId,
+    );
+    if (existing.status === "REVOKED") {
+      throw new ConflictException(
+        "Revoked integration connections cannot be enabled",
+      );
+    }
+    if (existing.authStrategy === IntegrationAuthStrategy.CLERK_OAUTH) {
+      await this.verifyConnectedAccountToken(
+        existing.provider,
+        existing.scopes,
+        actor,
+        existing.connectedByUserId,
+      );
+    }
+
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const connection = await tx.integrationConnection.update({
+        where: { id: connectionId },
+        data: { status: "ACTIVE", lastCheckedAt: new Date() },
+        select: CONNECTION_SELECT,
+      });
+
+      await this.actionAudit.recordWith(tx, {
+        projectId,
+        actor,
+        action: "integration_connection.enabled",
+        targetType: "integration_connection",
+        targetId: connection.id,
+        metadata: { provider: connection.provider },
+      });
+
+      return connection;
+    });
+
+    return this.toConnectionDto(updated);
+  }
+
+  async revokeConnection(
+    projectId: string,
+    connectionId: string,
+    actor: ActorContext | null | undefined,
+  ) {
+    await this.getOwnedConnectionOrThrow(projectId, connectionId);
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const connection = await tx.integrationConnection.update({
+        where: { id: connectionId },
+        data: { status: "REVOKED" },
+        select: CONNECTION_SELECT,
+      });
+
+      await this.actionAudit.recordWith(tx, {
+        projectId,
+        actor,
+        action: "integration_connection.revoked",
         targetType: "integration_connection",
         targetId: connection.id,
         metadata: { provider: connection.provider },
@@ -524,6 +647,26 @@ export class IntegrationsService {
   private toDeliveryDto(delivery: ExportDeliveryRecord) {
     return delivery;
   }
+
+  private async verifyConnectedAccountToken(
+    provider: IntegrationProvider,
+    requiredScopes: string[],
+    actor: ActorContext | null | undefined,
+    connectedByUserId?: string | null,
+  ) {
+    const userId = connectedByUserId ?? actor?.userId;
+    if (!userId) {
+      throw new ForbiddenException(
+        "Integration OAuth actions require a connected user",
+      );
+    }
+
+    return this.tokenProvider.getToken({
+      userId,
+      provider: providerToConnectedProvider(provider),
+      requiredScopes,
+    });
+  }
 }
 
 function toExportDestinationProvider(provider: IntegrationProvider) {
@@ -552,6 +695,12 @@ function providerToConnectedProvider(
   provider: IntegrationProvider,
 ): ConnectedProvider {
   return provider.toLowerCase() as ConnectedProvider;
+}
+
+function normalizeScopes(provider: IntegrationProvider, scopes?: string[]) {
+  return scopes && scopes.length > 0
+    ? Array.from(new Set(scopes))
+    : DEFAULT_PROVIDER_SCOPES[provider];
 }
 
 function defaultClerkProvider(provider: string) {

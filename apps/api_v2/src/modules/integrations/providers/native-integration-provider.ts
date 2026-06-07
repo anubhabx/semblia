@@ -26,8 +26,30 @@ export type NativeIntegrationProviderResult = {
   response: Record<string, unknown>;
 };
 
+export type NativeIntegrationResource = {
+  id: string;
+  label: string;
+  config: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+};
+
+export type NativeIntegrationResourceList = {
+  provider: IntegrationProvider;
+  items: NativeIntegrationResource[];
+  nextCursor: string | null;
+};
+
+export type NativeIntegrationResourceListInput = {
+  token: ConnectedAccountToken;
+  query?: string;
+  cursor?: string;
+};
+
 export interface NativeIntegrationProvider {
   readonly provider: IntegrationProvider;
+  listResources(
+    input: NativeIntegrationResourceListInput,
+  ): Promise<NativeIntegrationResourceList>;
   deliver(
     input: NativeIntegrationProviderInput,
   ): Promise<NativeIntegrationProviderResult>;

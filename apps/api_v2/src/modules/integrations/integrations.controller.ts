@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   InternalServerErrorException,
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -20,10 +22,14 @@ import {
   createIntegrationConnectionBodySchema,
   createNativeIntegrationExportBodySchema,
   integrationConnectionParamsSchema,
+  integrationProviderParamsSchema,
+  listIntegrationResourcesQuerySchema,
   updateIntegrationConnectionBodySchema,
   type CreateIntegrationConnectionBodyDto,
   type CreateNativeIntegrationExportBodyDto,
   type IntegrationConnectionParamsDto,
+  type IntegrationProviderParamsDto,
+  type ListIntegrationResourcesQueryDto,
   type UpdateIntegrationConnectionBodyDto,
 } from "./integrations.dto.js";
 import { IntegrationsService } from "./integrations.service.js";
@@ -92,6 +98,52 @@ export class IntegrationsController {
     return this.integrationsService.disableConnection(
       this.getProjectId(request),
       params.connectionId,
+      actor,
+    );
+  }
+
+  @Post("connections/:connectionId/enable")
+  @RequireCapability(Capability.MANAGE_INTEGRATIONS)
+  enableConnection(
+    @Param(new ZodValidationPipe(integrationConnectionParamsSchema))
+    params: IntegrationConnectionParamsDto,
+    @Req() request: ProjectRequest,
+    @CurrentActor() actor: ActorContext | null,
+  ) {
+    return this.integrationsService.enableConnection(
+      this.getProjectId(request),
+      params.connectionId,
+      actor,
+    );
+  }
+
+  @Delete("connections/:connectionId")
+  @RequireCapability(Capability.MANAGE_INTEGRATIONS)
+  revokeConnection(
+    @Param(new ZodValidationPipe(integrationConnectionParamsSchema))
+    params: IntegrationConnectionParamsDto,
+    @Req() request: ProjectRequest,
+    @CurrentActor() actor: ActorContext | null,
+  ) {
+    return this.integrationsService.revokeConnection(
+      this.getProjectId(request),
+      params.connectionId,
+      actor,
+    );
+  }
+
+  @Get("providers/:provider/resources")
+  @RequireCapability(Capability.MANAGE_INTEGRATIONS)
+  listResources(
+    @Param(new ZodValidationPipe(integrationProviderParamsSchema))
+    params: IntegrationProviderParamsDto,
+    @Query(new ZodValidationPipe(listIntegrationResourcesQuerySchema))
+    query: ListIntegrationResourcesQueryDto,
+    @CurrentActor() actor: ActorContext | null,
+  ) {
+    return this.integrationsService.listResources(
+      params.provider,
+      query,
       actor,
     );
   }

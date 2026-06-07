@@ -126,9 +126,12 @@ export {
 
 export {
   useIntegrationConnections,
+  useIntegrationResources,
   useCreateIntegrationConnection,
   useUpdateIntegrationConnection,
+  useEnableIntegrationConnection,
   useDisableIntegrationConnection,
+  useRevokeIntegrationConnection,
   useCreateNativeIntegrationExport,
 } from "./use-integrations-api";
 

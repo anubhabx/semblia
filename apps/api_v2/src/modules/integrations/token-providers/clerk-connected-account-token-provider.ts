@@ -30,10 +30,21 @@ export class ClerkConnectedAccountTokenProvider
       );
     }
 
+    const grantedScopes = token.scopes ?? [];
+    const missingScopes =
+      grantedScopes.length > 0
+        ? requiredScopes.filter((scope) => !grantedScopes.includes(scope))
+        : [];
+    if (missingScopes.length > 0) {
+      throw new ForbiddenException(
+        `Reconnect ${provider} with required scopes: ${missingScopes.join(", ")}`,
+      );
+    }
+
     return {
       accessToken: token.accessToken,
       expiresAt: token.expiresAt,
-      scopes: token.scopes.length > 0 ? token.scopes : requiredScopes,
+      scopes: grantedScopes.length > 0 ? grantedScopes : requiredScopes,
     };
   }
 }

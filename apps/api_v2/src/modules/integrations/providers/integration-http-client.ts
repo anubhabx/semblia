@@ -7,6 +7,13 @@ export type IntegrationHttpClientPostJsonInput = {
   headers?: Record<string, string>;
 };
 
+export type IntegrationHttpClientGetJsonInput = {
+  url: string;
+  token: string;
+  params?: Record<string, string | undefined>;
+  headers?: Record<string, string>;
+};
+
 export type IntegrationHttpClientResponse = {
   status: number;
   body: unknown;
@@ -14,6 +21,37 @@ export type IntegrationHttpClientResponse = {
 
 @Injectable()
 export class IntegrationHttpClient {
+  async getJson({
+    url,
+    token,
+    params = {},
+    headers = {},
+  }: IntegrationHttpClientGetJsonInput): Promise<IntegrationHttpClientResponse> {
+    const target = new URL(url);
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) target.searchParams.set(key, value);
+    }
+
+    const response = await fetch(target, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...headers,
+      },
+    });
+    const responseBody = await readResponseBody(response);
+
+    if (!response.ok) {
+      throw new IntegrationProviderError(
+        `Provider returned HTTP ${response.status}`,
+        response.status,
+        responseBody,
+      );
+    }
+
+    return { status: response.status, body: responseBody };
+  }
+
   async postJson({
     url,
     token,

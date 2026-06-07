@@ -20,6 +20,10 @@ export interface ProviderSpec {
   icon: BrandIcon;
   /** Short description shown on the connect picker. */
   blurb: string;
+  /** Clerk external account strategy used to authorize this provider. */
+  oauthStrategy: string;
+  /** OAuth scopes Tresta needs for one-way delivery and destination picking. */
+  oauthScopes: string[];
   /** Destination config fields the user fills when connecting. */
   fields: ProviderConfigField[];
   /**
@@ -42,6 +46,8 @@ export const PROVIDERS: ProviderSpec[] = [
     label: "Slack",
     icon: SlackIcon,
     blurb: "Post new responses to a Slack channel.",
+    oauthStrategy: "oauth_slack",
+    oauthScopes: ["chat:write", "channels:read", "groups:read"],
     fields: [
       {
         key: "channelId",
@@ -61,6 +67,8 @@ export const PROVIDERS: ProviderSpec[] = [
     label: "Notion",
     icon: NotionIcon,
     blurb: "Append responses to a Notion page or database.",
+    oauthStrategy: "oauth_notion",
+    oauthScopes: [],
     oneOf: true,
     fields: [
       {
@@ -89,6 +97,8 @@ export const PROVIDERS: ProviderSpec[] = [
     label: "Linear",
     icon: LinearIcon,
     blurb: "Create Linear issues from responses.",
+    oauthStrategy: "oauth_linear",
+    oauthScopes: ["write"],
     fields: [
       {
         key: "teamId",
@@ -108,6 +118,8 @@ export const PROVIDERS: ProviderSpec[] = [
     label: "GitHub",
     icon: GithubIcon,
     blurb: "Open GitHub issues from responses.",
+    oauthStrategy: "oauth_github",
+    oauthScopes: ["repo"],
     fields: [
       {
         key: "owner",
