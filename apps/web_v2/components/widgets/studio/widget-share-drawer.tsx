@@ -5,7 +5,7 @@
  *
  * Three tabs:
  *   - Embed (default for embed widgets): <script>, React, npm
- *   - Public link (default for wall widgets): URL + open + QR stub
+ *   - Public link (default for wall widgets): URL + open + scannable QR
  *   - Settings: branding toggle + auto-deploy reassurance
  *
  * Built on radix Dialog (Sheet) for portal/focus-trap. The drawer slides
@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   X as XIcon,
   Code as CodeIcon,
@@ -25,6 +26,7 @@ import {
   ArrowSquareOut as OpenIcon,
   CircleNotch as SpinnerIcon,
   Sparkle as SparkleIcon,
+  DownloadSimple as DownloadIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -280,18 +282,7 @@ function LinkTab({ widgetId, isWall }: { widgetId: string; isWall: boolean }) {
 
       {isWall && (
         <>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              QR code
-            </div>
-            <div className="mt-2 flex items-center gap-3">
-              <QRGlyph size={64} />
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                A scannable QR will be generated for printables and offline
-                share. Coming next.
-              </p>
-            </div>
-          </div>
+          <WallQrCard url={url} slug={draft.wall.slug} />
 
           <SnippetBlock
             title="Suggested social copy"
@@ -447,60 +438,64 @@ function SnippetBlock({
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/*  Tiny placeholder QR — purely visual; replaced with real QR later         */
+/*  Wall QR card — real, scannable QR with PNG download                       */
 /* ──────────────────────────────────────────────────────────────────────── */
 
-function QRGlyph({ size = 56 }: { size?: number }) {
-  // Pseudo-deterministic 9×9 grid that *looks* like a QR. Not scannable.
-  const cells = React.useMemo(() => {
-    const seed = 7919;
-    const out: boolean[] = [];
-    let v = seed;
-    for (let i = 0; i < 81; i++) {
-      v = (v * 9301 + 49297) % 233280;
-      out.push(v / 233280 > 0.55);
-    }
-    // Force corner squares for "QR-ness".
-    const isCorner = (x: number, y: number) =>
-      (x < 3 && y < 3) || (x > 5 && y < 3) || (x < 3 && y > 5);
-    return out.map((on, i) => {
-      const x = i % 9;
-      const y = Math.floor(i / 9);
-      const corner = isCorner(x, y);
-      const ring =
-        corner &&
-        (x === 0 ||
-          x === 2 ||
-          x === 6 ||
-          x === 8 ||
-          y === 0 ||
-          y === 2 ||
-          y === 6 ||
-          y === 8);
-      return corner ? ring : on;
-    });
-  }, []);
+function WallQrCard({ url, slug }: { url: string; slug: string }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  const cell = size / 9;
+  // Fixed black-on-white for maximum scan reliability across themes and print.
+  const handleDownload = React.useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      toast.error("QR not ready yet — try again in a moment.");
+      return;
+    }
+    try {
+      const href = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `tresta-wall-${slug || "qr"}.png`;
+      link.click();
+      toast.success("QR downloaded");
+    } catch {
+      toast.error("Couldn't export the QR. Try again.");
+    }
+  }, [slug]);
 
   return (
-    <div
-      className="grid shrink-0 rounded-md bg-foreground/[0.04] p-1"
-      style={{
-        gridTemplateColumns: `repeat(9, ${cell}px)`,
-        width: size + 8,
-        height: size + 8,
-      }}
-      aria-hidden
-    >
-      {cells.map((on, i) => (
-        <span
-          key={i}
-          style={{
-            background: on ? "var(--foreground)" : "transparent",
-          }}
-        />
-      ))}
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          QR code
+        </div>
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background px-2 text-[10.5px] font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+        >
+          <DownloadIcon className="size-3" weight="bold" aria-hidden />
+          PNG
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
+        <div className="shrink-0 rounded-md border border-border bg-white p-2">
+          <QRCodeCanvas
+            ref={canvasRef}
+            value={url}
+            size={88}
+            level="M"
+            marginSize={0}
+            fgColor="#000000"
+            bgColor="#ffffff"
+            title="QR code linking to the public testimonial wall"
+          />
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Scan to open the wall. Drop the PNG into print, packaging, slide
+          decks, or event signage for offline sharing.
+        </p>
+      </div>
     </div>
   );
 }
