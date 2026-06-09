@@ -6,6 +6,7 @@ import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { REQUIRED_CAPABILITIES_KEY } from "../../common/authz/require-capability.decorator.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import { ApiKeysController } from "./api-keys.controller.js";
 import { ApiKeyAuthenticator } from "./api-key-auth.guard.js";
 import {
@@ -27,6 +28,7 @@ const mockDailyUsageFindMany = vi.fn();
 const mockDailyUsageUpsert = vi.fn();
 const mockTransaction = vi.fn();
 const mockCreateForProjectManagers = vi.fn();
+const mockProjectActionAuditCreate = vi.fn();
 
 const prismaMock = {
   client: {
@@ -40,6 +42,9 @@ const prismaMock = {
     apiKeyDailyUsage: {
       findMany: mockDailyUsageFindMany,
       upsert: mockDailyUsageUpsert,
+    },
+    projectActionAudit: {
+      create: mockProjectActionAuditCreate,
     },
   },
 } as unknown as PrismaService;
@@ -103,6 +108,18 @@ describe("ApiKeysController", () => {
       Reflect.getMetadata(
         REQUIRED_CAPABILITIES_KEY,
         ApiKeysController.prototype.rotate,
+      ),
+    ).toEqual([Capability.MANAGE_CREDENTIALS]);
+    expect(
+      Reflect.getMetadata(PATH_METADATA, ApiKeysController.prototype.update),
+    ).toBe(":keyId");
+    expect(
+      Reflect.getMetadata(METHOD_METADATA, ApiKeysController.prototype.update),
+    ).toBe(RequestMethod.PATCH);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ApiKeysController.prototype.update,
       ),
     ).toEqual([Capability.MANAGE_CREDENTIALS]);
     expect(
@@ -294,6 +311,161 @@ describe("ApiKeysService", () => {
       }),
       { excludeUserIds: ["user_1"] },
     );
+  });
+
+  it("updates a key name and records an audit row", async () => {
+    mockApiKeyFindFirst.mockResolvedValue(makeKey());
+    mockTransaction.mockImplementation(async (callback) =>
+      callback(prismaMock.client),
+    );
+    mockApiKeyUpdate.mockImplementation(async ({ data }) =>
+      makeKey({
+        name: data.name,
+        updatedAt: new Date("2026-05-03T00:02:00.000Z"),
+      }),
+    );
+    mockProjectActionAuditCreate.mockResolvedValue({});
+
+    const service = new ApiKeysService(
+      prismaMock,
+      notificationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+    );
+    const result = await service.update(
+      "project_1",
+      "key_1",
+      { name: "Renamed production key" },
+      ApiKeyType.SECRET,
+    );
+
+    expect(mockApiKeyFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "key_1",
+          projectId: "project_1",
+          keyType: ApiKeyType.SECRET,
+        },
+      }),
+    );
+    expect(mockApiKeyUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "key_1" },
+        data: { name: "Renamed production key" },
+      }),
+    );
+    expect(result.name).toBe("Renamed production key");
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: "project_1",
+        actorType: "system",
+        action: "api_key.updated",
+        targetType: "api_key",
+        targetId: "key_1",
+        metadata: expect.objectContaining({
+          changedFields: ["name"],
+          keyType: ApiKeyType.SECRET,
+        }),
+      }),
+    });
+  });
+
+  it("updates an AGENT key rate limit by project boundary", async () => {
+    mockApiKeyFindFirst.mockResolvedValue(
+      makeKey({
+        keyType: ApiKeyType.AGENT,
+        rateLimit: 100,
+      }),
+    );
+    mockTransaction.mockImplementation(async (callback) =>
+      callback(prismaMock.client),
+    );
+    mockApiKeyUpdate.mockImplementation(async ({ data }) =>
+      makeKey({
+        keyType: ApiKeyType.AGENT,
+        rateLimit: data.rateLimit,
+      }),
+    );
+    mockProjectActionAuditCreate.mockResolvedValue({});
+
+    const service = new ApiKeysService(
+      prismaMock,
+      notificationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+    );
+    const result = await service.update(
+      "project_1",
+      "agent_key_1",
+      { rateLimit: 600 },
+      ApiKeyType.AGENT,
+    );
+
+    expect(mockApiKeyFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "agent_key_1",
+          projectId: "project_1",
+          keyType: ApiKeyType.AGENT,
+        },
+      }),
+    );
+    expect(mockApiKeyUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "key_1" },
+        data: { rateLimit: 600 },
+      }),
+    );
+    expect(result.keyType).toBe(ApiKeyType.AGENT);
+    expect(result.rateLimit).toBe(600);
+  });
+
+  it("throws 404 when updating a missing key", async () => {
+    mockApiKeyFindFirst.mockResolvedValue(null);
+
+    const service = new ApiKeysService(
+      prismaMock,
+      notificationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+    );
+
+    await expect(
+      service.update(
+        "project_1",
+        "missing_key",
+        { name: "Does not exist" },
+        ApiKeyType.SECRET,
+      ),
+    ).rejects.toThrow("API key not found");
+    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockApiKeyUpdate).not.toHaveBeenCalled();
+    expect(mockProjectActionAuditCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects updates for revoked keys", async () => {
+    mockApiKeyFindFirst.mockResolvedValue(
+      makeKey({
+        status: ApiKeyStatus.REVOKED,
+        isActive: false,
+        revokedAt: new Date("2026-05-03T00:01:00.000Z"),
+      }),
+    );
+
+    const service = new ApiKeysService(
+      prismaMock,
+      notificationsServiceMock,
+      new ProjectActionAuditService(prismaMock),
+    );
+
+    await expect(
+      service.update(
+        "project_1",
+        "key_1",
+        { rateLimit: 600 },
+        ApiKeyType.SECRET,
+      ),
+    ).rejects.toThrow("Cannot update a revoked API key");
+    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockApiKeyUpdate).not.toHaveBeenCalled();
+    expect(mockProjectActionAuditCreate).not.toHaveBeenCalled();
   });
 });
 

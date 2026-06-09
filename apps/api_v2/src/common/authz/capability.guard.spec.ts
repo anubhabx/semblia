@@ -48,6 +48,7 @@ describe("CapabilityGuard", () => {
       resolveBySlug: vi.fn().mockResolvedValue({
         project: { id: "project_1", slug: "alpha", userId: "owner_1" },
         role: MemberRole.EDITOR,
+        isPrimaryOwner: false,
         capabilities: new Set([
           Capability.VIEW_PROJECT,
           Capability.OPERATE_PROJECT,
@@ -65,6 +66,7 @@ describe("CapabilityGuard", () => {
       projectAccess: {
         projectId: "project_1",
         role: MemberRole.EDITOR,
+        isPrimaryOwner: false,
       },
     });
   });
@@ -94,9 +96,7 @@ describe("CapabilityGuard", () => {
 
   it("rejects viewers from review routes", async () => {
     const reflector = {
-      getAllAndOverride: vi
-        .fn()
-        .mockReturnValue([Capability.REVIEW_RESPONSES]),
+      getAllAndOverride: vi.fn().mockReturnValue([Capability.REVIEW_RESPONSES]),
     } as unknown as Reflector;
     const projectAccessService = {
       resolveBySlug: vi.fn().mockResolvedValue({

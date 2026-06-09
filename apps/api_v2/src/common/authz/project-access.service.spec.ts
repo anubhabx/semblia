@@ -36,6 +36,7 @@ describe("ProjectAccessService", () => {
     const result = await service.resolveBySlug("user_1", "alpha");
 
     expect(result.role).toBe(MemberRole.OWNER);
+    expect(result.isPrimaryOwner).toBe(true);
     expect(result.capabilities.has(Capability.MANAGE_PROJECT)).toBe(true);
   });
 
@@ -52,6 +53,7 @@ describe("ProjectAccessService", () => {
     const result = await service.resolveBySlug("editor_1", "alpha");
 
     expect(result.role).toBe(MemberRole.EDITOR);
+    expect(result.isPrimaryOwner).toBe(false);
     expect(result.capabilities.has(Capability.REVIEW_RESPONSES)).toBe(true);
   });
 
@@ -100,6 +102,7 @@ describe("ProjectAccessService", () => {
     );
 
     expect(result.role).toBe("ORG_ADMIN");
+    expect(result.isPrimaryOwner).toBe(false);
     expect(result.capabilities.has(Capability.MANAGE_CREDENTIALS)).toBe(true);
     expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();
   });
@@ -126,6 +129,7 @@ describe("ProjectAccessService", () => {
     );
 
     expect(result.role).toBe("API_KEY");
+    expect(result.isPrimaryOwner).toBe(false);
     expect(result.capabilities.has(Capability.MANAGE_CREDENTIALS)).toBe(true);
     expect(result.capabilities.has(Capability.MANAGE_MEMBERS)).toBe(false);
     expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();

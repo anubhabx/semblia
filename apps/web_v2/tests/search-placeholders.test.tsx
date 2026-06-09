@@ -24,6 +24,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/tresta-api", () => ({
   fetchProjects: vi.fn(),
+  fetchMyProjectTransfers: vi.fn().mockResolvedValue([]),
   fetchResponses: vi.fn(),
   createCsvExport: vi.fn(),
 }));
@@ -62,6 +63,7 @@ function makeApiProject(overrides: Partial<V2ProjectDTO> = {}): V2ProjectDTO {
     access: {
       role: "ORG_ADMIN",
       capabilities: ["VIEW_PROJECT"],
+      isPrimaryOwner: true,
     },
     ...overrides,
   };

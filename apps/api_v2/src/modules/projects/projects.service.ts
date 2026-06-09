@@ -17,9 +17,11 @@ import {
   Prisma,
   type ProjectMember,
   ProjectMemberInviteStatus,
+  ProjectOwnershipTransferStatus,
 } from "@workspace/database/prisma";
 import type {
   V2ProjectMemberInviteDTO,
+  V2ProjectOwnershipTransferDTO,
   V2PublicSurfaceHostDTO,
 } from "@workspace/types";
 import type { ActorContext } from "../../common/authz/actor-context.js";
@@ -41,11 +43,13 @@ import type {
   AddProjectMemberBodyDto,
   CreateProjectMemberInviteBodyDto,
   CreateProjectBodyDto,
+  InitiateOwnershipTransferBodyDto,
   ListProjectsQueryDto,
   ProjectInviteParamsDto,
   ProjectMemberInviteParamsDto,
   ProjectMemberParamsDto,
   ProjectSlugParamsDto,
+  ProjectTransferParamsDto,
   UpdateProjectBodyDto,
   UpdateProjectMemberBodyDto,
 } from "./projects.dto.js";
@@ -120,6 +124,41 @@ const PROJECT_MEMBER_INVITE_SELECT = {
   },
 } satisfies Prisma.ProjectMemberInviteSelect;
 
+const PROJECT_OWNERSHIP_TRANSFER_USER_SELECT = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  avatar: true,
+} satisfies Prisma.UserSelect;
+
+const PROJECT_OWNERSHIP_TRANSFER_SELECT = {
+  id: true,
+  projectId: true,
+  fromUserId: true,
+  toUserId: true,
+  status: true,
+  initiatedByUserId: true,
+  respondedByUserId: true,
+  respondedAt: true,
+  expiresAt: true,
+  createdAt: true,
+  updatedAt: true,
+  project: {
+    select: {
+      slug: true,
+      name: true,
+      userId: true,
+    },
+  },
+  fromUser: {
+    select: PROJECT_OWNERSHIP_TRANSFER_USER_SELECT,
+  },
+  toUser: {
+    select: PROJECT_OWNERSHIP_TRANSFER_USER_SELECT,
+  },
+} satisfies Prisma.ProjectOwnershipTransferSelect;
+
 const PUBLIC_SURFACE_HOST_SELECT = {
   id: true,
   projectId: true,
@@ -146,6 +185,10 @@ type ProjectMemberInviteRow = Prisma.ProjectMemberInviteGetPayload<{
   select: typeof PROJECT_MEMBER_INVITE_SELECT;
 }>;
 
+type ProjectOwnershipTransferRow = Prisma.ProjectOwnershipTransferGetPayload<{
+  select: typeof PROJECT_OWNERSHIP_TRANSFER_SELECT;
+}>;
+
 type PublicSurfaceHostRow = Prisma.PublicSurfaceHostGetPayload<{
   select: typeof PUBLIC_SURFACE_HOST_SELECT;
 }>;
@@ -154,6 +197,7 @@ type ProjectJsonShape = Prisma.JsonValue | null;
 export type ProjectResponseAccess = {
   role: ProjectAccessRole;
   capabilities: ReadonlySet<Capability>;
+  isPrimaryOwner: boolean;
 };
 
 @Injectable()
@@ -846,6 +890,424 @@ export class ProjectsService {
     };
   }
 
+  async getOwnershipTransfer(
+    _userId: string,
+    params: ProjectSlugParamsDto,
+  ): Promise<V2ProjectOwnershipTransferDTO | null> {
+    const project = await this.getProjectOrThrow(params.slug);
+    const now = new Date();
+
+    await this.expirePendingOwnershipTransfersForProject(project.id, now);
+
+    const transfer =
+      await this.prisma.client.projectOwnershipTransfer.findFirst({
+        where: {
+          projectId: project.id,
+          status: ProjectOwnershipTransferStatus.PENDING,
+          expiresAt: { gt: now },
+        },
+        orderBy: { createdAt: "desc" },
+        select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+      });
+
+    return transfer ? this.toProjectOwnershipTransferResponse(transfer) : null;
+  }
+
+  async initiateOwnershipTransfer(
+    userId: string,
+    params: ProjectSlugParamsDto,
+    body: InitiateOwnershipTransferBodyDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectOwnershipTransferDTO> {
+    const project = await this.getProjectOrThrow(params.slug);
+    this.assertPrimaryProjectOwner(userId, project, actor);
+
+    if (body.confirmName !== project.name) {
+      throw new UnprocessableEntityException(
+        "Project name confirmation does not match",
+      );
+    }
+
+    if (body.toUserId === project.userId) {
+      throw new UnprocessableEntityException(
+        "Project ownership cannot be transferred to the current owner",
+      );
+    }
+
+    const recipientMember = await this.prisma.client.projectMember.findUnique({
+      where: {
+        projectId_userId: {
+          projectId: project.id,
+          userId: body.toUserId,
+        },
+      },
+      select: {
+        userId: true,
+        role: true,
+        user: {
+          select: PROJECT_OWNERSHIP_TRANSFER_USER_SELECT,
+        },
+      },
+    });
+
+    if (!recipientMember) {
+      throw new UnprocessableEntityException(
+        "Ownership recipient must be an existing project member",
+      );
+    }
+
+    const now = new Date();
+    await this.expirePendingOwnershipTransfersForProject(project.id, now);
+
+    const existingTransfer =
+      await this.prisma.client.projectOwnershipTransfer.findFirst({
+        where: {
+          projectId: project.id,
+          status: ProjectOwnershipTransferStatus.PENDING,
+        },
+        select: { id: true },
+      });
+
+    if (existingTransfer) {
+      throw new ConflictException(
+        "A pending ownership transfer already exists",
+      );
+    }
+
+    try {
+      const transfer = await this.prisma.client.$transaction(async (tx) => {
+        const createdTransfer = await tx.projectOwnershipTransfer.create({
+          data: {
+            projectId: project.id,
+            fromUserId: project.userId,
+            toUserId: recipientMember.userId,
+            initiatedByUserId: userId,
+          },
+          select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+        });
+
+        await this.actionAudit.recordWith(tx, {
+          projectId: project.id,
+          actor: this.actorOrUser(actor, userId),
+          action: "project.ownership_transfer_requested",
+          targetType: "project_ownership_transfer",
+          targetId: createdTransfer.id,
+          metadata: {
+            fromUserId: project.userId,
+            toUserId: recipientMember.userId,
+          },
+        });
+
+        await this.notificationsService?.createForUsers(
+          [recipientMember.userId],
+          {
+            type: NotificationType.PROJECT_TRANSFER_REQUESTED,
+            title: "Ownership transfer requested",
+            message: `${createdTransfer.fromUser.email} asked you to take ownership of ${project.name}.`,
+            link: "/projects",
+            metadata: {
+              projectId: project.id,
+              projectSlug: project.slug,
+              transferId: createdTransfer.id,
+              fromUserId: project.userId,
+              toUserId: recipientMember.userId,
+            },
+          },
+          tx,
+        );
+
+        return createdTransfer;
+      });
+
+      return this.toProjectOwnershipTransferResponse(transfer);
+    } catch (error: unknown) {
+      if (this.isPrismaUniqueViolation(error)) {
+        throw new ConflictException(
+          "A pending ownership transfer already exists",
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async cancelOwnershipTransfer(
+    userId: string,
+    params: ProjectSlugParamsDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectOwnershipTransferDTO | null> {
+    const project = await this.getProjectOrThrow(params.slug);
+    this.assertPrimaryProjectOwner(userId, project, actor);
+    const now = new Date();
+
+    await this.expirePendingOwnershipTransfersForProject(project.id, now);
+
+    const transfer =
+      await this.prisma.client.projectOwnershipTransfer.findFirst({
+        where: {
+          projectId: project.id,
+          status: ProjectOwnershipTransferStatus.PENDING,
+          expiresAt: { gt: now },
+        },
+        select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+      });
+
+    if (!transfer) {
+      return null;
+    }
+
+    const cancelledTransfer = await this.prisma.client.$transaction(
+      async (tx) => {
+        const updatedTransfer = await tx.projectOwnershipTransfer.update({
+          where: { id: transfer.id },
+          data: { status: ProjectOwnershipTransferStatus.CANCELLED },
+          select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+        });
+
+        await this.actionAudit.recordWith(tx, {
+          projectId: project.id,
+          actor: this.actorOrUser(actor, userId),
+          action: "project.ownership_transfer_cancelled",
+          targetType: "project_ownership_transfer",
+          targetId: transfer.id,
+          metadata: {
+            fromUserId: transfer.fromUserId,
+            toUserId: transfer.toUserId,
+          },
+        });
+
+        await this.notificationsService?.createForUsers(
+          [transfer.toUserId],
+          {
+            type: NotificationType.PROJECT_TRANSFER_CANCELLED,
+            title: "Ownership transfer cancelled",
+            message: `${project.name}'s ownership transfer was cancelled.`,
+            link: `/projects/${project.slug}/settings/danger`,
+            metadata: {
+              projectId: project.id,
+              projectSlug: project.slug,
+              transferId: transfer.id,
+              fromUserId: transfer.fromUserId,
+              toUserId: transfer.toUserId,
+            },
+          },
+          tx,
+        );
+
+        return updatedTransfer;
+      },
+    );
+
+    return this.toProjectOwnershipTransferResponse(cancelledTransfer);
+  }
+
+  async listIncomingOwnershipTransfers(
+    userId: string,
+  ): Promise<V2ProjectOwnershipTransferDTO[]> {
+    const now = new Date();
+    await this.expirePendingOwnershipTransfersForUser(userId, now);
+
+    const transfers =
+      await this.prisma.client.projectOwnershipTransfer.findMany({
+        where: {
+          toUserId: userId,
+          status: ProjectOwnershipTransferStatus.PENDING,
+          expiresAt: { gt: now },
+        },
+        orderBy: { createdAt: "desc" },
+        select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+      });
+
+    return transfers.map((transfer) =>
+      this.toProjectOwnershipTransferResponse(transfer),
+    );
+  }
+
+  async acceptOwnershipTransfer(
+    userId: string,
+    params: ProjectTransferParamsDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectOwnershipTransferDTO> {
+    this.assertUserActorForOwnershipTransfer(actor);
+
+    const transfer = await this.getOwnershipTransferByIdOrThrow(
+      params.transferId,
+    );
+    this.assertTransferRecipient(transfer, userId);
+    this.assertTransferPending(transfer);
+
+    const now = new Date();
+    if (transfer.expiresAt <= now) {
+      await this.expireOwnershipTransfer(transfer.id);
+      throw new ConflictException("Project ownership transfer has expired");
+    }
+
+    const acceptedTransfer = await this.prisma.client.$transaction(
+      async (tx) => {
+        const ownerUpdate = await tx.project.updateMany({
+          where: {
+            id: transfer.projectId,
+            userId: transfer.fromUserId,
+          },
+          data: { userId: transfer.toUserId },
+        });
+
+        if (ownerUpdate.count !== 1) {
+          throw new ConflictException(
+            "Project ownership transfer is no longer valid",
+          );
+        }
+
+        const recipientMember = await tx.projectMember.upsert({
+          where: {
+            projectId_userId: {
+              projectId: transfer.projectId,
+              userId: transfer.toUserId,
+            },
+          },
+          update: { role: MemberRole.OWNER },
+          create: {
+            projectId: transfer.projectId,
+            userId: transfer.toUserId,
+            role: MemberRole.OWNER,
+          },
+          select: { id: true },
+        });
+
+        const formerOwnerMember = await tx.projectMember.upsert({
+          where: {
+            projectId_userId: {
+              projectId: transfer.projectId,
+              userId: transfer.fromUserId,
+            },
+          },
+          update: { role: MemberRole.ADMIN },
+          create: {
+            projectId: transfer.projectId,
+            userId: transfer.fromUserId,
+            role: MemberRole.ADMIN,
+          },
+          select: { id: true },
+        });
+
+        const updatedTransfer = await tx.projectOwnershipTransfer.update({
+          where: { id: transfer.id },
+          data: {
+            status: ProjectOwnershipTransferStatus.ACCEPTED,
+            respondedByUserId: userId,
+            respondedAt: now,
+          },
+          select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+        });
+
+        await this.actionAudit.recordWith(tx, {
+          projectId: transfer.projectId,
+          actor: this.actorOrUser(actor, userId),
+          action: "project.ownership_transfer_accepted",
+          targetType: "project_ownership_transfer",
+          targetId: transfer.id,
+          metadata: {
+            fromUserId: transfer.fromUserId,
+            toUserId: transfer.toUserId,
+            recipientMemberId: recipientMember.id,
+            formerOwnerMemberId: formerOwnerMember.id,
+          },
+        });
+
+        await this.notificationsService?.createForProjectManagers(
+          transfer.projectId,
+          {
+            type: NotificationType.PROJECT_TRANSFER_ACCEPTED,
+            title: "Ownership transfer accepted",
+            message: `${transfer.toUser.email} accepted ownership of ${transfer.project.name}.`,
+            link: `/projects/${transfer.project.slug}/settings/danger`,
+            metadata: {
+              projectId: transfer.projectId,
+              projectSlug: transfer.project.slug,
+              transferId: transfer.id,
+              fromUserId: transfer.fromUserId,
+              toUserId: transfer.toUserId,
+            },
+          },
+          { excludeUserIds: [userId] },
+          tx,
+        );
+
+        return updatedTransfer;
+      },
+    );
+
+    return this.toProjectOwnershipTransferResponse(acceptedTransfer);
+  }
+
+  async declineOwnershipTransfer(
+    userId: string,
+    params: ProjectTransferParamsDto,
+    actor?: ActorContext | null,
+  ): Promise<V2ProjectOwnershipTransferDTO> {
+    this.assertUserActorForOwnershipTransfer(actor);
+
+    const transfer = await this.getOwnershipTransferByIdOrThrow(
+      params.transferId,
+    );
+    this.assertTransferRecipient(transfer, userId);
+    this.assertTransferPending(transfer);
+
+    const now = new Date();
+    if (transfer.expiresAt <= now) {
+      await this.expireOwnershipTransfer(transfer.id);
+      throw new ConflictException("Project ownership transfer has expired");
+    }
+
+    const declinedTransfer = await this.prisma.client.$transaction(
+      async (tx) => {
+        const updatedTransfer = await tx.projectOwnershipTransfer.update({
+          where: { id: transfer.id },
+          data: {
+            status: ProjectOwnershipTransferStatus.DECLINED,
+            respondedByUserId: userId,
+            respondedAt: now,
+          },
+          select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+        });
+
+        await this.actionAudit.recordWith(tx, {
+          projectId: transfer.projectId,
+          actor: this.actorOrUser(actor, userId),
+          action: "project.ownership_transfer_declined",
+          targetType: "project_ownership_transfer",
+          targetId: transfer.id,
+          metadata: {
+            fromUserId: transfer.fromUserId,
+            toUserId: transfer.toUserId,
+          },
+        });
+
+        await this.notificationsService?.createForUsers(
+          [transfer.fromUserId],
+          {
+            type: NotificationType.PROJECT_TRANSFER_DECLINED,
+            title: "Ownership transfer declined",
+            message: `${transfer.toUser.email} declined ownership of ${transfer.project.name}.`,
+            link: `/projects/${transfer.project.slug}/settings/danger`,
+            metadata: {
+              projectId: transfer.projectId,
+              projectSlug: transfer.project.slug,
+              transferId: transfer.id,
+              fromUserId: transfer.fromUserId,
+              toUserId: transfer.toUserId,
+            },
+          },
+          tx,
+        );
+
+        return updatedTransfer;
+      },
+    );
+
+    return this.toProjectOwnershipTransferResponse(declinedTransfer);
+  }
+
   private buildProjectAccessWhere(
     userId: string,
     actor?: ActorContext | null,
@@ -889,7 +1351,11 @@ export class ProjectsService {
         actor.actorType === "agent_key" ? "AGENT_KEY" : "API_KEY";
       const capabilities = credentialScopeCapabilities(actor.scopes);
       for (const project of projects) {
-        accessByProjectId.set(project.id, { role, capabilities });
+        accessByProjectId.set(project.id, {
+          role,
+          capabilities,
+          isPrimaryOwner: false,
+        });
       }
       return accessByProjectId;
     }
@@ -899,7 +1365,11 @@ export class ProjectsService {
         actor.clerkOrgRole === "admin" ? "ORG_ADMIN" : "ORG_MEMBER";
       const capabilities = clerkOrgRoleCapabilities(actor.clerkOrgRole);
       for (const project of projects) {
-        accessByProjectId.set(project.id, { role, capabilities });
+        accessByProjectId.set(project.id, {
+          role,
+          capabilities,
+          isPrimaryOwner: project.userId === userId,
+        });
       }
       return accessByProjectId;
     }
@@ -929,6 +1399,7 @@ export class ProjectsService {
       accessByProjectId.set(project.id, {
         role,
         capabilities: this.capabilitiesForRole(role),
+        isPrimaryOwner: project.userId === userId,
       });
     }
 
@@ -944,12 +1415,14 @@ export class ProjectsService {
       return {
         role,
         capabilities: clerkOrgRoleCapabilities(actor.clerkOrgRole),
+        isPrimaryOwner: true,
       };
     }
 
     return {
       role: MemberRole.OWNER,
       capabilities: this.capabilitiesForRole(MemberRole.OWNER),
+      isPrimaryOwner: true,
     };
   }
 
@@ -1125,6 +1598,59 @@ export class ProjectsService {
     }
   }
 
+  private assertPrimaryProjectOwner(
+    userId: string,
+    project: { userId: string },
+    actor?: ActorContext | null,
+  ) {
+    this.assertUserActorForOwnershipTransfer(actor);
+
+    if (project.userId !== userId) {
+      throw new ForbiddenException(
+        "Only the primary project owner can manage ownership transfers",
+      );
+    }
+  }
+
+  private assertUserActorForOwnershipTransfer(actor?: ActorContext | null) {
+    if (actor && actor.actorType !== "user") {
+      throw new ForbiddenException(
+        "Project credentials cannot manage ownership transfers",
+      );
+    }
+  }
+
+  private assertTransferRecipient(
+    transfer: ProjectOwnershipTransferRow,
+    userId: string,
+  ) {
+    if (transfer.toUserId !== userId) {
+      throw new ForbiddenException(
+        "Project ownership transfer belongs to another user",
+      );
+    }
+  }
+
+  private assertTransferPending(transfer: ProjectOwnershipTransferRow) {
+    if (transfer.status !== ProjectOwnershipTransferStatus.PENDING) {
+      throw new ConflictException("Project ownership transfer is not pending");
+    }
+  }
+
+  private async getOwnershipTransferByIdOrThrow(transferId: string) {
+    const transfer =
+      await this.prisma.client.projectOwnershipTransfer.findUnique({
+        where: { id: transferId },
+        select: PROJECT_OWNERSHIP_TRANSFER_SELECT,
+      });
+
+    if (!transfer) {
+      throw new NotFoundException("Project ownership transfer not found");
+    }
+
+    return transfer;
+  }
+
   private countOwners(projectId: string) {
     return this.prisma.client.projectMember.count({
       where: {
@@ -1158,6 +1684,39 @@ export class ProjectsService {
         expiresAt: { lte: now },
       },
       data: { status: ProjectMemberInviteStatus.EXPIRED },
+    });
+  }
+
+  private expirePendingOwnershipTransfersForProject(
+    projectId: string,
+    now: Date,
+  ) {
+    return this.prisma.client.projectOwnershipTransfer.updateMany({
+      where: {
+        projectId,
+        status: ProjectOwnershipTransferStatus.PENDING,
+        expiresAt: { lte: now },
+      },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+    });
+  }
+
+  private expirePendingOwnershipTransfersForUser(toUserId: string, now: Date) {
+    return this.prisma.client.projectOwnershipTransfer.updateMany({
+      where: {
+        toUserId,
+        status: ProjectOwnershipTransferStatus.PENDING,
+        expiresAt: { lte: now },
+      },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+    });
+  }
+
+  private expireOwnershipTransfer(transferId: string) {
+    return this.prisma.client.projectOwnershipTransfer.update({
+      where: { id: transferId },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+      select: { id: true },
     });
   }
 
@@ -1408,6 +1967,7 @@ export class ProjectsService {
     return {
       role: access?.role ?? "VIEWER",
       capabilities: [...(access?.capabilities ?? new Set<Capability>())].sort(),
+      isPrimaryOwner: access?.isPrimaryOwner ?? false,
     };
   }
 
@@ -1436,6 +1996,23 @@ export class ProjectsService {
       expiresAt: invite.expiresAt.toISOString(),
       createdAt: invite.createdAt.toISOString(),
       updatedAt: invite.updatedAt.toISOString(),
+    };
+  }
+
+  private toProjectOwnershipTransferResponse(
+    transfer: ProjectOwnershipTransferRow,
+  ): V2ProjectOwnershipTransferDTO {
+    return {
+      id: transfer.id,
+      projectId: transfer.projectId,
+      projectSlug: transfer.project.slug,
+      projectName: transfer.project.name,
+      fromUser: transfer.fromUser,
+      toUser: transfer.toUser,
+      status: transfer.status as V2ProjectOwnershipTransferDTO["status"],
+      expiresAt: transfer.expiresAt.toISOString(),
+      createdAt: transfer.createdAt.toISOString(),
+      respondedAt: transfer.respondedAt?.toISOString() ?? null,
     };
   }
 

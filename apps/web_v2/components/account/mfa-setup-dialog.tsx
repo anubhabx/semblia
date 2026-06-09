@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useUser } from "@clerk/nextjs";
+import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -48,13 +49,17 @@ function SecretStep({
 
       {totp.uri && (
         <div className="flex flex-col items-center gap-3">
-          {/* QR placeholder — shows the URI as a tappable link */}
-          <a
-            href={totp.uri}
-            className="flex h-40 w-40 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-center text-[11px] text-muted-foreground hover:bg-muted/60 transition-colors p-3"
-          >
-            Tap to open in authenticator app
-          </a>
+          <div className="rounded-lg border border-border bg-white p-3">
+            <QRCodeCanvas
+              value={totp.uri}
+              size={160}
+              level="M"
+              marginSize={0}
+              fgColor="#000000"
+              bgColor="#ffffff"
+              title="QR code for two-factor authenticator setup"
+            />
+          </div>
         </div>
       )}
 

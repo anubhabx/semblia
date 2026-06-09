@@ -19,6 +19,8 @@ import type {
   V2ProjectMemberDTO,
   V2ProjectMemberRole,
   V2ProjectMemberInviteDTO,
+  V2ProjectOwnershipTransferDTO,
+  V2InitiateProjectOwnershipTransferBody,
   V2PublicSurfaceHostDTO,
   V2PublicCreateUploadIntentBody,
   V2ResponseDTO,
@@ -28,8 +30,10 @@ import type {
   V2WidgetListEntry,
   V2StudioDraftDTO,
   V2ApiKeyDTO,
+  V2ApiKeyType,
   V2CreatedApiKeyDTO,
   V2ApiKeyEventDTO,
+  V2UpdateApiKeyBody,
   V2AgentAccessOverviewDTO,
   V2BillingProfileDTO,
   V2CurrentOrganizationDTO,
@@ -475,6 +479,64 @@ export function acceptProjectMemberInvite(
     invite: V2ProjectMemberInviteDTO;
     member: V2ProjectMemberDTO;
   }>(`/me/project-invites/${encodeURIComponent(inviteId)}/accept`, token);
+}
+
+// ── Project ownership transfers ─────────────────────────────────────────────
+
+export function fetchProjectOwnershipTransfer(
+  token: string | null,
+  slug: string,
+) {
+  return api<V2ProjectOwnershipTransferDTO | null>(
+    `/projects/${encodeURIComponent(slug)}/ownership-transfer`,
+    token,
+  );
+}
+
+export function initiateProjectOwnershipTransfer(
+  token: string | null,
+  slug: string,
+  body: V2InitiateProjectOwnershipTransferBody,
+) {
+  return post<V2ProjectOwnershipTransferDTO>(
+    `/projects/${encodeURIComponent(slug)}/ownership-transfer`,
+    token,
+    body,
+  );
+}
+
+export function cancelProjectOwnershipTransfer(
+  token: string | null,
+  slug: string,
+) {
+  return del<V2ProjectOwnershipTransferDTO | null>(
+    `/projects/${encodeURIComponent(slug)}/ownership-transfer`,
+    token,
+  );
+}
+
+export function fetchMyProjectTransfers(token: string | null) {
+  return api<V2ProjectOwnershipTransferDTO[]>("/me/project-transfers", token);
+}
+
+export function acceptProjectTransfer(
+  token: string | null,
+  transferId: string,
+) {
+  return post<V2ProjectOwnershipTransferDTO>(
+    `/me/project-transfers/${encodeURIComponent(transferId)}/accept`,
+    token,
+  );
+}
+
+export function declineProjectTransfer(
+  token: string | null,
+  transferId: string,
+) {
+  return post<V2ProjectOwnershipTransferDTO>(
+    `/me/project-transfers/${encodeURIComponent(transferId)}/decline`,
+    token,
+  );
 }
 
 // ── Project public-surface hosts ────────────────────────────────────────────
@@ -1218,6 +1280,24 @@ export function rotateApiKey(
   return post<V2CreatedApiKeyDTO>(
     `/projects/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(keyId)}/rotate`,
     token,
+  );
+}
+
+export function updateApiKey(
+  token: string | null,
+  slug: string,
+  keyId: string,
+  body: V2UpdateApiKeyBody,
+  keyType?: Extract<V2ApiKeyType, "SECRET" | "AGENT">,
+) {
+  return api<V2ApiKeyDTO>(
+    `/projects/${encodeURIComponent(slug)}/api-keys/${encodeURIComponent(keyId)}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+      params: keyType ? { keyType } : undefined,
+    },
   );
 }
 

@@ -24,6 +24,7 @@ import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
 import {
   addProjectMemberBodySchema,
   createProjectMemberInviteBodySchema,
+  initiateOwnershipTransferBodySchema,
   replaceAllowedOriginsBodySchema,
   createProjectBodySchema,
   listProjectsQuerySchema,
@@ -35,6 +36,7 @@ import {
   type AddProjectMemberBodyDto,
   type CreateProjectMemberInviteBodyDto,
   type CreateProjectBodyDto,
+  type InitiateOwnershipTransferBodyDto,
   type ListProjectsQueryDto,
   type ProjectMemberInviteParamsDto,
   type ProjectMemberParamsDto,
@@ -120,6 +122,48 @@ export class ProjectsController {
     params: ProjectSlugParamsDto,
   ) {
     return this.projectsService.delete(userId, params);
+  }
+
+  @Get(":slug/ownership-transfer")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.VIEW_PROJECT)
+  getOwnershipTransfer(
+    @CurrentUserId() userId: string,
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    params: ProjectSlugParamsDto,
+  ) {
+    return this.projectsService.getOwnershipTransfer(userId, params);
+  }
+
+  @Post(":slug/ownership-transfer")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PROJECT)
+  initiateOwnershipTransfer(
+    @CurrentUserId() userId: string,
+    @CurrentActor() actor: ActorContext | null,
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    params: ProjectSlugParamsDto,
+    @Body(new ZodValidationPipe(initiateOwnershipTransferBodySchema))
+    body: InitiateOwnershipTransferBodyDto,
+  ) {
+    return this.projectsService.initiateOwnershipTransfer(
+      userId,
+      params,
+      body,
+      actor,
+    );
+  }
+
+  @Delete(":slug/ownership-transfer")
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PROJECT)
+  cancelOwnershipTransfer(
+    @CurrentUserId() userId: string,
+    @CurrentActor() actor: ActorContext | null,
+    @Param(new ZodValidationPipe(projectSlugParamsSchema))
+    params: ProjectSlugParamsDto,
+  ) {
+    return this.projectsService.cancelOwnershipTransfer(userId, params, actor);
   }
 
   @Get(":slug/members")

@@ -9,6 +9,7 @@ import {
   MemberRole,
   NotificationType,
   ProjectMemberInviteStatus,
+  ProjectOwnershipTransferStatus,
 } from "@workspace/database/prisma";
 import { Capability } from "../../common/authz/capabilities.js";
 import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
@@ -23,6 +24,7 @@ const mockProjectFindUnique = vi.fn();
 const mockProjectFindMany = vi.fn();
 const mockProjectCount = vi.fn();
 const mockProjectUpdate = vi.fn();
+const mockProjectUpdateMany = vi.fn();
 const mockProjectCreate = vi.fn();
 const mockProjectMemberCreate = vi.fn();
 const mockProjectMemberFindUnique = vi.fn();
@@ -35,6 +37,12 @@ const mockProjectMemberInviteFindMany = vi.fn();
 const mockProjectMemberInviteFindUnique = vi.fn();
 const mockProjectMemberInviteUpdate = vi.fn();
 const mockProjectMemberInviteUpdateMany = vi.fn();
+const mockProjectOwnershipTransferCreate = vi.fn();
+const mockProjectOwnershipTransferFindFirst = vi.fn();
+const mockProjectOwnershipTransferFindMany = vi.fn();
+const mockProjectOwnershipTransferFindUnique = vi.fn();
+const mockProjectOwnershipTransferUpdate = vi.fn();
+const mockProjectOwnershipTransferUpdateMany = vi.fn();
 const mockPublicSurfaceHostCreateMany = vi.fn();
 const mockPublicSurfaceHostFindMany = vi.fn();
 const mockSubmissionGroupBy = vi.fn();
@@ -57,6 +65,7 @@ const prismaMock = {
       findMany: mockProjectFindMany,
       count: mockProjectCount,
       update: mockProjectUpdate,
+      updateMany: mockProjectUpdateMany,
       create: mockProjectCreate,
     },
     collectionFormSubmission: {
@@ -76,6 +85,14 @@ const prismaMock = {
       findUnique: mockProjectMemberInviteFindUnique,
       update: mockProjectMemberInviteUpdate,
       updateMany: mockProjectMemberInviteUpdateMany,
+    },
+    projectOwnershipTransfer: {
+      create: mockProjectOwnershipTransferCreate,
+      findFirst: mockProjectOwnershipTransferFindFirst,
+      findMany: mockProjectOwnershipTransferFindMany,
+      findUnique: mockProjectOwnershipTransferFindUnique,
+      update: mockProjectOwnershipTransferUpdate,
+      updateMany: mockProjectOwnershipTransferUpdateMany,
     },
     projectTrustedOrigin: {
       findMany: mockProjectTrustedOriginFindMany,
@@ -138,6 +155,7 @@ describe("ProjectsService allowed origins", () => {
     );
     mockProjectMemberFindMany.mockResolvedValue([]);
     mockProjectMemberInviteUpdateMany.mockResolvedValue({ count: 0 });
+    mockProjectOwnershipTransferUpdateMany.mockResolvedValue({ count: 0 });
     mockSubmissionCount.mockResolvedValue(0);
   });
 
@@ -661,6 +679,7 @@ describe("ProjectsService allowed origins", () => {
     expect(result.items[0]?.access).toEqual({
       role: "AGENT_KEY",
       capabilities: ["VIEW_PROJECT"],
+      isPrimaryOwner: false,
     });
   });
 
@@ -689,6 +708,7 @@ describe("ProjectsService allowed origins", () => {
     expect(result.items[0]?.access).toEqual({
       role: MemberRole.EDITOR,
       capabilities: ["OPERATE_PROJECT", "REVIEW_RESPONSES", "VIEW_PROJECT"],
+      isPrimaryOwner: false,
     });
   });
 
@@ -707,6 +727,7 @@ describe("ProjectsService allowed origins", () => {
             Capability.VIEW_PROJECT,
             Capability.MANAGE_PROJECT,
           ]),
+          isPrimaryOwner: true,
         },
       ),
     ).resolves.toMatchObject({
@@ -1118,6 +1139,283 @@ describe("ProjectsService allowed origins", () => {
     });
     expect(mockProjectMemberUpsert).not.toHaveBeenCalled();
   });
+
+  it("creates pending ownership transfers for existing members and notifies the recipient", async () => {
+    mockProjectFindUnique.mockResolvedValue(
+      projectRecord({ userId: "owner_1" }),
+    );
+    mockProjectMemberFindUnique.mockResolvedValue(
+      projectMemberRecord({ userId: "member_1", role: MemberRole.ADMIN }),
+    );
+    mockProjectOwnershipTransferFindFirst.mockResolvedValue(null);
+    mockProjectOwnershipTransferCreate.mockResolvedValue(transferRecord());
+
+    const transfer = await service.initiateOwnershipTransfer(
+      "owner_1",
+      { slug: "acme" },
+      { toUserId: "member_1", confirmName: "Acme" },
+    );
+
+    expect(mockProjectOwnershipTransferUpdateMany).toHaveBeenCalledWith({
+      where: {
+        projectId: "project_1",
+        status: ProjectOwnershipTransferStatus.PENDING,
+        expiresAt: { lte: expect.any(Date) },
+      },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+    });
+    expect(mockProjectOwnershipTransferCreate).toHaveBeenCalledWith({
+      data: {
+        projectId: "project_1",
+        fromUserId: "owner_1",
+        toUserId: "member_1",
+        initiatedByUserId: "owner_1",
+      },
+      select: expect.any(Object),
+    });
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "project.ownership_transfer_requested",
+        targetType: "project_ownership_transfer",
+        targetId: "transfer_1",
+      }),
+    });
+    expect(mockCreateForUsers).toHaveBeenCalledWith(
+      ["member_1"],
+      expect.objectContaining({
+        type: NotificationType.PROJECT_TRANSFER_REQUESTED,
+        link: "/projects",
+        metadata: expect.objectContaining({ transferId: "transfer_1" }),
+      }),
+      expect.any(Object),
+    );
+    expect(transfer).toMatchObject({
+      id: "transfer_1",
+      projectSlug: "acme",
+      fromUser: { id: "owner_1" },
+      toUser: { id: "member_1" },
+      status: ProjectOwnershipTransferStatus.PENDING,
+    });
+  });
+
+  it("rejects ownership transfer initiation by non-primary owners", async () => {
+    mockProjectFindUnique.mockResolvedValue(
+      projectRecord({ userId: "owner_1" }),
+    );
+
+    await expect(
+      service.initiateOwnershipTransfer(
+        "admin_1",
+        { slug: "acme" },
+        { toUserId: "member_1", confirmName: "Acme" },
+      ),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(mockProjectOwnershipTransferCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects ownership transfers to non-members", async () => {
+    mockProjectFindUnique.mockResolvedValue(
+      projectRecord({ userId: "owner_1" }),
+    );
+    mockProjectMemberFindUnique.mockResolvedValue(null);
+
+    await expect(
+      service.initiateOwnershipTransfer(
+        "owner_1",
+        { slug: "acme" },
+        { toUserId: "stranger_1", confirmName: "Acme" },
+      ),
+    ).rejects.toThrow(UnprocessableEntityException);
+
+    expect(mockProjectOwnershipTransferCreate).not.toHaveBeenCalled();
+  });
+
+  it("cancels the pending ownership transfer and notifies the recipient", async () => {
+    mockProjectFindUnique.mockResolvedValue(
+      projectRecord({ userId: "owner_1" }),
+    );
+    mockProjectOwnershipTransferFindFirst.mockResolvedValue(transferRecord());
+    mockProjectOwnershipTransferUpdate.mockResolvedValue(
+      transferRecord({ status: ProjectOwnershipTransferStatus.CANCELLED }),
+    );
+
+    const transfer = await service.cancelOwnershipTransfer("owner_1", {
+      slug: "acme",
+    });
+
+    expect(mockProjectOwnershipTransferUpdate).toHaveBeenCalledWith({
+      where: { id: "transfer_1" },
+      data: { status: ProjectOwnershipTransferStatus.CANCELLED },
+      select: expect.any(Object),
+    });
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "project.ownership_transfer_cancelled",
+        targetId: "transfer_1",
+      }),
+    });
+    expect(mockCreateForUsers).toHaveBeenCalledWith(
+      ["member_1"],
+      expect.objectContaining({
+        type: NotificationType.PROJECT_TRANSFER_CANCELLED,
+        link: "/projects/acme/settings/danger",
+      }),
+      expect.any(Object),
+    );
+    expect(transfer?.status).toBe(ProjectOwnershipTransferStatus.CANCELLED);
+  });
+
+  it("lists pending ownership transfers addressed to the current user", async () => {
+    mockProjectOwnershipTransferFindMany.mockResolvedValue([
+      transferRecord({ id: "transfer_new", createdAt: date("2026-05-04") }),
+      transferRecord({ id: "transfer_old", createdAt: date("2026-05-03") }),
+    ]);
+
+    const transfers = await service.listIncomingOwnershipTransfers("member_1");
+
+    expect(mockProjectOwnershipTransferUpdateMany).toHaveBeenCalledWith({
+      where: {
+        toUserId: "member_1",
+        status: ProjectOwnershipTransferStatus.PENDING,
+        expiresAt: { lte: expect.any(Date) },
+      },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+    });
+    expect(mockProjectOwnershipTransferFindMany).toHaveBeenCalledWith({
+      where: {
+        toUserId: "member_1",
+        status: ProjectOwnershipTransferStatus.PENDING,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      orderBy: { createdAt: "desc" },
+      select: expect.any(Object),
+    });
+    expect(transfers.map((transfer) => transfer.id)).toEqual([
+      "transfer_new",
+      "transfer_old",
+    ]);
+  });
+
+  it("accepts ownership transfers atomically and demotes the former owner to admin", async () => {
+    mockProjectOwnershipTransferFindUnique.mockResolvedValue(transferRecord());
+    mockProjectUpdateMany.mockResolvedValue({ count: 1 });
+    mockProjectMemberUpsert
+      .mockResolvedValueOnce({ id: "recipient_member" })
+      .mockResolvedValueOnce({ id: "former_owner_member" });
+    mockProjectOwnershipTransferUpdate.mockResolvedValue(
+      transferRecord({
+        status: ProjectOwnershipTransferStatus.ACCEPTED,
+        respondedByUserId: "member_1",
+        respondedAt: date("2026-05-05"),
+      }),
+    );
+
+    const transfer = await service.acceptOwnershipTransfer("member_1", {
+      transferId: "transfer_1",
+    });
+
+    expect(mockProjectUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: "project_1",
+        userId: "owner_1",
+      },
+      data: { userId: "member_1" },
+    });
+    expect(mockProjectMemberUpsert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        update: { role: MemberRole.OWNER },
+        create: expect.objectContaining({
+          userId: "member_1",
+          role: MemberRole.OWNER,
+        }),
+      }),
+    );
+    expect(mockProjectMemberUpsert).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        update: { role: MemberRole.ADMIN },
+        create: expect.objectContaining({
+          userId: "owner_1",
+          role: MemberRole.ADMIN,
+        }),
+      }),
+    );
+    expect(mockProjectActionAuditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "project.ownership_transfer_accepted",
+        actorId: "member_1",
+        targetId: "transfer_1",
+      }),
+    });
+    expect(mockCreateForProjectManagers).toHaveBeenCalledWith(
+      "project_1",
+      expect.objectContaining({
+        type: NotificationType.PROJECT_TRANSFER_ACCEPTED,
+        link: "/projects/acme/settings/danger",
+      }),
+      { excludeUserIds: ["member_1"] },
+      expect.any(Object),
+    );
+    expect(transfer.status).toBe(ProjectOwnershipTransferStatus.ACCEPTED);
+  });
+
+  it("declines ownership transfers and notifies the initiator", async () => {
+    mockProjectOwnershipTransferFindUnique.mockResolvedValue(transferRecord());
+    mockProjectOwnershipTransferUpdate.mockResolvedValue(
+      transferRecord({
+        status: ProjectOwnershipTransferStatus.DECLINED,
+        respondedByUserId: "member_1",
+        respondedAt: date("2026-05-05"),
+      }),
+    );
+
+    const transfer = await service.declineOwnershipTransfer("member_1", {
+      transferId: "transfer_1",
+    });
+
+    expect(mockProjectOwnershipTransferUpdate).toHaveBeenCalledWith({
+      where: { id: "transfer_1" },
+      data: {
+        status: ProjectOwnershipTransferStatus.DECLINED,
+        respondedByUserId: "member_1",
+        respondedAt: expect.any(Date),
+      },
+      select: expect.any(Object),
+    });
+    expect(mockCreateForUsers).toHaveBeenCalledWith(
+      ["owner_1"],
+      expect.objectContaining({
+        type: NotificationType.PROJECT_TRANSFER_DECLINED,
+        link: "/projects/acme/settings/danger",
+      }),
+      expect.any(Object),
+    );
+    expect(transfer.status).toBe(ProjectOwnershipTransferStatus.DECLINED);
+  });
+
+  it("marks expired ownership transfers before rejecting accept attempts", async () => {
+    mockProjectOwnershipTransferFindUnique.mockResolvedValue(
+      transferRecord({ expiresAt: date("2000-01-01") }),
+    );
+    mockProjectOwnershipTransferUpdate.mockResolvedValue(
+      transferRecord({ status: ProjectOwnershipTransferStatus.EXPIRED }),
+    );
+
+    await expect(
+      service.acceptOwnershipTransfer("member_1", {
+        transferId: "transfer_1",
+      }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockProjectOwnershipTransferUpdate).toHaveBeenCalledWith({
+      where: { id: "transfer_1" },
+      data: { status: ProjectOwnershipTransferStatus.EXPIRED },
+      select: { id: true },
+    });
+    expect(mockProjectUpdateMany).not.toHaveBeenCalled();
+  });
 });
 
 function projectRecord(overrides: Partial<Record<string, unknown>> = {}) {
@@ -1187,6 +1485,42 @@ function inviteRecord(overrides: Partial<Record<string, unknown>> = {}) {
     project: {
       slug: "acme",
       name: "Acme",
+    },
+    ...overrides,
+  };
+}
+
+function transferRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "transfer_1",
+    projectId: "project_1",
+    fromUserId: "owner_1",
+    toUserId: "member_1",
+    status: ProjectOwnershipTransferStatus.PENDING,
+    initiatedByUserId: "owner_1",
+    respondedByUserId: null,
+    respondedAt: null,
+    expiresAt: date("2999-01-01"),
+    createdAt: date("2026-05-03"),
+    updatedAt: date("2026-05-03"),
+    project: {
+      slug: "acme",
+      name: "Acme",
+      userId: "owner_1",
+    },
+    fromUser: {
+      id: "owner_1",
+      firstName: "Owner",
+      lastName: "User",
+      email: "owner@example.com",
+      avatar: null,
+    },
+    toUser: {
+      id: "member_1",
+      firstName: "Member",
+      lastName: "User",
+      email: "member@example.com",
+      avatar: null,
     },
     ...overrides,
   };

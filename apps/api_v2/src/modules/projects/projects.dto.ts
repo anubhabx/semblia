@@ -188,6 +188,16 @@ export const createProjectMemberInviteBodySchema = z.object({
   role: memberRoleSchema.default("VIEWER"),
 });
 
+export const initiateOwnershipTransferBodySchema = z.object({
+  toUserId: z.string().trim().min(1),
+  // Typed-to-confirm safeguard — must match the exact project name.
+  confirmName: z.string().min(1),
+});
+
+export const projectTransferParamsSchema = z.object({
+  transferId: z.string().trim().min(1),
+});
+
 export type ProjectSlugParamsDto = z.infer<typeof projectSlugParamsSchema>;
 export type MemberRoleDto = z.infer<typeof memberRoleSchema>;
 export type ProjectMemberParamsDto = z.infer<typeof projectMemberParamsSchema>;
@@ -206,6 +216,12 @@ export type UpdateProjectMemberBodyDto = z.infer<
 >;
 export type CreateProjectMemberInviteBodyDto = z.infer<
   typeof createProjectMemberInviteBodySchema
+>;
+export type InitiateOwnershipTransferBodyDto = z.infer<
+  typeof initiateOwnershipTransferBodySchema
+>;
+export type ProjectTransferParamsDto = z.infer<
+  typeof projectTransferParamsSchema
 >;
 export type ReplaceAllowedOriginsBodyDto = z.infer<
   typeof replaceAllowedOriginsBodySchema

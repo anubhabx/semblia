@@ -8,6 +8,7 @@ import {
   Export as ExportIcon,
   Robot as RobotIcon,
   EnvelopeSimple as EnvelopeSimpleIcon,
+  ArrowsLeftRight as TransferIcon,
 } from "@phosphor-icons/react";
 import type { V2NotificationType } from "@workspace/types";
 
@@ -54,6 +55,22 @@ export const notificationIcon: Record<
   PROJECT_INVITE_ACCEPTED: {
     Icon: CircleCheckIcon,
     tone: "text-success bg-success/12",
+  },
+  PROJECT_TRANSFER_REQUESTED: {
+    Icon: TransferIcon,
+    tone: "text-warning bg-warning/15",
+  },
+  PROJECT_TRANSFER_ACCEPTED: {
+    Icon: CircleCheckIcon,
+    tone: "text-success bg-success/12",
+  },
+  PROJECT_TRANSFER_DECLINED: {
+    Icon: ShieldAlertIcon,
+    tone: "text-muted-foreground bg-muted",
+  },
+  PROJECT_TRANSFER_CANCELLED: {
+    Icon: TransferIcon,
+    tone: "text-muted-foreground bg-muted",
   },
   OUTBOUND_WEBHOOK_DELIVERY_FAILED: {
     Icon: ShieldAlertIcon,

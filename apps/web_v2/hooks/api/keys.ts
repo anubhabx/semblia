@@ -11,6 +11,10 @@ export const queryKeys = {
     asset: (assetId: string) => ["media", assetId] as const,
   },
 
+  me: {
+    projectTransfers: ["me", "project-transfers"] as const,
+  },
+
   projects: {
     all: ["projects"] as const,
     list: (params?: Record<string, unknown>) =>
@@ -19,6 +23,8 @@ export const queryKeys = {
     members: (slug: string) => ["projects", slug, "members"] as const,
     memberInvites: (slug: string) =>
       ["projects", slug, "member-invites"] as const,
+    ownershipTransfer: (slug: string) =>
+      ["projects", slug, "ownership-transfer"] as const,
     allowedOrigins: (slug: string) =>
       ["projects", slug, "allowed-origins"] as const,
     publicSurfaceHosts: (slug: string) =>

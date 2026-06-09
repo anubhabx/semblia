@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RequestMethod } from "@nestjs/common";
 import { ProjectInvitesController } from "./project-invites.controller.js";
+import { ProjectTransfersController } from "./project-transfers.controller.js";
 import { ProjectsController } from "./projects.controller.js";
 import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
@@ -147,6 +148,47 @@ describe("ProjectsController", () => {
     ).toBe(RequestMethod.POST);
   });
 
+  it("declares ownership transfer routes", () => {
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.getOwnershipTransfer,
+      ),
+    ).toBe(":slug/ownership-transfer");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.getOwnershipTransfer,
+      ),
+    ).toBe(RequestMethod.GET);
+
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.initiateOwnershipTransfer,
+      ),
+    ).toBe(":slug/ownership-transfer");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.initiateOwnershipTransfer,
+      ),
+    ).toBe(RequestMethod.POST);
+
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectsController.prototype.cancelOwnershipTransfer,
+      ),
+    ).toBe(":slug/ownership-transfer");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectsController.prototype.cancelOwnershipTransfer,
+      ),
+    ).toBe(RequestMethod.DELETE);
+  });
+
   it("declares member invite routes", () => {
     expect(
       Reflect.getMetadata(
@@ -285,6 +327,24 @@ describe("ProjectsController", () => {
     expect(
       Reflect.getMetadata(
         REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.getOwnershipTransfer,
+      ),
+    ).toEqual([Capability.VIEW_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.initiateOwnershipTransfer,
+      ),
+    ).toEqual([Capability.MANAGE_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        ProjectsController.prototype.cancelOwnershipTransfer,
+      ),
+    ).toEqual([Capability.MANAGE_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
         ProjectsController.prototype.listAllowedOrigins,
       ),
     ).toEqual([Capability.MANAGE_PROJECT]);
@@ -338,5 +398,49 @@ describe("ProjectInvitesController", () => {
         ProjectInvitesController.prototype.accept,
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("ProjectTransfersController", () => {
+  it("declares authenticated self-service ownership transfer routes", () => {
+    expect(Reflect.getMetadata(PATH_METADATA, ProjectTransfersController)).toBe(
+      "me/project-transfers",
+    );
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectTransfersController.prototype.list,
+      ),
+    ).toBe("/");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectTransfersController.prototype.list,
+      ),
+    ).toBe(RequestMethod.GET);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectTransfersController.prototype.accept,
+      ),
+    ).toBe(":transferId/accept");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectTransfersController.prototype.accept,
+      ),
+    ).toBe(RequestMethod.POST);
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        ProjectTransfersController.prototype.decline,
+      ),
+    ).toBe(":transferId/decline");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        ProjectTransfersController.prototype.decline,
+      ),
+    ).toBe(RequestMethod.POST);
   });
 });

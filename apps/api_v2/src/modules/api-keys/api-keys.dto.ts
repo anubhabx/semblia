@@ -44,10 +44,26 @@ export const createApiKeyBodySchema = z.object({
   rateLimit: z.number().int().min(1).max(10_000).optional(),
 });
 
+export const updateApiKeyBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(50).optional(),
+    rateLimit: z.number().int().min(1).max(10_000).optional(),
+  })
+  .refine(
+    (body) => body.name !== undefined || body.rateLimit !== undefined,
+    { message: "Provide at least one field to update" },
+  );
+
+export const apiKeyQuerySchema = z.object({
+  keyType: z.enum(["SECRET", "AGENT"]).optional(),
+});
+
 export const apiKeyParamsSchema = projectSlugParamsSchema.extend({
   keyId: z.string().trim().min(1),
 });
 
 export type ApiKeyScope = z.infer<typeof apiKeyScopeSchema>;
 export type CreateApiKeyBodyDto = z.infer<typeof createApiKeyBodySchema>;
+export type UpdateApiKeyBodyDto = z.infer<typeof updateApiKeyBodySchema>;
+export type ApiKeyQueryDto = z.infer<typeof apiKeyQuerySchema>;
 export type ApiKeyParamsDto = z.infer<typeof apiKeyParamsSchema>;

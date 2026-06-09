@@ -36,6 +36,7 @@ export function makeProject(
     access: {
       role: "OWNER",
       capabilities: [],
+      isPrimaryOwner: true,
     },
     ...overrides,
   };

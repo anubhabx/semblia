@@ -6,6 +6,7 @@ import { NotificationsModule } from "../notifications/notifications.module.js";
 import { OrganizationsModule } from "../organizations/organizations.module.js";
 import { StorageModule } from "../storage/storage.module.js";
 import { ProjectInvitesController } from "./project-invites.controller.js";
+import { ProjectTransfersController } from "./project-transfers.controller.js";
 import { ProjectsController } from "./projects.controller.js";
 import { ProjectsService } from "./projects.service.js";
 import { SigningSecretService } from "./signing-secret.service.js";
@@ -18,7 +19,11 @@ import { SigningSecretService } from "./signing-secret.service.js";
     OrganizationsModule,
     StorageModule,
   ],
-  controllers: [ProjectsController, ProjectInvitesController],
+  controllers: [
+    ProjectsController,
+    ProjectInvitesController,
+    ProjectTransfersController,
+  ],
   providers: [ProjectsService, SigningSecretService, ProjectActionAuditService],
   exports: [SigningSecretService],
 })

@@ -2,10 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
+import type { V2ApiKeyType, V2UpdateApiKeyBody } from "@workspace/types";
 import {
   fetchApiKeys,
   createApiKey,
   rotateApiKey,
+  updateApiKey,
   revokeApiKey,
   fetchApiKeyEvents,
   fetchAgentAccessOverview,
@@ -62,6 +64,42 @@ export function useRotateApiKey(slug: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.apiKeys.list(slug) });
+    },
+  });
+}
+
+export function useUpdateApiKey(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      keyId,
+      body,
+      keyType,
+    }: {
+      keyId: string;
+      body: V2UpdateApiKeyBody;
+      keyType?: Extract<V2ApiKeyType, "SECRET" | "AGENT">;
+    }) => {
+      const token = await getToken();
+      return updateApiKey(token, slug, keyId, body, keyType);
+    },
+    onSuccess: (_updated, variables) => {
+      if (variables.keyType === "AGENT") {
+        qc.invalidateQueries({
+          queryKey: queryKeys.agentAccess.overview(slug),
+        });
+        qc.invalidateQueries({
+          queryKey: queryKeys.agentAccess.actions(slug),
+        });
+        return;
+      }
+
+      qc.invalidateQueries({ queryKey: queryKeys.apiKeys.list(slug) });
+      qc.invalidateQueries({
+        queryKey: queryKeys.apiKeys.events(slug, variables.keyId),
+      });
     },
   });
 }

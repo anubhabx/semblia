@@ -22,6 +22,7 @@ type RequestWithAuth = {
     projectId: string;
     role: ProjectAccessRole;
     capabilities: ReadonlySet<Capability>;
+    isPrimaryOwner: boolean;
   };
 };
 
@@ -71,6 +72,7 @@ export class CapabilityGuard implements CanActivate {
       projectId: resolved.project.id,
       role: resolved.role,
       capabilities: resolved.capabilities,
+      isPrimaryOwner: resolved.isPrimaryOwner,
     };
 
     return true;

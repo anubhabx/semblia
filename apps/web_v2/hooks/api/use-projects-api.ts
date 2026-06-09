@@ -2,7 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import type { V2ProjectMemberRole } from "@workspace/types";
+import type {
+  V2InitiateProjectOwnershipTransferBody,
+  V2ProjectMemberRole,
+} from "@workspace/types";
 import {
   fetchProjects,
   fetchProjectBySlug,
@@ -17,6 +20,12 @@ import {
   createProjectMemberInvite,
   revokeProjectMemberInvite,
   acceptProjectMemberInvite,
+  fetchProjectOwnershipTransfer,
+  initiateProjectOwnershipTransfer,
+  cancelProjectOwnershipTransfer,
+  fetchMyProjectTransfers,
+  acceptProjectTransfer,
+  declineProjectTransfer,
   fetchAllowedOrigins,
   fetchPublicSurfaceHosts,
   replaceAllowedOrigins,
@@ -234,6 +243,118 @@ export function useAcceptProjectMemberInvite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
+export function useProjectOwnershipTransfer(
+  slug: string,
+  options?: ApiQueryOptions,
+) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.projects.ownershipTransfer(slug),
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchProjectOwnershipTransfer(token, slug);
+    },
+    enabled: isSignedIn === true && !!slug,
+    ...liveQueryOptions(options),
+  });
+}
+
+export function useInitiateProjectOwnershipTransfer(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: V2InitiateProjectOwnershipTransferBody) => {
+      const token = await getToken();
+      return initiateProjectOwnershipTransfer(token, slug, body);
+    },
+    onSuccess: (transfer) => {
+      qc.setQueryData(queryKeys.projects.ownershipTransfer(slug), transfer);
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      qc.invalidateQueries({ queryKey: queryKeys.me.projectTransfers });
+    },
+  });
+}
+
+export function useCancelProjectOwnershipTransfer(slug: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      return cancelProjectOwnershipTransfer(token, slug);
+    },
+    onSuccess: () => {
+      qc.setQueryData(queryKeys.projects.ownershipTransfer(slug), null);
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      qc.invalidateQueries({ queryKey: queryKeys.me.projectTransfers });
+    },
+  });
+}
+
+export function useMyProjectTransfers(options?: ApiQueryOptions) {
+  const { getToken, isSignedIn } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.me.projectTransfers,
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchMyProjectTransfers(token);
+    },
+    enabled: isSignedIn === true,
+    ...liveQueryOptions(options),
+  });
+}
+
+export function useAcceptProjectTransfer() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (transferId: string) => {
+      const token = await getToken();
+      return acceptProjectTransfer(token, transferId);
+    },
+    onSuccess: (transfer) => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
+      qc.invalidateQueries({
+        queryKey: queryKeys.projects.detail(transfer.projectSlug),
+      });
+      qc.invalidateQueries({
+        queryKey: queryKeys.projects.members(transfer.projectSlug),
+      });
+      qc.setQueryData(
+        queryKeys.projects.ownershipTransfer(transfer.projectSlug),
+        null,
+      );
+      qc.invalidateQueries({ queryKey: queryKeys.me.projectTransfers });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+}
+
+export function useDeclineProjectTransfer() {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (transferId: string) => {
+      const token = await getToken();
+      return declineProjectTransfer(token, transferId);
+    },
+    onSuccess: (transfer) => {
+      qc.setQueryData(
+        queryKeys.projects.ownershipTransfer(transfer.projectSlug),
+        null,
+      );
+      qc.invalidateQueries({ queryKey: queryKeys.me.projectTransfers });
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 }

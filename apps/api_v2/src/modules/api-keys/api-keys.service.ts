@@ -6,12 +6,15 @@ import {
   Optional,
 } from "@nestjs/common";
 import { ApiKeyStatus, ApiKeyType, Prisma } from "@workspace/database/prisma";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
+import type { ActorContext } from "../../common/authz/actor-context.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import {
   apiKeyScopeValues,
   type ApiKeyScope,
   type CreateApiKeyBodyDto,
+  type UpdateApiKeyBodyDto,
 } from "./api-keys.dto.js";
 import {
   generateCredentialSecret,
@@ -71,6 +74,9 @@ export class ApiKeysService {
     @Optional()
     @Inject(NotificationsService)
     private readonly notificationsService?: NotificationsService,
+    @Optional()
+    @Inject(ProjectActionAuditService)
+    private readonly actionAudit?: ProjectActionAuditService,
   ) {}
 
   async list(projectId: string, options: ApiKeyListOptions = {}) {
@@ -218,6 +224,62 @@ export class ApiKeysService {
       },
       { excludeUserIds: [updated.userId] },
     );
+
+    return this.toDto(updated);
+  }
+
+  async update(
+    projectId: string,
+    keyId: string,
+    input: UpdateApiKeyBodyDto,
+    keyType: ApiKeyType = ApiKeyType.SECRET,
+    actor?: ActorContext | null,
+  ) {
+    const existing = await this.findProjectKeyOrThrow(
+      projectId,
+      keyId,
+      keyType,
+    );
+
+    if (
+      existing.status === ApiKeyStatus.REVOKED ||
+      existing.revokedAt ||
+      !existing.isActive
+    ) {
+      throw new BadRequestException("Cannot update a revoked API key");
+    }
+
+    const data: Prisma.ApiKeyUpdateInput = {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.rateLimit !== undefined ? { rateLimit: input.rateLimit } : {}),
+    };
+    const changedFields = Object.keys(data);
+    if (changedFields.length === 0) {
+      throw new BadRequestException("Provide at least one field to update");
+    }
+
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const key = await tx.apiKey.update({
+        where: { id: existing.id },
+        data,
+        select: API_KEY_SELECT,
+      });
+
+      await this.actionAudit?.recordWith(tx, {
+        projectId,
+        actor,
+        action: "api_key.updated",
+        targetType: "api_key",
+        targetId: key.id,
+        metadata: {
+          changedFields,
+          keyType: key.keyType,
+          keyName: key.name,
+        },
+      });
+
+      return key;
+    });
 
     return this.toDto(updated);
   }

@@ -14,8 +14,13 @@ import { AuthSocialButtons } from "@/components/auth/auth-social-buttons";
 import { AuthDivider } from "@/components/auth/auth-divider";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { AuthBackBtn } from "@/components/auth/auth-back-btn";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
-type Step = "email" | "password";
+type Step = "email" | "password" | "second-factor";
 
 export function SignInForm() {
   const { signIn, fetchStatus } = useSignIn();
@@ -35,6 +40,11 @@ export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  // Second-factor (MFA) state
+  const [code, setCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const totpRef = useRef<HTMLInputElement>(null);
+
   const busy = loading || !!oauthLoading || fetchStatus === "fetching";
 
   useEffect(() => {
@@ -42,10 +52,14 @@ export function SignInForm() {
     return () => clearTimeout(t);
   }, []);
 
-  // Focus password field when transitioning to password step
+  // Focus password / second-factor field when transitioning to those steps
   useEffect(() => {
     if (activeStep === "password") {
       const t = setTimeout(() => passwordRef.current?.focus(), 300);
+      return () => clearTimeout(t);
+    }
+    if (activeStep === "second-factor") {
+      const t = setTimeout(() => totpRef.current?.focus(), 300);
       return () => clearTimeout(t);
     }
   }, [activeStep]);
@@ -100,31 +114,74 @@ export function SignInForm() {
       return;
     }
 
+    await resolveStatusAfterFactor();
+  }
+
+  // Finalizes a completed sign-in and routes to the app.
+  async function finalizeAndNavigate() {
+    const { error: finalErr } = await signIn.finalize({
+      navigate: ({ session, decorateUrl }) => {
+        if (session?.currentTask) {
+          return;
+        }
+        const url = decorateUrl("/projects");
+        if (url.startsWith("http")) window.location.href = url;
+        else router.push(url);
+      },
+    });
+    if (finalErr) {
+      setError(errMsg(finalErr));
+      setLoading(false);
+    }
+  }
+
+  // Branches on signIn.status after a factor is submitted (password or MFA).
+  async function resolveStatusAfterFactor() {
     if (signIn.status === "complete") {
-      const { error: finalErr } = await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            return;
-          }
-          const url = decorateUrl("/projects");
-          if (url.startsWith("http")) window.location.href = url;
-          else router.push(url);
-        },
-      });
-      if (finalErr) {
-        setError(errMsg(finalErr));
-        setLoading(false);
-      }
-    } else if (signIn.status === "needs_second_factor") {
-      setError("Multi-factor authentication is not yet supported.");
+      await finalizeAndNavigate();
+    } else if (
+      signIn.status === "needs_second_factor" ||
+      signIn.status === "needs_client_trust"
+    ) {
       setLoading(false);
-    } else if (signIn.status === "needs_client_trust") {
-      setError("Additional verification required. Please try again.");
-      setLoading(false);
+      setError(null);
+      setCode("");
+      setUseBackupCode(false);
+      go("second-factor", "forward");
     } else {
       setError("Sign-in step incomplete. Please check your credentials.");
       setLoading(false);
     }
+  }
+
+  async function submitSecondFactor() {
+    if (busy) return;
+    const trimmed = code.trim();
+    if (useBackupCode ? trimmed.length < 4 : trimmed.length < 6) return;
+    setLoading(true);
+    setError(null);
+
+    const { error: mfaErr } = useBackupCode
+      ? await signIn.mfa.verifyBackupCode({ code: trimmed })
+      : await signIn.mfa.verifyTOTP({ code: trimmed });
+
+    if (mfaErr) {
+      setError(
+        useBackupCode
+          ? "That backup code didn’t match. Try another one."
+          : "That code didn’t match. Check your authenticator app and try again.",
+      );
+      setCode("");
+      setLoading(false);
+      return;
+    }
+
+    await resolveStatusAfterFactor();
+  }
+
+  function handleSecondFactorSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void submitSecondFactor();
   }
 
   async function handleOAuth(strategy: "oauth_google" | "oauth_github") {
@@ -147,6 +204,21 @@ export function SignInForm() {
     setError(null);
     setPassword("");
     go("email", "back");
+  }
+
+  // From the second-factor step, "back" restarts the whole attempt.
+  function handleSecondFactorBack() {
+    setError(null);
+    setPassword("");
+    setCode("");
+    setUseBackupCode(false);
+    go("email", "back");
+  }
+
+  function toggleBackupCode() {
+    setUseBackupCode((v) => !v);
+    setCode("");
+    setError(null);
   }
 
   const enterCls = isFirstRender
@@ -220,7 +292,7 @@ export function SignInForm() {
             </Link>
           </p>
         </>
-      ) : (
+      ) : activeStep === "password" ? (
         <>
           <AuthBackBtn onClick={handleBack} className="mb-7" />
 
@@ -267,6 +339,82 @@ export function SignInForm() {
               Sign in
             </AuthPrimaryBtn>
           </form>
+        </>
+      ) : (
+        <>
+          <AuthBackBtn onClick={handleSecondFactorBack} className="mb-7" />
+
+          <div className="mb-7">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Two-step verification
+            </h1>
+            <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">
+              {useBackupCode
+                ? "Enter one of your saved backup codes to finish signing in."
+                : "Enter the 6-digit code from your authenticator app."}
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSecondFactorSubmit}
+            noValidate
+            className="space-y-4"
+          >
+            {useBackupCode ? (
+              <AuthField
+                id="signin-backup-code"
+                label="Backup code"
+                type="text"
+                value={code}
+                onChange={setCode}
+                placeholder="xxxxxxxx"
+                autoComplete="one-time-code"
+                required
+                inputRef={totpRef}
+              />
+            ) : (
+              <div className="flex justify-center py-1">
+                <InputOTP
+                  maxLength={6}
+                  value={code}
+                  onChange={setCode}
+                  onComplete={() => void submitSecondFactor()}
+                  containerClassName="gap-2"
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            )}
+
+            <AuthNotice error={error} />
+
+            <AuthPrimaryBtn
+              type="submit"
+              loading={loading}
+              loadingLabel="Verifying…"
+              disabled={
+                busy ||
+                (useBackupCode ? code.trim().length < 4 : code.length < 6)
+              }
+            >
+              Verify
+            </AuthPrimaryBtn>
+          </form>
+
+          <button
+            type="button"
+            onClick={toggleBackupCode}
+            className="mt-6 block w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150"
+          >
+            {useBackupCode
+              ? "Use your authenticator app instead"
+              : "Can’t access your authenticator? Use a backup code"}
+          </button>
         </>
       )}
     </div>

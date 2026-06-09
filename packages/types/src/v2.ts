@@ -224,8 +224,18 @@ export type V2NotificationType =
   | "AGENT_ACTION_CREATED"
   | "PROJECT_INVITE_RECEIVED"
   | "PROJECT_INVITE_ACCEPTED"
+  | "PROJECT_TRANSFER_REQUESTED"
+  | "PROJECT_TRANSFER_ACCEPTED"
+  | "PROJECT_TRANSFER_DECLINED"
+  | "PROJECT_TRANSFER_CANCELLED"
   | "OUTBOUND_WEBHOOK_DELIVERY_FAILED"
   | "SECURITY_ALERT";
+export type V2ProjectOwnershipTransferStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "DECLINED"
+  | "CANCELLED"
+  | "EXPIRED";
 export type V2SubscriptionStatus =
   | "active"
   | "trialing"
@@ -347,6 +357,7 @@ export type V2ProjectCapability =
 export interface V2ProjectAccessDTO {
   role: V2ProjectAccessRole;
   capabilities: V2ProjectCapability[];
+  isPrimaryOwner: boolean;
 }
 
 export interface V2MediaAssetDTO {
@@ -864,6 +875,10 @@ export interface V2ApiKeyDTO {
   updatedAt: string;
 }
 
+export type V2UpdateApiKeyBody =
+  | { name: string; rateLimit?: number }
+  | { name?: string; rateLimit: number };
+
 export interface V2CreatedApiKeyDTO extends V2ApiKeyDTO {
   secret: string;
   key: string;
@@ -1104,6 +1119,32 @@ export interface V2ProjectMemberInviteDTO {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface V2ProjectOwnershipTransferUserDTO {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatar: string | null;
+}
+
+export interface V2ProjectOwnershipTransferDTO {
+  id: string;
+  projectId: string;
+  projectSlug: string;
+  projectName: string;
+  fromUser: V2ProjectOwnershipTransferUserDTO;
+  toUser: V2ProjectOwnershipTransferUserDTO;
+  status: V2ProjectOwnershipTransferStatus;
+  expiresAt: string;
+  createdAt: string;
+  respondedAt: string | null;
+}
+
+export interface V2InitiateProjectOwnershipTransferBody {
+  toUserId: string;
+  confirmName: string;
 }
 
 export interface V2NotificationDTO {

@@ -59,7 +59,9 @@ import {
   useApiKeyEvents,
   useRevokeApiKey,
   useRotateApiKey,
+  useUpdateApiKey,
 } from "@/hooks/api";
+import { toast } from "sonner";
 import {
   RevealStep,
   ConfirmCloseDialog,
@@ -300,18 +302,38 @@ const RATE_PRESETS = [10, 60, 600, 3000];
 
 function SettingsTab({
   entry,
+  slug,
   onRevoke,
 }: {
   entry: V2ApiKeyDTO;
+  slug: string;
   onRevoke: () => void;
 }) {
   const [name, setName] = React.useState(entry.name);
   const [rateLimit, setRateLimit] = React.useState(entry.rateLimit);
   const [revokeOpen, setRevokeOpen] = React.useState(false);
+  const updateKey = useUpdateApiKey(slug);
 
-  // V2 API does not yet expose an update-key endpoint; save remains disabled
-  // until the contract exists.
-  const isDirty = name !== entry.name || rateLimit !== entry.rateLimit;
+  const trimmedName = name.trim();
+  const isDirty = trimmedName !== entry.name || rateLimit !== entry.rateLimit;
+  const canSave = isDirty && trimmedName.length > 0 && !updateKey.isPending;
+
+  async function handleSave() {
+    if (!canSave) return;
+    try {
+      await updateKey.mutateAsync({
+        keyId: entry.id,
+        body: { name: trimmedName, rateLimit },
+        keyType:
+          entry.keyType === "AGENT" || entry.keyType === "SECRET"
+            ? entry.keyType
+            : "SECRET",
+      });
+      toast.success("Key updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update key");
+    }
+  }
 
   const rateLabelIdx = RATE_PRESETS.indexOf(rateLimit);
   const sliderValue =
@@ -360,6 +382,7 @@ function SettingsTab({
           <Button
             variant="outline"
             size="sm"
+            disabled={updateKey.isPending}
             onClick={() => {
               setName(entry.name);
               setRateLimit(entry.rateLimit);
@@ -367,12 +390,8 @@ function SettingsTab({
           >
             Discard
           </Button>
-          <Button
-            size="sm"
-            disabled
-            title="Key updates not yet available via API"
-          >
-            Save
+          <Button size="sm" disabled={!canSave} onClick={handleSave}>
+            {updateKey.isPending ? "Saving…" : "Save"}
           </Button>
         </div>
       )}
@@ -553,7 +572,11 @@ export function KeyDetailClient({
         {tab === "overview" && <UsageChart data={events} />}
         {tab === "activity" && <ActivityTab slug={slug} keyId={keyId} />}
         {tab === "settings" && (
-          <SettingsTab entry={key} onRevoke={() => setRevokeOpen(true)} />
+          <SettingsTab
+            entry={key}
+            slug={slug}
+            onRevoke={() => setRevokeOpen(true)}
+          />
         )}
       </PageBody>
 

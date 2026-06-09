@@ -25,6 +25,7 @@ import {
   ProhibitIcon,
   FlagIcon,
   PulseIcon,
+  ArrowsLeftRightIcon,
   type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +86,10 @@ const ACTION_ICONS: Record<string, PhosphorIcon> = {
   "member.invite_sent": PaperPlaneTiltIcon,
   "member.invite_accepted": UserPlusIcon,
   "member.invite_revoked": UserMinusIcon,
+  "project.ownership_transfer_requested": ArrowsLeftRightIcon,
+  "project.ownership_transfer_accepted": ShieldCheckIcon,
+  "project.ownership_transfer_declined": UserMinusIcon,
+  "project.ownership_transfer_cancelled": ProhibitIcon,
   "allowed_origins.replaced": GlobeSimpleIcon,
   "outbound_webhook.secret_rotated": ArrowsClockwiseIcon,
   "api_key.created": KeyIcon,
@@ -100,6 +105,7 @@ const ACTION_PREFIX_ICONS: Record<string, PhosphorIcon> = {
   submission: ChatCircleIcon,
   signing_secret: ShieldCheckIcon,
   member: UsersThreeIcon,
+  project: ArrowsLeftRightIcon,
   allowed_origins: GlobeSimpleIcon,
   outbound_webhook: WebhooksLogoIcon,
   integration_connection: PlugsConnectedIcon,

@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  acceptProjectTransfer,
+  cancelProjectOwnershipTransfer,
   createSubscriptionCheckout,
   createOutboundWebhookEndpoint,
   duplicateForm,
   duplicateWidget,
+  fetchMyProjectTransfers,
+  fetchProjectOwnershipTransfer,
   fetchNotifications,
+  initiateProjectOwnershipTransfer,
   recordHostedPageViewEvent,
   resolvePublicSurface,
 } from "@/lib/tresta-api";
@@ -128,6 +133,53 @@ describe("tresta-api control-plane contracts", () => {
           Authorization: "Bearer session-token",
         }),
       }),
+    );
+  });
+
+  it("uses the project ownership transfer handshake routes", async () => {
+    await fetchProjectOwnershipTransfer("session-token", "launchpad");
+    await initiateProjectOwnershipTransfer("session-token", "launchpad", {
+      toUserId: "user_2",
+      confirmName: "Launchpad",
+    });
+    await cancelProjectOwnershipTransfer("session-token", "launchpad");
+    await fetchMyProjectTransfers("session-token");
+    await acceptProjectTransfer("session-token", "transfer_1");
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8100/v2/projects/launchpad/ownership-transfer",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer session-token",
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:8100/v2/projects/launchpad/ownership-transfer",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          toUserId: "user_2",
+          confirmName: "Launchpad",
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      3,
+      "http://localhost:8100/v2/projects/launchpad/ownership-transfer",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      4,
+      "http://localhost:8100/v2/me/project-transfers",
+      expect.any(Object),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      5,
+      "http://localhost:8100/v2/me/project-transfers/transfer_1/accept",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

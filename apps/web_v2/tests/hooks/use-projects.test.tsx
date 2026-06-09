@@ -57,6 +57,7 @@ const makeProject = (overrides: Partial<V2ProjectDTO> = {}): V2ProjectDTO => ({
   access: {
     role: "ORG_ADMIN",
     capabilities: ["VIEW_PROJECT", "MANAGE_PROJECT"],
+    isPrimaryOwner: true,
   },
   ...overrides,
 });

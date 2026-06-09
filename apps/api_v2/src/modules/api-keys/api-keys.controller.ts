@@ -5,21 +5,29 @@ import {
   Inject,
   InternalServerErrorException,
   Param,
+  Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import { ApiKeyType } from "@workspace/database/prisma";
+import type { ActorContext } from "../../common/authz/actor-context.js";
 import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { RequireCapability } from "../../common/authz/require-capability.decorator.js";
+import { CurrentActor } from "../../common/decorators/current-actor.decorator.js";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
 import {
   apiKeyParamsSchema,
+  apiKeyQuerySchema,
   createApiKeyBodySchema,
+  updateApiKeyBodySchema,
+  type ApiKeyQueryDto,
   type ApiKeyParamsDto,
   type CreateApiKeyBodyDto,
+  type UpdateApiKeyBodyDto,
 } from "./api-keys.dto.js";
 import { ApiKeysService } from "./api-keys.service.js";
 
@@ -56,6 +64,27 @@ export class ApiKeysController {
       projectId: this.getProjectId(request),
       keyType: ApiKeyType.SECRET,
     });
+  }
+
+  @Patch(":keyId")
+  @RequireCapability(Capability.MANAGE_CREDENTIALS)
+  update(
+    @Param(new ZodValidationPipe(apiKeyParamsSchema))
+    params: ApiKeyParamsDto,
+    @Body(new ZodValidationPipe(updateApiKeyBodySchema))
+    body: UpdateApiKeyBodyDto,
+    @Query(new ZodValidationPipe(apiKeyQuerySchema))
+    query: ApiKeyQueryDto,
+    @Req() request: ProjectRequest,
+    @CurrentActor() actor: ActorContext | null,
+  ) {
+    return this.apiKeysService.update(
+      this.getProjectId(request),
+      params.keyId,
+      body,
+      this.getKeyType(query),
+      actor,
+    );
   }
 
   @Post(":keyId/rotate")
@@ -111,5 +140,11 @@ export class ApiKeysController {
     }
 
     return projectId;
+  }
+
+  private getKeyType(query: ApiKeyQueryDto) {
+    return query.keyType === ApiKeyType.AGENT
+      ? ApiKeyType.AGENT
+      : ApiKeyType.SECRET;
   }
 }

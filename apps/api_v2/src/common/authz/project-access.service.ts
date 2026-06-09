@@ -30,6 +30,7 @@ export type ResolvedProjectAccess = {
   };
   role: ProjectAccessRole;
   capabilities: ReadonlySet<Capability>;
+  isPrimaryOwner: boolean;
 };
 
 @Injectable()
@@ -78,6 +79,7 @@ export class ProjectAccessService {
         project,
         role: actor.actorType === "agent_key" ? "AGENT_KEY" : "API_KEY",
         capabilities: credentialScopeCapabilities(actor.scopes),
+        isPrimaryOwner: false,
       };
     }
 
@@ -90,6 +92,7 @@ export class ProjectAccessService {
         project,
         role: actor.clerkOrgRole === "admin" ? "ORG_ADMIN" : "ORG_MEMBER",
         capabilities: clerkOrgRoleCapabilities(actor.clerkOrgRole),
+        isPrimaryOwner: project.userId === actor.userId,
       };
     }
 
@@ -120,6 +123,7 @@ export class ProjectAccessService {
       project,
       role,
       capabilities: ROLE_CAPABILITIES[role],
+      isPrimaryOwner: project.userId === userId,
     };
   }
 }
