@@ -294,6 +294,37 @@ On 2026-05-23, the Clerk signup reconciliation gap was closed. `GET /v2/me` now 
 - Project ownership transfer verification passed: `corepack.cmd pnpm --filter @workspace/database generate`; `corepack.cmd pnpm --filter @workspace/database exec prisma validate`; `corepack.cmd pnpm --filter @workspace/types build`; `corepack.cmd pnpm --filter @workspace/database build`; `corepack.cmd pnpm --filter api_v2 test -- src/modules/projects/projects.service.spec.ts src/modules/projects/projects.spec.ts src/common/authz/project-access.service.spec.ts src/common/authz/capability.guard.spec.ts src/modules/notifications/notifications.spec.ts` (full API suite ran: 72 files, 463 tests); `corepack.cmd pnpm --filter api_v2 typecheck`; `corepack.cmd pnpm --filter api_v2 lint`; `pnpm.cmd --filter web_v2 test -- tests/search-placeholders.test.tsx tests/hooks/use-projects.test.tsx tests/tresta-api-control-plane.test.ts` (full web suite ran: 29 files, 113 tests); `cd apps/web_v2 && pnpm.cmd exec tsc --noEmit`; `cd apps/web_v2 && pnpm.cmd exec eslint . --ext .ts,.tsx`; `pnpm.cmd build --filter api_v2`; `pnpm.cmd build --filter web_v2`; `python scripts/update-indexes.py` (vector store already current, AST graph refreshed to 5797 nodes/9955 edges); `python scripts/rebuild-graphify.py` (graph merged 5797 nodes/9955 edges). Semantic extraction remains skipped because it requires Claude.
 - Project ownership transfer browser smoke note: local `web_v2` served on port 3002 and `/projects` correctly redirected to sign-in; the authenticated projects-page smoke stopped at the existing sign-in email step because submitting the repo test email did not advance and browser console logs had no errors. The throwaway dev server was stopped after the check.
 
+## 2026-06-10 — Hosted Forms Ground-Up Rebuild
+
+Status: the public hosted form now renders the full Collect Studio design — layout (flow × container × hero), loader screen, success screen, conditional logic, rich controls, webfonts — replacing the old static single-card renderer.
+
+Completed since last checkpoint:
+
+- forms-core rebuild (commit `feat(forms-core): rebuild hosted form renderer from the ground up`): schema parity with the studio config (layout/loader/success/submitLabel/showIf/descriptions + atomic tokens), new SSR renderer (boxed/centered/fullbleed/split × top/side/floating heroes, star radios, NPS chips, emoji scale, choice cards, loader overlay with pure-CSS timed reveal, confetti success screen, Tresta watermark), inline client runtime (esbuild-bundled at `src/client/runtime.ts` → generated `src/generated/runtime-js.ts` with sha256 for CSP) implementing stepped/cards/conversational flows, per-step validation, Enter-to-advance, auto-advance, conditional questions, textarea auto-grow, and double-submit guard. Progressive enhancement: plain POST still works without JS. Webfonts referenced by token stacks (curated Google Fonts map in `src/fonts.ts`) now load on the hosted page.
+- forms_runtime + api_v2 wiring (commit `e29d467`): CSP `script-src 'sha256-…'` (replaces `'none'`) + Google Fonts in style-src; mock services exercise stepped flow, loader, conditional follow-up, NPS, confetti success; `getRuntimeRedirectTo` honours the studio `config.success` shape with legacy `content.successAction` fallback.
+
+Current work:
+
+- None in flight; rebuild verified end to end.
+
+Next move:
+
+- Optional follow-ups: unify web_v2 `studio-token-css.ts` to re-export from forms-core (the implementations are now identical-shaped); real file-upload support on hosted forms (current behaviour posts the filename only, matching the previous renderer); studio preview could adopt the hosted runtime for true WYSIWYG.
+
+Blockers or decisions:
+
+- None. Watermark ("Powered by Tresta") added as a fixed chip on hosted forms — no config flag yet; revisit when plan tiers exist.
+
+Verification:
+
+- forms-core: build + 88 vitest tests green; forms_runtime: typecheck, lint, 19 tests green; api_v2 forms module: 48 tests green incl. new studio-redirect regression test, module lint green.
+- Live walkthrough on the mock runtime (localhost:3007) via Playwright: loader → stepped flow with progress → star auto-advance → conditional question appears for rating ≤ 3 → required validation with inline error + shake → NPS chips → custom submit label → POST → confetti success screen. Zero console errors/CSP violations.
+- Demos regenerated across five style × layout × flow personalities plus a success-screen artifact (`packages/forms-core/demo/`).
+
+Doc drift:
+
+- None found; this entry is the canonical record of the hosted-form renderer architecture change.
+
 ## Known Doc Drift
 
 - `docs/plans/2026-05-08-web-v2-api-types-gap-inventory.md` was current after Control-plane Task 3, but is now stale for outbound webhooks, exports, native integrations, project access blocks, notifications, analytics event capture, public host resolution, OpenAPI/docs, Prisma models, and shared DTOs after the Task 4 through Task 7 implementations.
