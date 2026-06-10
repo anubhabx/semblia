@@ -989,6 +989,17 @@ export class FormsService {
 
   private getRuntimeRedirectTo(form: FormRecord, originalHost: string) {
     const config = this.toRecord(form.config);
+
+    // Studio shape: config.success { action: "redirect", redirectUrl }.
+    const success = this.toRecord(config?.success);
+    if (
+      success?.action === "redirect" &&
+      typeof success.redirectUrl === "string"
+    ) {
+      return this.normalizeRuntimeRedirect(success.redirectUrl, originalHost);
+    }
+
+    // Legacy shape: config.content.successAction { kind: "redirect", url }.
     const content = this.toRecord(config?.content);
     const successAction = this.toRecord(content?.successAction);
     if (

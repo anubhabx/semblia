@@ -58,6 +58,41 @@ describe("createFormsRuntimeApp", () => {
     expect(html).toContain("Acme Launchpad");
   });
 
+  it("allows exactly the inline client runtime and Google Fonts in the CSP", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request("http://acme.collect.tresta.app/");
+    const csp = response.headers.get("content-security-policy") ?? "";
+
+    expect(csp).toMatch(/script-src 'sha256-[A-Za-z0-9+/]{43}='/);
+    expect(csp).toContain(
+      "style-src 'unsafe-inline' https://fonts.googleapis.com",
+    );
+    expect(csp).not.toContain("script-src 'none'");
+  });
+
+  it("renders the designed experience: loader, flow config, and runtime", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request("http://acme.collect.tresta.app/");
+    const html = await response.text();
+
+    expect(html).toContain('class="hf-loader"');
+    expect(html).toContain('"flow":"stepped"');
+    expect(html).toContain('id="hf-config"');
+    expect(html).toContain("hf-root");
+  });
+
+  it("renders the success screen for submitted state", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request(
+      "http://acme.collect.tresta.app/?submitted=1",
+    );
+    const html = await response.text();
+
+    expect(html).toContain("hf-success");
+    expect(html).toContain("Thank you!");
+    expect(html).toContain("hf-confetti");
+  });
+
   it("redirects mock submissions back to submitted state", async () => {
     const app = createFormsRuntimeApp(env, createMockRuntimeServices());
     const response = await app.request(

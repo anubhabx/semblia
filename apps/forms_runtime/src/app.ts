@@ -2,7 +2,10 @@ import {
   createFormViewModel,
   normalizeFormConfig,
 } from "@workspace/forms-core";
-import { renderHostedFormHtml } from "@workspace/forms-core/html";
+import {
+  HOSTED_RUNTIME_SHA256,
+  renderHostedFormHtml,
+} from "@workspace/forms-core/html";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { createApiRuntimeServices } from "./api-services.js";
@@ -23,9 +26,11 @@ const securityHeaders = {
     "form-action 'self'",
     "frame-ancestors 'none'",
     "img-src 'self' https: data:",
-    "style-src 'unsafe-inline'",
+    // Inline token CSS + the Google Fonts stylesheet the renderer links.
+    "style-src 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https: data:",
-    "script-src 'none'",
+    // Only the exact inline client runtime shipped by forms-core may run.
+    `script-src 'sha256-${HOSTED_RUNTIME_SHA256}'`,
     "connect-src 'none'",
   ].join("; "),
   "permissions-policy":

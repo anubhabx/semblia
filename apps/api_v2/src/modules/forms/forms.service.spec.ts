@@ -978,6 +978,54 @@ describe("FormsService", () => {
     expect(result).toEqual({ redirectTo: null });
   });
 
+  it("submitRuntimeForm honours studio-shape success redirects on the same host", async () => {
+    mockPublicSurfaceHostFindFirst.mockResolvedValue(null);
+    mockProjectFindFirst.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+      autoModeration: true,
+      autoApproveVerified: false,
+    });
+    mockCollectionFormFindFirst.mockResolvedValueOnce(
+      makeForm({
+        isActive: true,
+        config: {
+          success: {
+            action: "redirect",
+            redirectUrl: "https://acme.collect.tresta.app/thanks",
+          },
+        },
+      }),
+    );
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+    });
+
+    const service = makeService();
+    const result = await service.submitRuntimeForm(
+      {
+        context: { projectPublicSlug: "acme", formSlug: null, path: "/" },
+        contentType: "application/x-www-form-urlencoded",
+        body: [
+          "answers%5BauthorName%5D=Ada",
+          "answers%5Bcontent%5D=Great",
+          "answers%5Brating%5D=5",
+        ].join("&"),
+      },
+      {
+        headers: {
+          "x-tresta-original-host": "acme.collect.tresta.app",
+        },
+      },
+    );
+
+    expect(result).toEqual({
+      redirectTo: "https://acme.collect.tresta.app/thanks",
+    });
+  });
+
   it("submitPublic persists answers in a canonical submission without testimonial projections", async () => {
     mockEvaluateTrust.mockResolvedValue({
       projectId: "project_1",
