@@ -100,11 +100,12 @@ describe("<FormConfigList />", () => {
 
     await userEvent.click(screen.getByText(/Stepped flow/i));
 
+    // Forms v4: creation never posts a config — the API owns the default
+    // publish-validated document, and layout presets are picked in the studio.
     await waitFor(() =>
       expect(createForm).toHaveBeenCalledWith("session-token", "launchpad", {
         name: "Default Form",
         description: "",
-        config: { layout: { flow: "stepped" } },
       }),
     );
     await waitFor(() =>

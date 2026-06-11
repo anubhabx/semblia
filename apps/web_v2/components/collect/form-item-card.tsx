@@ -3,7 +3,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
-import type { FormConfigEntry, LayoutConfig } from "@/lib/collect/studio-types";
+import {
+  LAYOUT_PRESET_LABEL,
+  type FormConfigEntry,
+} from "@/lib/collect/forms-list";
 import {
   PencilIcon,
   CopyIcon,
@@ -20,13 +23,6 @@ import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
 import { FormCardPreview } from "./form-card-preview";
 import { AbWeightDialog } from "./ab-weight-dialog";
-
-const FLOW_LABEL: Record<LayoutConfig["flow"], string> = {
-  all: "All fields",
-  stepped: "Stepped",
-  cards: "Cards",
-  conversational: "Conversational",
-};
 
 /* ─── Skeleton ────────────────────────────────────────────────────────────── */
 
@@ -47,7 +43,6 @@ export function FormItemCardSkeleton() {
 
 export const FormItemCard = React.memo(function FormItemCard({
   entry,
-  layout,
   hasDirtyDraft,
   onEdit,
   onDuplicate,
@@ -57,7 +52,6 @@ export const FormItemCard = React.memo(function FormItemCard({
   onSetWeight,
 }: {
   entry: FormConfigEntry;
-  layout: LayoutConfig | null;
   hasDirtyDraft: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
@@ -123,10 +117,10 @@ export const FormItemCard = React.memo(function FormItemCard({
         onClick={renaming ? undefined : onEdit}
         aria-label={`Open ${entry.name}`}
       >
-        {/* Preview pane — now reflects the form's actual layout */}
+        {/* Preview pane — keyed off the form's v4 layout preset */}
         <div className="relative block aspect-[16/10] overflow-hidden">
           <FormCardPreview
-            layout={layout}
+            preset={entry.layoutPreset}
             inactive={inactive}
             className="absolute inset-0"
           />
@@ -189,14 +183,14 @@ export const FormItemCard = React.memo(function FormItemCard({
               <span>conv.</span>
             </div>
             <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-              {layout && (
+              {entry.layoutPreset && (
                 <span className="text-muted-foreground/70">
-                  {FLOW_LABEL[layout.flow]}
+                  {LAYOUT_PRESET_LABEL[entry.layoutPreset]}
                 </span>
               )}
               {entry.isActive && (
                 <>
-                  {layout && <span className="text-border">·</span>}
+                  {entry.layoutPreset && <span className="text-border">·</span>}
                   <span className="text-muted-foreground" title="A/B weight">
                     {entry.abWeight}%
                   </span>

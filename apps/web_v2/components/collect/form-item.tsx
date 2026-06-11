@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
 import { timeAgo } from "@/lib/format";
-import type { FormConfigEntry } from "@/lib/collect/studio-types";
+import type { FormConfigEntry } from "@/lib/collect/forms-list";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";

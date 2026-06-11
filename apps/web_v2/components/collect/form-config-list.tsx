@@ -4,8 +4,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { FormConfigEntry } from "@/lib/collect/studio-types";
-import { dtoToFormConfigEntry } from "@/lib/collect/dto-adapter";
+import {
+  dtoToFormConfigEntry,
+  type FormConfigEntry,
+} from "@/lib/collect/forms-list";
 import { Button } from "@/components/ui/button";
 import {
   Browsers as BrowsersIcon,
@@ -131,23 +133,16 @@ export function FormConfigList({ slug }: { slug: string }) {
     );
   }, [listQuery.data]);
 
-  const handleCreate = React.useCallback(
-    async (kind?: CollectKind) => {
-      const starterConfig =
-        kind === "stepped"
-          ? { layout: { flow: "stepped" } }
-          : kind === "single"
-            ? { layout: { flow: "all" } }
-            : undefined;
-      const result = await createMutation.mutateAsync({
-        name: "Default Form",
-        description: "",
-        ...(starterConfig ? { config: starterConfig } : {}),
-      });
-      router.push(`/projects/${slug}/collect/${result.id}`);
-    },
-    [slug, createMutation, router],
-  );
+  // Forms v4: the API owns the default document (publish-validated); the
+  // layout-preset choice moves into the rebuilt parametric studio, so the
+  // picked kind no longer shapes the config.
+  const handleCreate = React.useCallback(async () => {
+    const result = await createMutation.mutateAsync({
+      name: "Default Form",
+      description: "",
+    });
+    router.push(`/projects/${slug}/collect/${result.id}`);
+  }, [slug, createMutation, router]);
 
   const handleEdit = React.useCallback(
     (formId: string) => {
@@ -260,7 +255,7 @@ export function FormConfigList({ slug }: { slug: string }) {
             subheading="Start collecting testimonials."
             footnote="You can run multiple form variants in parallel for A/B testing."
             kinds={EMPTY_KINDS}
-            onPick={(kind) => handleCreate(kind)}
+            onPick={() => handleCreate()}
           />
         ) : viewMode === "list" ? (
           <div
@@ -294,7 +289,6 @@ export function FormConfigList({ slug }: { slug: string }) {
               <div key={entry.id} role="listitem" className="h-full">
                 <FormItemCard
                   entry={entry}
-                  layout={entry.layout}
                   hasDirtyDraft={false}
                   onEdit={() => handleEdit(entry.id)}
                   onDuplicate={() => handleDuplicate(entry.id)}

@@ -19,7 +19,7 @@ export {
   StudioColorInput,
   StudioSelect,
   Pills,
-} from "@/components/collect/studio/studio-primitives";
+} from "@/components/widgets/studio/studio-input-primitives";
 
 /**
  * Slim section header — used inside the widget controls accordion.
