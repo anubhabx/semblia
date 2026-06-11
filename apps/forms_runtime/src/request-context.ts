@@ -6,6 +6,15 @@ export type HostedFormRequestContext = {
 };
 
 const submitSuffix = "/__submit";
+const embedSuffix = "/__embed";
+
+/** `/feedback/__embed` → `/feedback`; non-embed paths pass through. */
+export function toEmbeddedFormPath(path: string): string {
+  const normalized = normalizePath(path);
+  if (normalized === embedSuffix) return "/";
+  if (!normalized.endsWith(embedSuffix)) return normalized;
+  return normalized.slice(0, -embedSuffix.length) || "/";
+}
 
 export function toSubmitPath(path: string): string {
   const normalized = normalizePath(path);

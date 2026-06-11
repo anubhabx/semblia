@@ -1,5 +1,8 @@
 import { migrateFormDoc } from "@workspace/forms-core/schema";
-import { renderFormStubPageHtml } from "@workspace/forms-core/render";
+import {
+  renderFormStubFragmentHtml,
+  renderFormStubPageHtml,
+} from "@workspace/forms-core/render";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { createApiRuntimeServices } from "./api-services.js";
@@ -7,6 +10,7 @@ import type { FormsRuntimeEnv } from "./env.js";
 import { createMockRuntimeServices } from "./mock-services.js";
 import {
   resolveRequestContext,
+  toEmbeddedFormPath,
   toSubmittedFormPath,
 } from "./request-context.js";
 import type { FormsRuntimeServices } from "./types.js";
@@ -117,6 +121,44 @@ export function createFormsRuntimeApp(
     });
 
     return c.redirect(result.redirectTo ?? `${formPath}?submitted=1`, 303);
+  });
+
+  // Embed fragment — fetched cross-origin by the <tresta-form> loader and
+  // mounted into a Shadow DOM root on the host page. One round trip: markup,
+  // styles, and (once renderers land) config travel together.
+  app.get("*", async (c, next) => {
+    const url = new URL(c.req.url);
+    if (!url.pathname.endsWith("/__embed")) {
+      await next();
+      return;
+    }
+    const host = resolveRuntimeHost(
+      c.req.header("x-tresta-original-host"),
+      c.req.header("host"),
+      url,
+      env,
+    );
+    const context = resolveRequestContext({
+      host,
+      url: toEmbeddedFormPath(url.pathname),
+      baseDomain: env.FORMS_RUNTIME_PUBLIC_BASE_DOMAIN,
+    });
+    const resolved = await services.resolveForm(context, {
+      userAgent: c.req.header("user-agent"),
+      forwardedFor: c.req.header("x-forwarded-for"),
+    });
+    const doc = migrateFormDoc(resolved.form.config);
+    const fragment = renderFormStubFragmentHtml({
+      brandName: doc.content.brandName || resolved.project.name,
+    });
+
+    return c.html(fragment, 200, {
+      // Public embed surface: any site may fetch it; the edge may cache it.
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET",
+      "cache-control": "public, s-maxage=60, stale-while-revalidate=300",
+      vary: "accept-encoding",
+    });
   });
 
   app.get("*", async (c) => {

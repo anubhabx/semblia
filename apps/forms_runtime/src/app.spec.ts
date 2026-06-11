@@ -77,6 +77,33 @@ describe("createFormsRuntimeApp", () => {
     expect(html).toContain("TRESTA FORMS V4 STUB");
   });
 
+  it("serves the embed fragment with CORS + edge caching for <tresta-form>", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request(
+      "http://acme.collect.tresta.app/__embed",
+    );
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("cache-control")).toContain("s-maxage=60");
+    // A fragment for Shadow DOM mounting, not a document.
+    expect(html).not.toContain("<!doctype");
+    expect(html).toContain("data-tresta-forms-v4-stub");
+    expect(html).toContain("Acme Launchpad");
+    expect(html).not.toContain("<script");
+  });
+
+  it("resolves form-scoped embed paths", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request(
+      "http://acme.collect.tresta.app/feedback/__embed",
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("data-tresta-forms-v4-stub");
+  });
+
   it("redirects mock submissions back to submitted state", async () => {
     const app = createFormsRuntimeApp(env, createMockRuntimeServices());
     const response = await app.request(

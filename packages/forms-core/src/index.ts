@@ -38,6 +38,7 @@ export {
 export type { FormPreset, PresetId, PresetTier } from "./presets.js";
 export {
   FormsV4NotImplementedError,
+  renderFormStubFragmentHtml,
   renderFormStubPageHtml,
   renderPublishedFormHtml,
 } from "./render/index.js";

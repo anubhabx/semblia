@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveRequestContext,
   toSubmitPath,
+  toEmbeddedFormPath,
   toSubmittedFormPath,
 } from "./request-context.js";
 
@@ -67,6 +68,16 @@ describe("resolveRequestContext", () => {
       "/customer-feedback/__submit",
     );
     expect(toSubmittedFormPath("/customer-feedback/__submit")).toBe(
+      "/customer-feedback",
+    );
+  });
+
+  it("maps embed paths back to form paths", () => {
+    expect(toEmbeddedFormPath("/__embed")).toBe("/");
+    expect(toEmbeddedFormPath("/customer-feedback/__embed")).toBe(
+      "/customer-feedback",
+    );
+    expect(toEmbeddedFormPath("/customer-feedback")).toBe(
       "/customer-feedback",
     );
   });

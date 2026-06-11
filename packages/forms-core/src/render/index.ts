@@ -40,6 +40,33 @@ function escapeHtml(value: string): string {
 }
 
 /**
+ * The interim embed fragment: the same loud stub as a self-contained element
+ * for Shadow DOM mounting. The inline <style> is scoped by the shadow
+ * boundary — it cannot leak into the host page, and host CSS cannot reach in.
+ */
+export function renderFormStubFragmentHtml(
+  opts: { brandName?: string | null } = {},
+): string {
+  const brand = opts.brandName?.trim()
+    ? escapeHtml(opts.brandName.trim())
+    : null;
+  return `<div data-tresta-forms-v4-stub="true" part="root">
+<!-- TRESTA FORMS V4 STUB — parametric renderer not yet implemented -->
+<style>
+  [data-tresta-forms-v4-stub]{font:15px/1.55 ui-sans-serif,system-ui,sans-serif;
+    color:#15181d;background:#f6f7f9;border:1px solid #e3e7ec;border-radius:12px;
+    padding:2rem 1.5rem;text-align:center}
+  @media (prefers-color-scheme:dark){[data-tresta-forms-v4-stub]{
+    background:#101216;color:#e8eaee;border-color:#2a2e35}}
+  [data-tresta-forms-v4-stub] strong{display:block;font-size:1.05rem;margin-bottom:.4rem}
+  [data-tresta-forms-v4-stub] span{opacity:.72}
+</style>
+<strong>This form is being rebuilt</strong>
+<span>${brand ? `${brand} is upgrading this form. ` : ""}It will be back shortly.</span>
+</div>`;
+}
+
+/**
  * The interim hosted page: a complete, self-contained, deliberately loud
  * "this form is being rebuilt" document. Zero scripts (CSP: script-src 'none'),
  * zero webfonts, < 2 KB on the wire.
