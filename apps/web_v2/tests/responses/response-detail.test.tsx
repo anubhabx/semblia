@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { V2ResponseDTO } from "@workspace/types";
 import { ResponseDetail } from "@/components/responses/response-detail";
@@ -95,19 +94,16 @@ describe("ResponseDetail", () => {
       />,
     );
 
-    await userEvent.type(
-      screen.getByLabelText(/add review note/i),
-      "Escalate this before publishing.",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/labels/i),
-      "urgent, launch, urgent",
-    );
-    await userEvent.selectOptions(
-      screen.getByLabelText(/sentiment/i),
-      "negative",
-    );
-    await userEvent.click(screen.getByRole("button", { name: /save note/i }));
+    fireEvent.change(screen.getByLabelText(/add review note/i), {
+      target: { value: "Escalate this before publishing." },
+    });
+    fireEvent.change(screen.getByLabelText(/labels/i), {
+      target: { value: "urgent, launch, urgent" },
+    });
+    fireEvent.change(screen.getByLabelText(/sentiment/i), {
+      target: { value: "negative" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save note/i }));
 
     await waitFor(() =>
       expect(onCreateAnnotation).toHaveBeenCalledWith("resp_1", {

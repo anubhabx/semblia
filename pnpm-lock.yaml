@@ -291,6 +291,9 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.97.0
         version: 5.97.0(@tanstack/react-query@5.99.2(react@19.2.4))(react@19.2.4)
+      '@workspace/forms-core':
+        specifier: workspace:*
+        version: link:../../packages/forms-core
       '@workspace/types':
         specifier: workspace:*
         version: link:../../packages/types
