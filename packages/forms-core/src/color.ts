@@ -58,6 +58,14 @@ export function normalizeHex(hex: string): string {
   return rgbToHex(hexToRgb(hex));
 }
 
+/** `#rrggbb` + alpha → `#rrggbbaa`. Input is sanitized first. */
+export function withAlpha(hex: string, alpha: number): string {
+  const a = Math.round(clamp01(alpha) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${normalizeHex(hex)}${a}`;
+}
+
 function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }

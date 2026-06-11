@@ -1,11 +1,11 @@
 /**
- * Presets are remixable *seeds* for the theme engine, not locked bundles. A
- * preset supplies every `FormThemeInputs` value except `brandColor`, which the
- * customer always provides. Picking a preset is just a starting point; any input
- * can then be changed and the resolver keeps the result coherent.
+ * Presets are remixable *seeds* for the derivation engine, not locked bundles.
+ * A preset supplies every `FormThemeInputs` value except `brandColor`, which
+ * the customer always provides. Picking a preset is just a starting point; any
+ * knob can then be changed and the resolver keeps the result coherent.
  *
- * See docs/DESIGN.md §3. More presets (minimal/bold/editorial) land in a later
- * phase; the slice ships Default + Clean.
+ * See docs/DESIGN.md §3. More presets (minimal/bold/editorial) land with the
+ * layout-preset renderers; this slice ships Default + Clean.
  */
 
 import type { FormThemeInputs } from "./theme.js";
@@ -35,6 +35,8 @@ export const PRESETS: Record<PresetId, FormPreset> = {
       typePairing: "geist",
       surfaceStyle: "bordered",
       accentIntensity: "balanced",
+      neutralTone: "auto",
+      buttonStyle: "solid",
     },
   },
   clean: {
@@ -49,6 +51,8 @@ export const PRESETS: Record<PresetId, FormPreset> = {
       typePairing: "inter",
       surfaceStyle: "elevated",
       accentIntensity: "balanced",
+      neutralTone: "auto",
+      buttonStyle: "solid",
     },
   },
 };

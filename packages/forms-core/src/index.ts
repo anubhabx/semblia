@@ -11,7 +11,11 @@ export { hexAlpha, textureBg, tokensToCssVars } from "./tokens-css.js";
 export { firstFamily, googleFontsHref, resolveWebFonts } from "./fonts.js";
 export { createFormViewModel } from "./view-model.js";
 export { HOSTED_FORM_CSS, HostedForm } from "./react.js";
-export { resolveTheme } from "./theme.js";
+export {
+  derivedThemeToCssVars,
+  resolveTheme,
+  resolveThemeSnapshot,
+} from "./theme.js";
 export { PRESETS, DEFAULT_PRESET_ID, resolvePreset } from "./presets.js";
 export type {
   ContainerMode,
@@ -49,5 +53,9 @@ export type {
   SurfaceStyle,
   AccentIntensity,
   TypePairingId,
+  NeutralTone,
+  ButtonStyle,
+  DerivedFormTheme,
+  ResolvedThemeSnapshot,
 } from "./theme.js";
 export type { FormPreset, PresetId, PresetTier } from "./presets.js";
