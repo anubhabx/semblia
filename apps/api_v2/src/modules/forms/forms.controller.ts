@@ -16,6 +16,8 @@ import { SkipThrottle, Throttle, seconds } from "@nestjs/throttler";
 import { Capability } from "../../common/authz/capabilities.js";
 import { CapabilityGuard } from "../../common/authz/capability.guard.js";
 import { RequireCapability } from "../../common/authz/require-capability.decorator.js";
+import type { ActorContext } from "../../common/authz/actor-context.js";
+import { CurrentActor } from "../../common/decorators/current-actor.decorator.js";
 import { CurrentUserId } from "../../common/decorators/current-user-id.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/zod/zod-validation.pipe.js";
@@ -30,6 +32,7 @@ import {
   publicFormsListQuerySchema,
   runtimeFormsSubmitBodySchema,
   studioDraftBodySchema,
+  themeTelemetryBatchSchema,
   type CreateFormBodyDto,
   type CreateFormSubmissionBodyDto,
   type FormParamsDto,
@@ -39,6 +42,7 @@ import {
   type PublicFormsListQueryDto,
   type RuntimeFormsSubmitBodyDto,
   type StudioDraftBodyDto,
+  type ThemeTelemetryBatchDto,
   type UpdateFormBodyDto,
   updateFormBodySchema,
 } from "./forms.dto.js";
@@ -166,6 +170,20 @@ export class FormsController {
     @Req() request: ProjectRequest,
   ) {
     return this.formsService.publishDraft(params, body, request);
+  }
+
+  @Post(":formId/theme-telemetry")
+  @Throttle({ "analytics-events": { limit: 240, ttl: seconds(60) } })
+  @UseGuards(CapabilityGuard)
+  @RequireCapability(Capability.MANAGE_PROJECT)
+  recordThemeTelemetry(
+    @Param(new ZodValidationPipe(formParamsSchema)) params: FormParamsDto,
+    @Body(new ZodValidationPipe(themeTelemetryBatchSchema))
+    body: ThemeTelemetryBatchDto,
+    @Req() request: ProjectRequest,
+    @CurrentActor() actor: ActorContext | null,
+  ) {
+    return this.formsService.recordThemeTelemetry(params, body, request, actor);
   }
 }
 

@@ -23,6 +23,7 @@ import { RedisService } from "../redis/redis.service.js";
 import { MediaService } from "../storage/media.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
 import { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
+import { createDefaultPublishedFormConfig } from "../forms/forms-v4-config.js";
 import { SubmissionPrivateMetadataService } from "./submission-private-metadata.service.js";
 import { PublicSubmitTrustService } from "./public-submit-trust.service.js";
 import {
@@ -42,65 +43,10 @@ import { hashIdempotencyPayload } from "./responses.dto.js";
 
 const DIRECT_SUBMISSION_FORM_SLUG = "direct-submissions";
 
-const DIRECT_SUBMISSION_FORM_CONFIG: Prisma.InputJsonObject = {
-  brandName: "Your brand",
-  headline: "Share your experience",
-  subhead: "A few words about working with us go a long way. Thank you.",
-  logoUrl: null,
-  questions: [
-    {
-      id: "content",
-      type: "longtext",
-      label: "Your feedback",
-      placeholder: "Tell us what stood out",
-      required: true,
-    },
-    {
-      id: "authorName",
-      type: "shorttext",
-      label: "Your name",
-      placeholder: "Jane Doe",
-      required: true,
-    },
-    {
-      id: "authorEmail",
-      type: "email",
-      label: "Email",
-      placeholder: "jane@example.com",
-      required: false,
-    },
-    {
-      id: "rating",
-      type: "stars",
-      label: "Rating",
-      required: false,
-    },
-  ],
-  tokens: {
-    fontHead: '"Inter", ui-sans-serif, system-ui, sans-serif',
-    fontBody: '"Inter", ui-sans-serif, system-ui, sans-serif',
-    fontMono: "ui-monospace, SFMono-Regular, Menlo, monospace",
-    sizeBase: 16,
-    sizeHead: 30,
-    trackingHead: 0,
-    weightHead: 650,
-    weightBody: 400,
-    bg: "#f6f7f9",
-    surface: "#ffffff",
-    ink: "#15181d",
-    inkSoft: "#5b6573",
-    line: "#e3e7ec",
-    accent: "#4f46e5",
-    accentInk: "#ffffff",
-    radius: 12,
-    fieldShape: "rounded",
-    density: "default",
-    buttonStyle: "solid",
-    shadow: "sm",
-    texture: "none",
-    dark: false,
-  },
-};
+const DIRECT_SUBMISSION_FORM_CONFIG =
+  createDefaultPublishedFormConfig({
+    brandName: "Your brand",
+  }) as unknown as Prisma.InputJsonObject;
 
 const FEEDBACK_SUBMISSION_SELECT = {
   id: true,

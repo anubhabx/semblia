@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { themeTelemetryBatchSchema } from "@workspace/forms-core/telemetry";
 import {
   studioDraftBodySchema,
   type StudioDraftBodyDto,
@@ -33,7 +34,7 @@ export const createFormBodySchema = z.object({
   description: z.string().trim().max(500).default(""),
   isActive: z.boolean().default(false),
   abWeight: z.number().int().min(0).default(0),
-  config: opaqueJsonObjectSchema,
+  config: opaqueJsonObjectSchema.optional(),
 });
 
 export const updateFormBodySchema = z
@@ -99,4 +100,8 @@ export type RuntimeFormsSubmitBodyDto = z.infer<
 export type PublishStudioDraftBodyDto = z.infer<
   typeof publishStudioDraftBodySchema
 >;
+export type ThemeTelemetryBatchDto = z.infer<
+  typeof themeTelemetryBatchSchema
+>;
 export { studioDraftBodySchema, type StudioDraftBodyDto };
+export { themeTelemetryBatchSchema };

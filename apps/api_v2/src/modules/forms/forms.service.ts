@@ -7,12 +7,11 @@ import {
   Logger,
   NotFoundException,
   Optional,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   ModerationStatus,
-  MediaAssetPurpose,
-  MediaAssetStatus,
   Prisma,
   PublicSurfaceFeature,
   PublicSurfaceResourceType,
@@ -21,6 +20,8 @@ import {
   StudioDraftResourceType,
   UserPlan,
 } from "@workspace/database/prisma";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
+import type { ActorContext } from "../../common/authz/actor-context.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RedisService } from "../redis/redis.service.js";
 import { StudioDraftsService } from "../studio-drafts/studio-drafts.service.js";
@@ -50,8 +51,16 @@ import {
   type PublishStudioDraftBodyDto,
   type RuntimeFormsSubmitBodyDto,
   type StudioDraftBodyDto,
+  type ThemeTelemetryBatchDto,
   type UpdateFormBodyDto,
 } from "./forms.dto.js";
+import {
+  createDefaultPublishedFormConfig,
+  getPublishedFormConfigEtag,
+  publishFormConfigForWrite,
+  publishStudioDraftConfig,
+  resolvePublishedFormConfig,
+} from "./forms-v4-config.js";
 
 const FORM_SELECT = {
   id: true,
@@ -219,6 +228,8 @@ export class FormsService {
     private readonly privateMetadataService: SubmissionPrivateMetadataService,
     @Inject(StudioDraftsService)
     private readonly studioDraftsService: StudioDraftsService,
+    @Inject(ProjectActionAuditService)
+    private readonly actionAuditService: ProjectActionAuditService,
     @Inject(MediaService)
     private readonly mediaService?: MediaService,
     @Optional()
@@ -259,7 +270,10 @@ export class FormsService {
     request: ProjectRequest,
   ) {
     const projectId = this.getProjectIdFromRequest(request);
-    const config = await this.validateFormConfigMedia(body.config, projectId);
+    const config =
+      body.config !== undefined
+        ? publishFormConfigForWrite(body.config)
+        : await this.createDefaultFormConfig(projectId);
     const slug = await this.createUniqueFormSlug(
       projectId,
       body.slug ?? body.name,
@@ -272,7 +286,7 @@ export class FormsService {
         description: body.description,
         isActive: body.isActive,
         abWeight: body.abWeight,
-        config: this.toJsonObjectInput(config),
+        config: this.toJsonValueInput(config as unknown as Prisma.JsonValue),
       },
       select: FORM_SELECT,
     });
@@ -302,7 +316,7 @@ export class FormsService {
 
     const config =
       body.config !== undefined
-        ? await this.validateFormConfigMedia(body.config, form.projectId)
+        ? publishFormConfigForWrite(body.config)
         : undefined;
     const slug =
       body.slug !== undefined
@@ -319,7 +333,11 @@ export class FormsService {
         ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
         ...(body.abWeight !== undefined ? { abWeight: body.abWeight } : {}),
         ...(config !== undefined
-          ? { config: this.toJsonObjectInput(config) }
+          ? {
+              config: this.toJsonValueInput(
+                config as unknown as Prisma.JsonValue,
+              ),
+            }
           : {}),
       },
       select: FORM_SELECT,
@@ -344,7 +362,9 @@ export class FormsService {
         description: source.description,
         isActive: false,
         abWeight: 0,
-        config: this.toJsonValueInput(source.config),
+        config: this.toJsonValueInput(
+          resolvePublishedFormConfig(source.config) as unknown as Prisma.JsonValue,
+        ),
       },
       select: FORM_SELECT,
     });
@@ -426,16 +446,15 @@ export class FormsService {
       throw new ConflictException("Draft version is stale");
     }
 
-    const draftConfig = this.toRecord(draft.draft);
-    if (!draftConfig) {
-      throw new BadRequestException("Draft has no publishable form config");
-    }
+    const draftConfig = publishStudioDraftConfig(draft.draft);
 
     const updated = await this.prisma.client.$transaction(async (tx) => {
       const published = await tx.collectionForm.update({
         where: { id: form.id },
         data: {
-          config: this.toJsonValueInput(draftConfig as Prisma.JsonValue),
+          config: this.toJsonValueInput(
+            draftConfig as unknown as Prisma.JsonValue,
+          ),
         },
         select: FORM_SELECT,
       });
@@ -457,6 +476,42 @@ export class FormsService {
 
     await this.bustPublicFormsCache(params.slug);
     return this.toAuthenticatedFormDto(updated);
+  }
+
+  async recordThemeTelemetry(
+    params: FormParamsDto,
+    body: ThemeTelemetryBatchDto,
+    request: ProjectRequest,
+    actor: ActorContext | null,
+  ) {
+    const projectId = this.getProjectIdFromRequest(request);
+    const form = await this.getOwnedFormOrThrow(params.formId, projectId);
+    const mismatched = body.events.find((event) => event.formId !== form.id);
+    if (mismatched) {
+      throw new UnprocessableEntityException({
+        message: "Theme telemetry event formId must match the route formId",
+        details: [{ path: "events.formId", message: mismatched.formId }],
+      });
+    }
+
+    // Theme telemetry rides ProjectActionAudit: knob changes ARE project-actor
+    // activity, the table already carries actor/action/target/metadata with a
+    // (projectId, action, createdAt) index, and no schema change is needed.
+    await this.actionAuditService.recordMany(
+      body.events.map((event) => ({
+        projectId,
+        actor,
+        action: event.type,
+        targetType: "FORM",
+        targetId: form.id,
+        metadata: event as unknown as Record<string, unknown>,
+      })),
+    );
+
+    return {
+      accepted: true,
+      count: body.events.length,
+    };
   }
 
   async listPublic(params: ProjectFormsParamsDto) {
@@ -514,6 +569,8 @@ export class FormsService {
       host: originalHost,
       request,
     });
+    const config = resolvePublishedFormConfig(resolution.form.config);
+    const configEtag = getPublishedFormConfigEtag(config);
 
     return {
       project: {
@@ -528,7 +585,8 @@ export class FormsService {
         slug: resolution.form.slug,
         name: resolution.form.name,
         description: resolution.form.description,
-        config: this.toHostedFormConfig(resolution.form, resolution.project),
+        config,
+        configEtag,
         publishedAt: resolution.form.updatedAt.toISOString(),
       },
     };
@@ -831,6 +889,24 @@ export class FormsService {
     return projectId;
   }
 
+  private async createDefaultFormConfig(projectId: string) {
+    const project = await this.prisma.client.project.findUnique({
+      where: { id: projectId },
+      select: {
+        name: true,
+        brandColorPrimary: true,
+      },
+    });
+    if (!project) {
+      throw new NotFoundException("Project not found");
+    }
+
+    return createDefaultPublishedFormConfig({
+      brandName: project.name,
+      brandColor: project.brandColorPrimary,
+    });
+  }
+
   private async resolveHostedFormTarget(
     context: HostedFormRequestContextDto,
     originalHost: string,
@@ -988,25 +1064,10 @@ export class FormsService {
   }
 
   private getRuntimeRedirectTo(form: FormRecord, originalHost: string) {
-    const config = this.toRecord(form.config);
-
-    // Studio shape: config.success { action: "redirect", redirectUrl }.
-    const success = this.toRecord(config?.success);
-    if (
-      success?.action === "redirect" &&
-      typeof success.redirectUrl === "string"
-    ) {
+    const config = resolvePublishedFormConfig(form.config);
+    const success = config.content.success;
+    if (success.action === "redirect") {
       return this.normalizeRuntimeRedirect(success.redirectUrl, originalHost);
-    }
-
-    // Legacy shape: config.content.successAction { kind: "redirect", url }.
-    const content = this.toRecord(config?.content);
-    const successAction = this.toRecord(content?.successAction);
-    if (
-      successAction?.kind === "redirect" &&
-      typeof successAction.url === "string"
-    ) {
-      return this.normalizeRuntimeRedirect(successAction.url, originalHost);
     }
 
     return null;
@@ -1030,114 +1091,6 @@ export class FormsService {
     }
 
     return null;
-  }
-
-  private toHostedFormConfig(
-    form: FormRecord,
-    project: { name: string; brandColorPrimary: string | null },
-  ) {
-    const config = this.toRecord(form.config);
-    if (this.isHostedFormConfig(config)) {
-      return config;
-    }
-
-    const content = this.toRecord(config?.content);
-    const fields = this.toRecord(config?.fields);
-    const branding = this.toRecord(config?.branding);
-    const colors = this.toRecord(branding?.colors);
-
-    const questions = [
-      {
-        id: "content",
-        type: "textarea",
-        label: "Your feedback",
-        placeholder: "",
-        required: true,
-      },
-      {
-        id: "authorName",
-        type: "text",
-        label: "Your name",
-        placeholder: "",
-        required: true,
-      },
-      ...this.optionalHostedQuestion(fields?.email, {
-        id: "authorEmail",
-        type: "email",
-        label: "Email",
-      }),
-      ...this.optionalHostedQuestion(fields?.rating, {
-        id: "rating",
-        type: "rating",
-        label: "Rating",
-      }),
-      ...this.optionalHostedQuestion(fields?.jobTitle, {
-        id: "authorRole",
-        type: "text",
-        label: "Job title",
-      }),
-      ...this.optionalHostedQuestion(fields?.company, {
-        id: "authorCompany",
-        type: "text",
-        label: "Company",
-      }),
-    ];
-
-    return {
-      brandName: project.name,
-      headline:
-        this.stringOrNull(content?.headerTitle) ??
-        form.name ??
-        "Share your experience",
-      subhead:
-        this.stringOrNull(content?.headerDescription) ??
-        form.description ??
-        "Your honest feedback helps others make better decisions.",
-      questions,
-      tokens: {
-        accent:
-          this.stringOrNull(colors?.primary) ??
-          project.brandColorPrimary ??
-          "#4f46e5",
-        background: this.stringOrNull(colors?.background) ?? "#f8fafc",
-        text: this.stringOrNull(colors?.foreground) ?? "#111827",
-        mutedText: "#6b7280",
-        surface: "#ffffff",
-        border: "#d1d5db",
-        radius: this.radiusTokenToNumber(branding?.cornerRadius),
-        fontFamily: this.fontFamilyTokenToCss(branding?.fontFamily),
-      },
-    };
-  }
-
-  private optionalHostedQuestion(
-    field: unknown,
-    question: {
-      id: string;
-      type: "text" | "textarea" | "email" | "rating";
-      label: string;
-    },
-  ) {
-    const record = this.toRecord(field);
-    if (record?.enabled !== true) return [];
-    return [
-      {
-        ...question,
-        placeholder: "",
-        required: record.required === true,
-      },
-    ];
-  }
-
-  private isHostedFormConfig(
-    value: Record<string, unknown> | null | undefined,
-  ) {
-    return (
-      Boolean(value) &&
-      typeof value?.brandName === "string" &&
-      Array.isArray(value.questions) &&
-      Boolean(this.toRecord(value.tokens))
-    );
   }
 
   private resolveInitialModeration(
@@ -1580,73 +1533,8 @@ export class FormsService {
     return value as Prisma.InputJsonObject;
   }
 
-  private async validateFormConfigMedia(
-    config: Record<string, unknown>,
-    projectId: string,
-  ) {
-    const logoAssetId = this.readBrandingLogoAssetId(config);
-    if (logoAssetId) {
-      await this.mediaService?.getAssetForOwner({
-        assetId: logoAssetId,
-        purpose: MediaAssetPurpose.FORM_BRANDING_LOGO,
-        projectId,
-        statuses: [MediaAssetStatus.ACTIVE],
-      });
-    }
-    return this.stripHydratedLogo(config);
-  }
-
   private async hydrateFormConfig(config: Prisma.JsonValue) {
-    if (!config || typeof config !== "object" || Array.isArray(config)) {
-      return config;
-    }
-    const record = { ...(config as Record<string, unknown>) };
-    const branding =
-      record.branding &&
-      typeof record.branding === "object" &&
-      !Array.isArray(record.branding)
-        ? { ...(record.branding as Record<string, unknown>) }
-        : null;
-    if (!branding) return record as Prisma.JsonValue;
-    const logoAssetId =
-      typeof branding.logoAssetId === "string" ? branding.logoAssetId : null;
-    const logo = logoAssetId
-      ? await this.prisma.client.mediaAsset.findUnique({
-          where: { id: logoAssetId },
-        })
-      : null;
-    branding.logo = this.mediaDto(logo);
-    delete branding.logoUrl;
-    record.branding = branding;
-    return record as Prisma.JsonValue;
-  }
-
-  private stripHydratedLogo(config: Record<string, unknown>) {
-    const next = { ...config };
-    if (
-      next.branding &&
-      typeof next.branding === "object" &&
-      !Array.isArray(next.branding)
-    ) {
-      const branding = { ...(next.branding as Record<string, unknown>) };
-      delete branding.logo;
-      delete branding.logoUrl;
-      next.branding = branding;
-    }
-    return next;
-  }
-
-  private readBrandingLogoAssetId(config: Record<string, unknown>) {
-    const branding = config.branding;
-    if (!branding || typeof branding !== "object" || Array.isArray(branding)) {
-      return null;
-    }
-    const value = (branding as Record<string, unknown>).logoAssetId;
-    return typeof value === "string" ? value : null;
-  }
-
-  private mediaDto(asset: Parameters<NonNullable<MediaService["toDto"]>>[0]) {
-    return this.mediaService?.toDto(asset) ?? null;
+    return resolvePublishedFormConfig(config) as unknown as Prisma.JsonValue;
   }
 
   private toJsonValueInput(value: Prisma.JsonValue) {
@@ -1729,26 +1617,6 @@ export class FormsService {
     }
 
     return value as Record<string, unknown>;
-  }
-
-  private stringOrNull(value: unknown) {
-    return typeof value === "string" && value.trim() ? value.trim() : null;
-  }
-
-  private radiusTokenToNumber(value: unknown) {
-    if (value === "sharp") return 0;
-    if (value === "subtle") return 8;
-    if (value === "pill") return 28;
-    return 14;
-  }
-
-  private fontFamilyTokenToCss(value: unknown) {
-    if (value === "serif") return "Georgia, Cambria, serif";
-    if (value === "mono") {
-      return "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-    }
-    if (value === "system") return "ui-sans-serif, system-ui, sans-serif";
-    return "Inter, ui-sans-serif, system-ui, sans-serif";
   }
 
   private async tryReplayIdempotentSubmit(

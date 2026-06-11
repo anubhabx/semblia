@@ -51,22 +51,34 @@ export class ProjectActionAuditService {
   }
 
   recordWith(writer: ProjectActionAuditWriter, input: ProjectActionAuditInput) {
-    const actor = input.actor;
-
     return writer.projectActionAudit.create({
-      data: {
-        projectId: input.projectId,
-        actorType: actor?.actorType ?? "system",
-        actorId: actor?.userId ?? null,
-        credentialId: actor?.credentialId ?? null,
-        action: input.action,
-        targetType: input.targetType ?? null,
-        targetId: input.targetId ?? null,
-        ...(input.metadata
-          ? { metadata: input.metadata as Prisma.InputJsonObject }
-          : {}),
-      },
+      data: this.toCreateInput(input),
     });
+  }
+
+  /** Batch write — used by event-shaped recorders like forms theme telemetry. */
+  recordMany(inputs: ProjectActionAuditInput[]) {
+    return this.prisma.client.projectActionAudit.createMany({
+      data: inputs.map((input) => this.toCreateInput(input)),
+    });
+  }
+
+  private toCreateInput(
+    input: ProjectActionAuditInput,
+  ): Prisma.ProjectActionAuditUncheckedCreateInput {
+    const actor = input.actor;
+    return {
+      projectId: input.projectId,
+      actorType: actor?.actorType ?? "system",
+      actorId: actor?.userId ?? null,
+      credentialId: actor?.credentialId ?? null,
+      action: input.action,
+      targetType: input.targetType ?? null,
+      targetId: input.targetId ?? null,
+      ...(input.metadata
+        ? { metadata: input.metadata as Prisma.InputJsonObject }
+        : {}),
+    };
   }
 
   async list(projectId: string, query: ProjectActionAuditListQuery) {

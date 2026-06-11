@@ -257,6 +257,39 @@ describe("FormsController", () => {
     ).toEqual([Capability.MANAGE_PROJECT]);
   });
 
+  it("declares POST /projects/:slug/forms/:formId/theme-telemetry with manage-project capability", () => {
+    expect(
+      Reflect.getMetadata(
+        PATH_METADATA,
+        FormsController.prototype.recordThemeTelemetry,
+      ),
+    ).toBe(":formId/theme-telemetry");
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        FormsController.prototype.recordThemeTelemetry,
+      ),
+    ).toBe(RequestMethod.POST);
+    expect(
+      Reflect.getMetadata(
+        GUARDS_METADATA,
+        FormsController.prototype.recordThemeTelemetry,
+      ),
+    ).toEqual([CapabilityGuard]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_CAPABILITIES_KEY,
+        FormsController.prototype.recordThemeTelemetry,
+      ),
+    ).toEqual([Capability.MANAGE_PROJECT]);
+    expect(
+      Reflect.getMetadata(
+        THROTTLER_LIMIT + "analytics-events",
+        FormsController.prototype.recordThemeTelemetry,
+      ),
+    ).toBe(240);
+  });
+
   it("declares DELETE /projects/:slug/forms/:formId with manage-project capability", () => {
     expect(
       Reflect.getMetadata(PATH_METADATA, FormsController.prototype.delete),

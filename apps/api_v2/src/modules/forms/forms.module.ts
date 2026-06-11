@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import { AuthzModule } from "../../common/authz/authz.module.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
@@ -32,6 +33,7 @@ import { FormsService } from "./forms.service.js";
     FormsService,
     FormsRuntimeSignatureService,
     FormsRuntimeThrottlerGuard,
+    ProjectActionAuditService,
   ],
 })
 export class FormsModule {}

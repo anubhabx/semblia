@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConflictException, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
 import {
   ModerationStatus,
   PublicSubmitTrustMode,
   StudioDraftResourceType,
 } from "@workspace/database/prisma";
+import { defaultFormDefinition } from "@workspace/forms-core/schema";
 import { FormsService } from "./forms.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { ConfigService } from "@nestjs/config";
@@ -14,8 +19,13 @@ import type { SubmissionPrivateMetadataService } from "../responses/submission-p
 import type { PublicSubmitTrustService } from "../responses/public-submit-trust.service.js";
 import type { NotificationsService } from "../notifications/notifications.service.js";
 import type { SubmissionModerationService } from "../submission-moderation/submission-moderation.service.js";
+import type { ProjectActionAuditService } from "../../common/audit/project-action-audit.service.js";
 import type { MediaService } from "../storage/media.service.js";
 import { hashIdempotencyPayload } from "../responses/responses.dto.js";
+import {
+  LEGACY_STUDIO_DRAFT_MESSAGE,
+  createDefaultPublishedFormConfig,
+} from "./forms-v4-config.js";
 
 const mockCollectionFormFindMany = vi.fn();
 const mockCollectionFormCreate = vi.fn();
@@ -32,6 +42,7 @@ const mockCollectionFormSubmissionFindFirst = vi.fn();
 const mockCollectionFormSubmissionCreate = vi.fn();
 const mockCollectionFormSubmissionGroupBy = vi.fn();
 const mockProjectAnalyticsDailyUpsert = vi.fn();
+const mockWidgetAnalyticsCreateMany = vi.fn();
 const mockFormImpressionCreate = vi.fn();
 const mockFormImpressionGroupBy = vi.fn();
 const mockStudioDraftFindUnique = vi.fn();
@@ -75,6 +86,9 @@ const prismaMock = {
     },
     projectAnalyticsDaily: {
       upsert: mockProjectAnalyticsDailyUpsert,
+    },
+    widgetAnalytics: {
+      createMany: mockWidgetAnalyticsCreateMany,
     },
     formImpression: {
       create: mockFormImpressionCreate,
@@ -129,6 +143,11 @@ const submissionModerationServiceMock = {
   enqueueSubmission: mockEnqueueSubmission,
 } as unknown as SubmissionModerationService;
 
+const mockActionAuditRecordMany = vi.fn();
+const actionAuditServiceMock = {
+  recordMany: mockActionAuditRecordMany,
+} as unknown as ProjectActionAuditService;
+
 const configServiceMock = {
   get: vi.fn((key: string) =>
     key === "FORMS_RUNTIME_PUBLIC_BASE_DOMAIN"
@@ -145,6 +164,7 @@ function makeService(mediaService?: MediaService) {
     trustServiceMock,
     privateMetadataServiceMock,
     studioDraftsServiceMock,
+    actionAuditServiceMock,
     mediaService,
     notificationsServiceMock,
     submissionModerationServiceMock,
@@ -160,7 +180,7 @@ function makeForm(overrides: Record<string, unknown> = {}) {
     description: "Primary form",
     isActive: false,
     abWeight: 0,
-    config: { content: { headerTitle: "Hello" } },
+    config: createDefaultPublishedFormConfig(),
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-02T00:00:00.000Z"),
     ...overrides,
@@ -201,6 +221,7 @@ describe("FormsService", () => {
         Array.isArray(input) ? Promise.all(input) : input(prismaMock.client),
     );
     mockProjectAnalyticsDailyUpsert.mockResolvedValue({ id: "daily_1" });
+    mockWidgetAnalyticsCreateMany.mockResolvedValue({ count: 1 });
     mockFormImpressionCreate.mockResolvedValue({ id: "impression_1" });
     mockCollectionFormSubmissionFindFirst.mockResolvedValue(null);
     mockCollectionFormSubmissionGroupBy.mockResolvedValue([]);
@@ -301,6 +322,10 @@ describe("FormsService", () => {
   });
 
   it("create returns authenticated dto with stub metrics", async () => {
+    mockProjectFindUnique.mockResolvedValue({
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+    });
     mockCollectionFormCreate.mockResolvedValue(makeForm());
 
     const service = makeService();
@@ -311,11 +336,26 @@ describe("FormsService", () => {
         description: "",
         isActive: false,
         abWeight: 0,
-        config: { content: { headerTitle: "Hello" } },
       },
       { projectAccess: { projectId: "project_1" } },
     );
 
+    expect(mockCollectionFormCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          config: expect.objectContaining({
+            schemaVersion: 2,
+            content: expect.objectContaining({
+              brandName: "Acme",
+            }),
+            theme: expect.objectContaining({
+              inputs: expect.objectContaining({ brandColor: "#0f766e" }),
+            }),
+            derived: expect.any(Object),
+          }),
+        }),
+      }),
+    );
     expect(result).toMatchObject({
       id: "form_1",
       projectId: "project_1",
@@ -327,11 +367,29 @@ describe("FormsService", () => {
     });
   });
 
+  it("create rejects invalid forms v4 configs with 422", async () => {
+    const service = makeService();
+
+    await expect(
+      service.create(
+        { slug: "acme" },
+        {
+          name: "Default Form",
+          description: "",
+          isActive: false,
+          abWeight: 0,
+          config: { content: { headerTitle: "Legacy config" } },
+        },
+        { projectAccess: { projectId: "project_1" } },
+      ),
+    ).rejects.toThrow(UnprocessableEntityException);
+    expect(mockCollectionFormCreate).not.toHaveBeenCalled();
+  });
+
   it("duplicate creates an inactive copy with the source config and stub metrics", async () => {
-    const sourceConfig = {
-      content: { headerTitle: "Customer proof" },
-      fields: [{ id: "content", type: "textarea" }],
-    };
+    const sourceConfig = createDefaultPublishedFormConfig({
+      brandName: "Customer proof",
+    });
     mockCollectionFormFindFirst
       .mockResolvedValueOnce(
         makeForm({
@@ -546,20 +604,30 @@ describe("FormsService", () => {
   });
 
   it("publishDraft promotes the saved Studio draft into the live hosted form config", async () => {
+    const draftConfig = defaultFormDefinition({
+      brandName: "Acme",
+      brandColor: "#0f766e",
+    });
+    draftConfig.content.headline = "Live headline";
+    const publishedConfig = createDefaultPublishedFormConfig({
+      brandName: "Acme",
+      brandColor: "#0f766e",
+    });
+    publishedConfig.content.headline = "Live headline";
     mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
     mockStudioDraftFindUnique.mockResolvedValue({
       resourceType: StudioDraftResourceType.FORM,
       resourceId: "form_1",
       version: 2,
       publishedVersion: null,
-      draft: { brandName: "Acme", headline: "Live headline", tokens: {} },
+      draft: draftConfig,
       updatedByUserId: "user_1",
       updatedAt: new Date("2026-05-02T00:01:00.000Z"),
     });
     mockCollectionFormUpdate.mockResolvedValue(
       makeForm({
         isActive: true,
-        config: { brandName: "Acme", headline: "Live headline", tokens: {} },
+        config: publishedConfig,
       }),
     );
 
@@ -573,7 +641,14 @@ describe("FormsService", () => {
     expect(mockCollectionFormUpdate).toHaveBeenCalledWith({
       where: { id: "form_1" },
       data: {
-        config: { brandName: "Acme", headline: "Live headline", tokens: {} },
+        config: expect.objectContaining({
+          schemaVersion: 2,
+          content: expect.objectContaining({
+            brandName: "Acme",
+            headline: "Live headline",
+          }),
+          derived: expect.any(Object),
+        }),
       },
       select: expect.any(Object),
     });
@@ -587,11 +662,104 @@ describe("FormsService", () => {
       data: { publishedVersion: 2 },
     });
     expect(mockRedisDel).toHaveBeenCalledWith("v2:forms:public:acme");
-    expect(result.config).toEqual({
-      brandName: "Acme",
-      headline: "Live headline",
-      tokens: {},
+    expect(result.config).toMatchObject({
+      schemaVersion: 2,
+      content: {
+        brandName: "Acme",
+        headline: "Live headline",
+      },
+      derived: expect.any(Object),
     });
+  });
+
+  it("publishDraft rejects legacy Studio drafts loudly", async () => {
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    mockStudioDraftFindUnique.mockResolvedValue({
+      resourceType: StudioDraftResourceType.FORM,
+      resourceId: "form_1",
+      version: 2,
+      publishedVersion: null,
+      draft: { content: { headerTitle: "Legacy draft" } },
+      updatedByUserId: "user_1",
+      updatedAt: new Date("2026-05-02T00:01:00.000Z"),
+    });
+
+    const service = makeService();
+
+    await expect(
+      service.publishDraft(
+        { slug: "acme", formId: "form_1" },
+        { expectedVersion: 2 },
+        { projectAccess: { projectId: "project_1" } },
+      ),
+    ).rejects.toMatchObject({
+      response: { message: LEGACY_STUDIO_DRAFT_MESSAGE },
+    });
+    expect(mockCollectionFormUpdate).not.toHaveBeenCalled();
+  });
+
+  it("recordThemeTelemetry persists validated events for the owned form", async () => {
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+
+    const service = makeService();
+    const actor = {
+      actorType: "user",
+      userId: "user_1",
+      credentialId: null,
+    } as unknown as Parameters<typeof service.recordThemeTelemetry>[3];
+    const result = await service.recordThemeTelemetry(
+      { slug: "acme", formId: "form_1" },
+      {
+        events: [
+          {
+            type: "forms_theme.knob_changed",
+            formId: "form_1",
+            presetId: "clean",
+            knob: "brandColor",
+            from: "#4f46e5",
+            to: "#0f766e",
+          },
+        ],
+      },
+      { projectAccess: { projectId: "project_1" } },
+      actor,
+    );
+
+    expect(result).toEqual({ accepted: true, count: 1 });
+    expect(mockActionAuditRecordMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        projectId: "project_1",
+        actor,
+        action: "forms_theme.knob_changed",
+        targetType: "FORM",
+        targetId: "form_1",
+        metadata: expect.objectContaining({ knob: "brandColor" }),
+      }),
+    ]);
+  });
+
+  it("recordThemeTelemetry rejects event form IDs that do not match the route", async () => {
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+
+    const service = makeService();
+    await expect(
+      service.recordThemeTelemetry(
+        { slug: "acme", formId: "form_1" },
+        {
+          events: [
+            {
+              type: "forms_theme.preset_selected",
+              formId: "form_other",
+              presetId: "clean",
+              previousPresetId: null,
+            },
+          ],
+        },
+        { projectAccess: { projectId: "project_1" } },
+        null,
+      ),
+    ).rejects.toThrow(UnprocessableEntityException);
+    expect(mockActionAuditRecordMany).not.toHaveBeenCalled();
   });
 
   it("listPublic returns only active forms with safe projection", async () => {
@@ -613,19 +781,19 @@ describe("FormsService", () => {
         orderBy: { createdAt: "asc" },
       }),
     );
-    expect(result).toEqual({
-      data: [
-        {
-          id: "form_1",
-          slug: "default-form",
-          name: "Default Form",
-          description: "Primary form",
-          isActive: true,
-          abWeight: 0,
-          config: { content: { headerTitle: "Hello" } },
-          createdAt: new Date("2026-04-01T00:00:00.000Z"),
-        },
-      ],
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
+      id: "form_1",
+      slug: "default-form",
+      name: "Default Form",
+      description: "Primary form",
+      isActive: true,
+      abWeight: 0,
+      config: {
+        schemaVersion: 2,
+        derived: expect.any(Object),
+      },
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
     });
     expect(result.data[0]).not.toHaveProperty("updatedAt");
   });
@@ -655,24 +823,45 @@ describe("FormsService", () => {
       makeForm({
         isActive: true,
         config: {
-          content: {
-            headerTitle: "Tell us what worked",
-            headerDescription: "A short note helps the next buyer.",
-          },
-          fields: {
-            email: { enabled: true, required: false },
-            rating: { enabled: true, required: true },
-            jobTitle: { enabled: false, required: false },
-            company: { enabled: true, required: false },
-          },
-          branding: {
-            colors: {
-              primary: "#0f766e",
-              background: "#eef7f4",
-              foreground: "#0f172a",
+          brandName: "Acme",
+          headline: "Tell us what worked",
+          subhead: "A short note helps the next buyer.",
+          questions: [
+            {
+              id: "content",
+              type: "textarea",
+              label: "Your feedback",
+              required: true,
             },
-            cornerRadius: "pill",
-            fontFamily: "system",
+            {
+              id: "authorName",
+              type: "text",
+              label: "Your name",
+              required: true,
+            },
+            {
+              id: "authorEmail",
+              type: "email",
+              label: "Email",
+              required: false,
+            },
+            {
+              id: "rating",
+              type: "rating",
+              label: "Rating",
+              required: true,
+            },
+            {
+              id: "authorCompany",
+              type: "text",
+              label: "Company",
+              required: false,
+            },
+          ],
+          tokens: {
+            accent: "#0f766e",
+            radius: 28,
+            fontBody: "ui-sans-serif, system-ui, sans-serif",
           },
         },
       }),
@@ -719,20 +908,29 @@ describe("FormsService", () => {
       id: "form_1",
       slug: "default-form",
       name: "Default Form",
+      configEtag: expect.stringMatching(/^[a-f0-9]{64}$/),
       publishedAt: "2026-04-02T00:00:00.000Z",
     });
     expect(result.form.config).toMatchObject({
-      brandName: "Acme",
-      headline: "Tell us what worked",
-      tokens: {
-        accent: "#0f766e",
-        radius: 28,
+      schemaVersion: 2,
+      content: {
+        brandName: "Acme",
+        headline: "Tell us what worked",
       },
+      theme: {
+        inputs: expect.objectContaining({
+          brandColor: "#0f766e",
+          radius: 4,
+        }),
+      },
+      derived: expect.any(Object),
     });
     const hostedConfig = result.form.config as {
-      questions: Array<{ id: string }>;
+      structure: { questions: Array<{ id: string }> };
     };
-    expect(hostedConfig.questions.map((question) => question.id)).toEqual([
+    expect(
+      hostedConfig.structure.questions.map((question) => question.id),
+    ).toEqual([
       "content",
       "authorName",
       "authorEmail",
