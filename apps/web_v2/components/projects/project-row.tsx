@@ -6,6 +6,8 @@ import { ItemRow } from "@/components/shared";
 import { fmtRelative, projectInitials } from "@/lib/format";
 import { PROJECT_TYPE_LABELS } from "@/lib/format";
 
+import { projectStaggerDelay } from "./project-card";
+
 // ── Project row (list view) ────────────────────────────────────────────────────
 
 export function ProjectRow({
@@ -27,8 +29,11 @@ export function ProjectRow({
       href={`/projects/${project.slug}`}
       aria-label={project.name}
       padding="default"
-      className="group animate-fade-up"
-      style={{ animationDelay: `${index * 55}ms`, animationFillMode: "both" }}
+      className="group animate-fade-up last:border-b-0"
+      style={{
+        animationDelay: projectStaggerDelay(index, 55),
+        animationFillMode: "both",
+      }}
       leading={
         <span
           className="flex size-9 items-center justify-center rounded-lg text-sm font-bold text-white transition-shadow duration-200 group-hover:shadow-[0_2px_8px_var(--tw-shadow-color)]"

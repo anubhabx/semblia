@@ -19,7 +19,9 @@ export function useProjects() {
     () => projectsQuery.data?.items ?? [],
     [projectsQuery.data?.items],
   );
-  const [view, setView] = useViewMode("projects:view", "list");
+  // Grid is the richer presentation at the 1-5 project counts most workspaces
+  // live in; a persisted user choice (localStorage) still wins.
+  const [view, setView] = useViewMode("projects:view", "grid");
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<ProjectFilter>("all");
 
@@ -63,6 +65,7 @@ export function useProjects() {
     loading: projectsQuery.isLoading && !liveState.hasData,
     refreshing: liveState.isBackgroundRefreshing,
     error: projectsQuery.error,
+    refetch: projectsQuery.refetch,
     view,
     setView,
     search,

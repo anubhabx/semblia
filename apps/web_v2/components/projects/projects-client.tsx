@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  ArrowClockwise as ArrowClockwiseIcon,
   ArrowRight as ArrowRightIcon,
   CheckCircle as CheckCircleIcon,
   Clock as ClockIcon,
   Plus as PlusIcon,
+  WarningCircle as WarningCircleIcon,
   XCircle as XCircleIcon,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -20,8 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  PageHeader,
+  HeaderSep,
   PageBody,
   FilterPills,
   RefreshingDataBadge,
@@ -38,7 +41,7 @@ import { PROJECT_TYPE_LABELS } from "@/lib/format";
 
 import { ProjectRowSkeleton, ProjectCardSkeleton } from "./project-skeletons";
 import { ProjectRow } from "./project-row";
-import { ProjectCard } from "./project-card";
+import { ProjectCard, NewProjectTile } from "./project-card";
 import { EmptySearch, EmptyProjects } from "./project-empty-states";
 
 function transferUserName(user: V2ProjectOwnershipTransferDTO["fromUser"]) {
@@ -67,7 +70,7 @@ function IncomingTransfers({
   if (transfers.length === 0) return null;
 
   return (
-    <div className="px-4 pt-4 sm:px-6">
+    <div className="mt-6">
       <div className="overflow-hidden rounded-lg border border-warning/30 bg-warning/[0.06]">
         <div className="divide-y divide-warning/20">
           {transfers.map((transfer) => (
@@ -180,6 +183,8 @@ export function ProjectsClient() {
     filtered,
     loading,
     refreshing,
+    error,
+    refetch,
     view,
     setView,
     search,
@@ -187,6 +192,8 @@ export function ProjectsClient() {
     typeFilter,
     setTypeFilter,
     typeCounts,
+    totalResponses,
+    totalPending,
   } = useProjects();
   const incomingTransfers = useMyProjectTransfers({ freshOnMount: true });
   const acceptTransfer = useAcceptProjectTransfer();
@@ -212,6 +219,13 @@ export function ProjectsClient() {
   // granted by default: at small workspaces (1-5 projects) there is nothing to
   // filter, search, or switch view of, so the controls are noise.
   const showToolbar = !loading && projects.length >= 6;
+  const isEmpty = !loading && !error && projects.length === 0;
+  // Only a full load failure gets the error surface; background refresh
+  // failures keep showing cached data per the live-query policy.
+  const loadFailed = !loading && Boolean(error) && projects.length === 0;
+  // The ghost tile is the create affordance inside the canvas; it bows out
+  // when the grid is showing a filtered subset rather than the workspace.
+  const showGhostTile = !search && typeFilter === "all";
 
   async function handleAcceptTransfer() {
     if (!reviewTransfer) return;
@@ -240,86 +254,158 @@ export function ProjectsClient() {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <PageHeader
-        title="Projects"
-        actions={
-          <Button size="sm" className="gap-1.5 shrink-0" asChild>
-            <Link href="/projects/new">
-              <PlusIcon className="size-3.5" />
-              New project
-            </Link>
-          </Button>
-        }
-        toolbar={
-          showToolbar ? (
-            <>
-              <FilterPills<ProjectFilter>
-                aria-label="Filter projects by type"
-                options={filterOptions}
-                value={typeFilter}
-                onChange={setTypeFilter}
+    <PageBody padding="bare" className="flex flex-1 flex-col">
+      {/* ── Workspace header — centered column, not a full-bleed band ── */}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <header className="animate-fade-up flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-7 sm:pt-9">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="block h-px w-5 shrink-0 rounded-full bg-brand"
               />
-              <div className="ml-auto flex items-center gap-3">
-                <RefreshingDataBadge show={refreshing} />
-                <SearchField
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="Search projects…"
-                  ariaLabel="Search projects"
-                />
-                <ViewToggle value={view} onChange={setView} />
-              </div>
-            </>
-          ) : undefined
-        }
-      />
+              <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
+                Workspace
+              </p>
+            </div>
+            <h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              Projects
+            </h1>
+            {loading ? (
+              <Skeleton className="mt-2.5 h-3.5 w-48 animate-shimmer" />
+            ) : isEmpty || loadFailed ? null : (
+              <p className="mt-1.5 text-[13px] text-muted-foreground">
+                {projects.length} project{projects.length === 1 ? "" : "s"}
+                <HeaderSep />
+                {totalResponses > 0
+                  ? `${totalResponses} response${totalResponses === 1 ? "" : "s"}`
+                  : "no responses yet"}
+                {totalPending > 0 && (
+                  <>
+                    <HeaderSep />
+                    <span className="font-medium text-warning">
+                      {totalPending} pending review
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-3 pb-0.5">
+            <RefreshingDataBadge show={refreshing} />
+            {!isEmpty && (
+              <Button size="sm" className="gap-1.5" asChild>
+                <Link href="/projects/new">
+                  <PlusIcon className="size-3.5" />
+                  New project
+                </Link>
+              </Button>
+            )}
+          </div>
+        </header>
+
+        <IncomingTransfers transfers={transfers} onReview={setReviewTransfer} />
+
+        {showToolbar && (
+          <div className="sticky top-[3.25rem] z-20 -mx-4 mt-6 flex items-center gap-3 border-y border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6">
+            <FilterPills<ProjectFilter>
+              aria-label="Filter projects by type"
+              options={filterOptions}
+              value={typeFilter}
+              onChange={setTypeFilter}
+            />
+            <div className="ml-auto flex items-center gap-3">
+              <SearchField
+                value={search}
+                onChange={setSearch}
+                placeholder="Search projects…"
+                ariaLabel="Search projects"
+              />
+              <ViewToggle value={view} onChange={setView} />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Content ── */}
-      <PageBody padding="bare" className="flex-1 overflow-y-auto">
-        <IncomingTransfers transfers={transfers} onReview={setReviewTransfer} />
-        {loading ? (
-          view === "list" ? (
-            <div className="divide-y divide-border">
-              {[0, 1, 2].map((i) => (
-                <ProjectRowSkeleton key={i} />
+      {isEmpty ? (
+        <EmptyProjects />
+      ) : (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+          {loading ? (
+            view === "list" ? (
+              <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+                {[0, 1, 2].map((i) => (
+                  <ProjectRowSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((i) => (
+                  <ProjectCardSkeleton key={i} />
+                ))}
+              </div>
+            )
+          ) : loadFailed ? (
+            <LoadFailed onRetry={() => refetch()} />
+          ) : filtered.length === 0 && search ? (
+            <EmptySearch query={search} onClear={() => setSearch("")} />
+          ) : view === "list" ? (
+            <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+              {filtered.map((project, i) => (
+                <ProjectRow key={project.id} project={project} index={i} />
               ))}
             </div>
           ) : (
-            <div className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
-              {[0, 1, 2].map((i) => (
-                <ProjectCardSkeleton key={i} />
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((project, i) => (
+                <ProjectCard key={project.id} project={project} index={i} />
               ))}
+              {showGhostTile && <NewProjectTile index={filtered.length} />}
             </div>
-          )
-        ) : filtered.length === 0 && search ? (
-          <EmptySearch query={search} onClear={() => setSearch("")} />
-        ) : projects.length === 0 ? (
-          <EmptyProjects />
-        ) : view === "list" ? (
-          <div className="divide-y divide-border">
-            {filtered.map((project, i) => (
-              <ProjectRow key={project.id} project={project} index={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid auto-rows-fr grid-cols-1 gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
-            {filtered.map((project, i) => (
-              <ProjectCard key={project.id} project={project} index={i} />
-            ))}
-          </div>
-        )}
-        <IncomingTransferDialog
-          transfer={reviewTransfer}
-          open={reviewTransfer !== null}
-          onOpenChange={(open) => {
-            if (!open) setReviewTransfer(null);
-          }}
-          onAccept={handleAcceptTransfer}
-          onDecline={handleDeclineTransfer}
-          pending={transferPending}
-        />
-      </PageBody>
+          )}
+        </div>
+      )}
+
+      <IncomingTransferDialog
+        transfer={reviewTransfer}
+        open={reviewTransfer !== null}
+        onOpenChange={(open) => {
+          if (!open) setReviewTransfer(null);
+        }}
+        onAccept={handleAcceptTransfer}
+        onDecline={handleDeclineTransfer}
+        pending={transferPending}
+      />
+    </PageBody>
+  );
+}
+
+// ── Load-failure state ─────────────────────────────────────────────────────────
+
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="animate-fade-up flex flex-col items-center px-6 py-16 text-center">
+      <span className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
+        <WarningCircleIcon className="size-5 text-destructive" aria-hidden />
+      </span>
+      <p className="mt-3 text-[15px] font-semibold tracking-tight text-foreground">
+        Couldn&rsquo;t load your projects
+      </p>
+      <p className="mt-1.5 max-w-[32ch] text-[12.5px] leading-relaxed text-muted-foreground/85">
+        The request didn&rsquo;t make it through. Check your connection and try
+        again.
+      </p>
+      <Button
+        type="button"
+        onClick={onRetry}
+        variant="outline"
+        size="default"
+        className="mt-4"
+      >
+        <ArrowClockwiseIcon className="size-3.5" />
+        Try again
+      </Button>
     </div>
   );
 }
