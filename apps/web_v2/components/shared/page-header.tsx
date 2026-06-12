@@ -53,6 +53,12 @@ export interface PageHeaderProps {
   density?: "default" | "compact";
   /** Skip the bottom border (when a sticky toolbar sits below and provides one). */
   borderless?: boolean;
+  /**
+   * Constrain header + toolbar content to the centered max-w-6xl rail while
+   * the band itself (border, backdrop) stays full-bleed. For workspace-level
+   * pages whose body content sits on the same rail. Default density only.
+   */
+  contained?: boolean;
   /** Animate-in on mount. */
   animate?: boolean;
   className?: string;
@@ -67,6 +73,7 @@ export function PageHeader({
   toolbar,
   density = "default",
   borderless = false,
+  contained = false,
   animate = false,
   className,
   children,
@@ -121,7 +128,7 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="pb-4">
+      <div className={cn("pb-4", contained && "mx-auto w-full max-w-6xl")}>
         {eyebrow && (
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
             {eyebrow}
@@ -142,8 +149,15 @@ export function PageHeader({
         )}
       </div>
       {toolbar && (
-        <div className="-mx-4 flex items-center justify-between gap-3 border-t border-border/60 px-4 py-2.5 sm:-mx-6 sm:px-6">
-          {toolbar}
+        <div className="-mx-4 border-t border-border/60 px-4 py-2.5 sm:-mx-6 sm:px-6">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-3",
+              contained && "mx-auto w-full max-w-6xl",
+            )}
+          >
+            {toolbar}
+          </div>
         </div>
       )}
       {children}

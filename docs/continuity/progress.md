@@ -1,6 +1,6 @@
 # Progress Ledger
 
-Last updated: 2026-06-12 (projects workspace-home structural rework; earlier same day: account-shell UX rework + PUT CORS fix + robots noindex)
+Last updated: 2026-06-12 (projects workspace-home revision 2: user rejected the streak/mono-uppercase eyebrow + page-local header from the same-day rework as AI-slop; page returned to canonical `PageHeader` extended with a `contained` max-w-6xl rail, eyebrows stripped from the projects empty states, skills-first directive added to CLAUDE.md — see docs/ui-rework/2026-06-12-projects/revision-2.md. Earlier same day: projects structural rework, account-shell UX rework + PUT CORS fix + robots noindex)
 
 ## Current Snapshot
 

@@ -34,17 +34,7 @@ export function EmptyProjects() {
       <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-10 px-6 py-12 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-16">
         {/* ── Left: editorial copy ── */}
         <div className="animate-fade-up max-w-[34rem]">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="block h-px w-5 shrink-0 rounded-full bg-brand"
-            />
-            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
-              First project · 0 of 1
-            </p>
-          </div>
-
-          <h2 className="mt-4 text-[1.85rem] leading-[1.1] font-semibold tracking-[-0.022em] text-foreground sm:text-[2.15rem]">
+          <h2 className="text-[1.85rem] leading-[1.1] font-semibold tracking-[-0.022em] text-foreground sm:text-[2.15rem]">
             Create your first project to start collecting testimonials.
           </h2>
 
@@ -124,10 +114,7 @@ export function EmptySearch({
 }) {
   return (
     <div className="animate-fade-up flex flex-col items-center px-6 py-16 text-center">
-      <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/70 uppercase">
-        No matches
-      </p>
-      <p className="mt-3 text-[15px] font-semibold tracking-tight text-foreground">
+      <p className="text-[15px] font-semibold tracking-tight text-foreground">
         Nothing here for{" "}
         <span className="text-muted-foreground">&ldquo;{query}&rdquo;</span>
       </p>

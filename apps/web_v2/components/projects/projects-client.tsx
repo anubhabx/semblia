@@ -22,10 +22,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   HeaderSep,
   PageBody,
+  PageHeader,
   FilterPills,
   RefreshingDataBadge,
   SearchField,
@@ -254,44 +254,36 @@ export function ProjectsClient() {
   }
 
   return (
-    <PageBody padding="bare" className="flex flex-1 flex-col">
-      {/* ── Workspace header — centered column, not a full-bleed band ── */}
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="animate-fade-up flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-7 sm:pt-9">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="block h-px w-5 shrink-0 rounded-full bg-brand"
-              />
-              <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
-                Workspace
-              </p>
-            </div>
-            <h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              Projects
-            </h1>
-            {loading ? (
-              <Skeleton className="mt-2.5 h-3.5 w-48 animate-shimmer" />
-            ) : isEmpty || loadFailed ? null : (
-              <p className="mt-1.5 text-[13px] text-muted-foreground">
-                {projects.length} project{projects.length === 1 ? "" : "s"}
-                <HeaderSep />
-                {totalResponses > 0
-                  ? `${totalResponses} response${totalResponses === 1 ? "" : "s"}`
-                  : "no responses yet"}
-                {totalPending > 0 && (
-                  <>
-                    <HeaderSep />
-                    <span className="font-medium text-warning">
-                      {totalPending} pending review
-                    </span>
-                  </>
-                )}
-              </p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-3 pb-0.5">
+    <div className="flex flex-1 flex-col">
+      <PageHeader
+        contained
+        title="Projects"
+        description={
+          loading ? (
+            <span
+              aria-hidden
+              className="inline-block h-3 w-44 animate-pulse rounded bg-muted"
+            />
+          ) : isEmpty || loadFailed ? undefined : (
+            <>
+              {projects.length} project{projects.length === 1 ? "" : "s"}
+              <HeaderSep />
+              {totalResponses > 0
+                ? `${totalResponses} response${totalResponses === 1 ? "" : "s"}`
+                : "no responses yet"}
+              {totalPending > 0 && (
+                <>
+                  <HeaderSep />
+                  <span className="font-medium text-warning">
+                    {totalPending} pending review
+                  </span>
+                </>
+              )}
+            </>
+          )
+        }
+        actions={
+          <div className="flex items-center gap-3">
             <RefreshingDataBadge show={refreshing} />
             {!isEmpty && (
               <Button size="sm" className="gap-1.5" asChild>
@@ -302,70 +294,87 @@ export function ProjectsClient() {
               </Button>
             )}
           </div>
-        </header>
-
-        <IncomingTransfers transfers={transfers} onReview={setReviewTransfer} />
-
-        {showToolbar && (
-          <div className="sticky top-[3.25rem] z-20 -mx-4 mt-6 flex items-center gap-3 border-y border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6">
-            <FilterPills<ProjectFilter>
-              aria-label="Filter projects by type"
-              options={filterOptions}
-              value={typeFilter}
-              onChange={setTypeFilter}
-            />
-            <div className="ml-auto flex items-center gap-3">
-              <SearchField
-                value={search}
-                onChange={setSearch}
-                placeholder="Search projects…"
-                ariaLabel="Search projects"
+        }
+        toolbar={
+          showToolbar ? (
+            <>
+              <FilterPills<ProjectFilter>
+                aria-label="Filter projects by type"
+                options={filterOptions}
+                value={typeFilter}
+                onChange={setTypeFilter}
               />
-              <ViewToggle value={view} onChange={setView} />
+              <div className="ml-auto flex items-center gap-3">
+                <SearchField
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search projects…"
+                  ariaLabel="Search projects"
+                />
+                <ViewToggle value={view} onChange={setView} />
+              </div>
+            </>
+          ) : undefined
+        }
+      />
+
+      <PageBody padding="bare" className="flex flex-1 flex-col overflow-y-auto">
+        {/* Gutters sit outside the rail so the rail lines up exactly with the
+            contained PageHeader band above (which gets its gutters from the
+            header element itself). */}
+        {transfers.length > 0 && (
+          <div className="px-4 sm:px-6">
+            <div className="mx-auto w-full max-w-6xl">
+              <IncomingTransfers
+                transfers={transfers}
+                onReview={setReviewTransfer}
+              />
             </div>
           </div>
         )}
-      </div>
 
-      {/* ── Content ── */}
-      {isEmpty ? (
-        <EmptyProjects />
-      ) : (
-        <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-          {loading ? (
-            view === "list" ? (
-              <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-                {[0, 1, 2].map((i) => (
-                  <ProjectRowSkeleton key={i} />
-                ))}
-              </div>
-            ) : (
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
-                {[0, 1, 2].map((i) => (
-                  <ProjectCardSkeleton key={i} />
-                ))}
-              </div>
-            )
-          ) : loadFailed ? (
-            <LoadFailed onRetry={() => refetch()} />
-          ) : filtered.length === 0 && search ? (
-            <EmptySearch query={search} onClear={() => setSearch("")} />
-          ) : view === "list" ? (
-            <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-              {filtered.map((project, i) => (
-                <ProjectRow key={project.id} project={project} index={i} />
-              ))}
+        {/* ── Content ── */}
+        {isEmpty ? (
+          <EmptyProjects />
+        ) : (
+          <div className="px-4 pb-16 sm:px-6">
+            <div className="mx-auto w-full max-w-6xl">
+              {loading ? (
+                view === "list" ? (
+                  <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+                    {[0, 1, 2].map((i) => (
+                      <ProjectRowSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+                    {[0, 1, 2].map((i) => (
+                      <ProjectCardSkeleton key={i} />
+                    ))}
+                  </div>
+                )
+              ) : loadFailed ? (
+                <LoadFailed onRetry={() => refetch()} />
+              ) : filtered.length === 0 && search ? (
+                <EmptySearch query={search} onClear={() => setSearch("")} />
+              ) : view === "list" ? (
+                <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+                  {filtered.map((project, i) => (
+                    <ProjectRow key={project.id} project={project} index={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+                  {filtered.map((project, i) => (
+                    <ProjectCard key={project.id} project={project} index={i} />
+                  ))}
+                  {showGhostTile && <NewProjectTile index={filtered.length} />}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((project, i) => (
-                <ProjectCard key={project.id} project={project} index={i} />
-              ))}
-              {showGhostTile && <NewProjectTile index={filtered.length} />}
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </PageBody>
 
       <IncomingTransferDialog
         transfer={reviewTransfer}
@@ -377,7 +386,7 @@ export function ProjectsClient() {
         onDecline={handleDeclineTransfer}
         pending={transferPending}
       />
-    </PageBody>
+    </div>
   );
 }
 

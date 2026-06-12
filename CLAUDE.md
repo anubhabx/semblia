@@ -18,6 +18,7 @@ python scripts/update-indexes.py
 ```
 
 Hard constraints:
+- **Skills-first, always.** Before starting any task that a repo/user skill covers, invoke the relevant skill(s) via the Skill tool — never freehand ("raw-dog") work a skill exists for. UI/design work MUST route through the design skills (`/critique` or `/audit` before, `/normalize`/`/arrange`/`/typeset`/etc. during, `/polish` after); testing through the testing skills; framework questions through the docs skills. The skills encode the house taste and standards — bypassing them is how AI-slop patterns (decorative streaks, mono uppercase eyebrows, off-system one-off headers) get shipped.
 - Do not end a session before `pnpm build --filter web_v2` succeeds.
 - In `apps/web_v2`, use `/v2/` endpoints only.
 - In Next.js 16 routes/layouts, `params` is a Promise: always `await props.params`.
