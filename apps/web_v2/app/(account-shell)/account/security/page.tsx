@@ -280,13 +280,8 @@ function MfaSection() {
 export default function SecurityPage() {
   return (
     <>
-      <PageHeader contained title="Security" />
-      <PageBody
-        contained
-        padding="default"
-        withFooter
-        contentClassName="space-y-8"
-      >
+      <PageHeader title="Security" />
+      <PageBody padding="default" withFooter className="space-y-8">
         <SettingsSection
           id="password"
           title="Password"

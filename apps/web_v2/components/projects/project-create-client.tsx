@@ -53,7 +53,6 @@ export function ProjectCreateClient() {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="New project"
         actions={
           <Button variant="ghost" size="sm" className="gap-1.5" asChild>
@@ -64,11 +63,7 @@ export function ProjectCreateClient() {
           </Button>
         }
       />
-      <PageBody
-        contained
-        maxWidth="4xl"
-        contentClassName="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]"
-      >
+      <PageBody className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand/10">

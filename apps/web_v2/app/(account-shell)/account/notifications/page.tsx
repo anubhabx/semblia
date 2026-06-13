@@ -4,7 +4,7 @@ import { NotificationsClient } from "@/components/notifications/notifications-cl
 export default function NotificationsPage() {
   return (
     <>
-      <PageHeader contained title="Notifications" />
+      <PageHeader title="Notifications" />
       <NotificationsClient />
     </>
   );

@@ -3,42 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  UserCircleIcon,
-  ShieldCheckIcon,
-  CreditCardIcon,
-  BellIcon,
-  SlidersHorizontalIcon,
-  ListIcon,
-} from "@phosphor-icons/react";
+import { UserCircleIcon, ListIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-
-// ── Nav model ──────────────────────────────────────────────────────────────────
-
-interface AccountNavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  disabled?: boolean;
-}
-
-const NAV: AccountNavItem[] = [
-  { label: "Profile", href: "/account/profile", icon: UserCircleIcon },
-  { label: "Security", href: "/account/security", icon: ShieldCheckIcon },
-  { label: "Billing", href: "/account/billing", icon: CreditCardIcon },
-  {
-    label: "Notifications",
-    href: "/account/notifications",
-    icon: BellIcon,
-  },
-  {
-    label: "Defaults",
-    href: "/account/defaults",
-    icon: SlidersHorizontalIcon,
-  },
-];
+import { ACCOUNT_NAV, type AccountNavItem } from "./account-nav";
 
 // ── Single nav row ─────────────────────────────────────────────────────────────
 
@@ -105,7 +74,7 @@ export function AccountSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         aria-label="Account navigation"
         onClick={onNavigate}
       >
-        {NAV.map((item) => (
+        {ACCOUNT_NAV.map((item) => (
           <NavRow key={item.href} item={item} active={isActive(item)} />
         ))}
       </nav>

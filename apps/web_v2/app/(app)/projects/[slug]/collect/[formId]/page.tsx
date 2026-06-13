@@ -29,16 +29,10 @@ export default async function StudioPage(props: {
   return (
     <div className="flex flex-1 flex-col" data-forms-v4-stub="studio">
       <PageHeader
-        contained
         title="Form studio"
         description={`${project.name} / Forms v4`}
       />
-      <PageBody
-        contained
-        padding="default"
-        maxWidth="4xl"
-        className="flex items-center"
-      >
+      <PageBody padding="default" className="flex items-center">
         <div className="py-16 text-center">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Forms v4

@@ -23,10 +23,6 @@ export interface PageToolbarProps {
   stickyTop?: string;
   /** Skip the bottom border (useful when toolbar abuts another bordered region). */
   borderless?: boolean;
-  /** Keep toolbar controls on the same centered rail as contained headers. */
-  contained?: boolean;
-  /** Classes for the centered rail when `contained` is true. */
-  contentClassName?: string;
   className?: string;
 }
 
@@ -36,8 +32,6 @@ export function PageToolbar({
   secondary,
   stickyTop = "3.25rem",
   borderless = false,
-  contained = false,
-  contentClassName,
   className,
 }: PageToolbarProps) {
   return (
@@ -49,28 +43,21 @@ export function PageToolbar({
       )}
       style={{ top: stickyTop }}
     >
-      <div
-        className={cn(
-          contained && "mx-auto w-full max-w-6xl",
-          contentClassName,
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          {leading && (
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              {leading}
-            </div>
-          )}
-          {trailing && (
-            <div className="flex shrink-0 items-center gap-2">{trailing}</div>
-          )}
-        </div>
-        {secondary && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-3 border-t border-border/60 pt-2.5">
-            {secondary}
+      <div className="flex flex-wrap items-center gap-3">
+        {leading && (
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {leading}
           </div>
         )}
+        {trailing && (
+          <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+        )}
       </div>
+      {secondary && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-3 border-t border-border/60 pt-2.5">
+          {secondary}
+        </div>
+      )}
     </div>
   );
 }

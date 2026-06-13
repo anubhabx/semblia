@@ -30,7 +30,6 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ProjectAuditModule } from "./modules/project-audit/project-audit.module.js";
 import { PublicSurfacesModule } from "./modules/public-surfaces/public-surfaces.module.js";
 import { BillingModule } from "./modules/billing/billing.module.js";
-import { AccountDefaultsModule } from "./modules/account-defaults/account-defaults.module.js";
 import { StorageModule } from "./modules/storage/storage.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
 import { QueueingModule } from "./modules/queueing/queueing.module.js";
@@ -108,7 +107,6 @@ import { SubmissionModerationModule } from "./modules/submission-moderation/subm
     AnalyticsModule,
     NotificationsModule,
     BillingModule,
-    AccountDefaultsModule,
     StorageModule,
     AdminModule,
     ProjectAuditModule,

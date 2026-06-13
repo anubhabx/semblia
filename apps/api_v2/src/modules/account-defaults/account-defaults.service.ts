@@ -1,16 +1,3 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import {
-  MediaAssetPurpose,
-  MediaAssetStatus,
-  MediaAssetVisibility,
-  Prisma,
-} from "@workspace/database/prisma";
 import type {
   V2AccountBrandDefaultsDTO,
   V2AccountDefaultsDTO,
@@ -18,15 +5,16 @@ import type {
   V2AccountVisibilityAccessDefaultsDTO,
   V2FormConfigDTO,
 } from "@workspace/types";
-import { PrismaService } from "../prisma/prisma.service.js";
-import {
-  accountDefaultsSchema,
-  type UpdateAccountDefaultsBodyDto,
-} from "./account-defaults.dto.js";
+import { accountDefaultsSchema } from "./account-defaults.dto.js";
 
-type DeepPartial<T> = T extends object
-  ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : T;
+// ── Platform-governed project defaults ─────────────────────────────────────────
+//
+// As of 2026-06-13 project defaults are governed by Semblia, not by users: the
+// user-facing `/v2/account/defaults` read/write surface was removed. These
+// constants remain the canonical default *values* applied when a project is
+// created, and `parseAccountDefaults` validates any persisted shape. The legacy
+// `User.defaults` column is no longer read or written and is slated for a
+// dedicated schema-cleanup pass.
 
 export const DEFAULT_ACCOUNT_FORM_CONFIG: V2FormConfigDTO = {
   content: {
@@ -114,130 +102,6 @@ const EMPTY_ACCOUNT_DEFAULTS: V2AccountDefaultsDTO = {
   brand: null,
 };
 
-@Injectable()
-export class AccountDefaultsService {
-  constructor(
-    @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ConfigService) private readonly configService?: ConfigService,
-  ) {}
-
-  async getDefaults(userId: string): Promise<V2AccountDefaultsDTO> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      select: {
-        defaults: true,
-        accountDefaultsLogoAssetId: true,
-        accountDefaultsLogoAsset: true,
-      },
-    });
-
-    if (!user) throw new NotFoundException("User not found");
-    return this.withAccountLogo(
-      parseAccountDefaults(user.defaults),
-      user.accountDefaultsLogoAssetId,
-      user.accountDefaultsLogoAsset,
-    );
-  }
-
-  async patchDefaults(
-    userId: string,
-    patch: UpdateAccountDefaultsBodyDto,
-  ): Promise<V2AccountDefaultsDTO> {
-    const current = await this.getDefaults(userId);
-    const next = mergeAccountDefaults(current, patch);
-    const logoAssetId = next.brand?.logoAssetId ?? null;
-    if (logoAssetId) {
-      const asset = await this.prisma.client.mediaAsset.findFirst({
-        where: {
-          id: logoAssetId,
-          userId,
-          purpose: MediaAssetPurpose.ACCOUNT_DEFAULTS_LOGO,
-          status: MediaAssetStatus.ACTIVE,
-        },
-        select: { id: true },
-      });
-      if (!asset) {
-        throw new BadRequestException("Account defaults logo asset is invalid");
-      }
-    }
-    const stored = {
-      ...next,
-      brand: next.brand
-        ? {
-            brandColorPrimary: next.brand.brandColorPrimary,
-            brandColorSecondary: next.brand.brandColorSecondary,
-          }
-        : null,
-    };
-
-    const updated = await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        defaults: stored as unknown as Prisma.InputJsonValue,
-        accountDefaultsLogoAssetId: logoAssetId,
-      },
-      select: {
-        defaults: true,
-        accountDefaultsLogoAssetId: true,
-        accountDefaultsLogoAsset: true,
-      },
-    });
-
-    return this.withAccountLogo(
-      parseAccountDefaults(updated.defaults),
-      updated.accountDefaultsLogoAssetId,
-      updated.accountDefaultsLogoAsset,
-    );
-  }
-
-  private withAccountLogo(
-    defaults: V2AccountDefaultsDTO,
-    logoAssetId: string | null,
-    logoAsset:
-      | {
-          id: string;
-          storageKey: string;
-          contentType: string;
-          byteSize: number | null;
-          purpose: MediaAssetPurpose;
-          visibility: MediaAssetVisibility;
-          status: MediaAssetStatus;
-          createdAt: Date;
-        }
-      | null,
-  ): V2AccountDefaultsDTO {
-    return {
-      ...defaults,
-      brand: defaults.brand
-        ? {
-            ...defaults.brand,
-            logoAssetId,
-            logo: logoAsset
-              ? {
-                  id: logoAsset.id,
-                  url:
-                    logoAsset.visibility === MediaAssetVisibility.PUBLIC
-                      ? this.publicUrlFor(logoAsset.storageKey)
-                      : null,
-                  contentType: logoAsset.contentType,
-                  byteSize: logoAsset.byteSize,
-                  purpose: logoAsset.purpose,
-                  visibility: logoAsset.visibility,
-                  status: logoAsset.status,
-                  createdAt: logoAsset.createdAt.toISOString(),
-                }
-              : null,
-          }
-        : null,
-    };
-  }
-
-  private publicUrlFor(storageKey: string) {
-    const base = this.configService?.get<string>("S3_PUBLIC_CDN_BASE_URL");
-    return base ? `${base.replace(/\/+$/, "")}/${storageKey}` : null;
-  }
-}
-
 export function parseAccountDefaults(value: unknown): V2AccountDefaultsDTO {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return { ...EMPTY_ACCOUNT_DEFAULTS };
@@ -247,78 +111,4 @@ export function parseAccountDefaults(value: unknown): V2AccountDefaultsDTO {
     ...EMPTY_ACCOUNT_DEFAULTS,
     ...(value as Record<string, unknown>),
   });
-}
-
-export function mergeAccountDefaults(
-  current: V2AccountDefaultsDTO,
-  patch: UpdateAccountDefaultsBodyDto,
-): V2AccountDefaultsDTO {
-  return {
-    form:
-      patch.form === undefined
-        ? current.form
-        : patch.form === null
-          ? null
-          : deepMerge(current.form ?? DEFAULT_ACCOUNT_FORM_CONFIG, patch.form),
-    moderation:
-      patch.moderation === undefined
-        ? current.moderation
-        : patch.moderation === null
-          ? null
-          : {
-              ...(current.moderation ?? DEFAULT_ACCOUNT_MODERATION),
-              ...patch.moderation,
-            },
-    visibilityAccess:
-      patch.visibilityAccess === undefined
-        ? current.visibilityAccess
-        : patch.visibilityAccess === null
-          ? null
-          : {
-              ...(current.visibilityAccess ??
-                DEFAULT_ACCOUNT_VISIBILITY_ACCESS),
-              ...patch.visibilityAccess,
-            },
-    brand:
-      patch.brand === undefined
-        ? current.brand
-        : patch.brand === null
-          ? null
-          : {
-              ...(current.brand ?? DEFAULT_ACCOUNT_BRAND),
-              ...patch.brand,
-            },
-  };
-}
-
-function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
-  if (
-    patch === null ||
-    typeof patch !== "object" ||
-    Array.isArray(patch) ||
-    base === null ||
-    typeof base !== "object" ||
-    Array.isArray(base)
-  ) {
-    return patch as T;
-  }
-
-  const out: Record<string, unknown> = {
-    ...(base as Record<string, unknown>),
-  };
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
-    const current = out[key];
-    out[key] =
-      current &&
-      typeof current === "object" &&
-      !Array.isArray(current) &&
-      value &&
-      typeof value === "object" &&
-      !Array.isArray(value)
-        ? deepMerge(current, value as DeepPartial<typeof current>)
-        : value;
-  }
-
-  return out as T;
 }

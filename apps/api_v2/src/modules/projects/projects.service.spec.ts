@@ -339,79 +339,10 @@ describe("ProjectsService allowed origins", () => {
     });
   });
 
-  it("prefills new projects from account defaults while preserving explicit create fields", async () => {
-    mockUserFindUnique.mockResolvedValue({
-      defaults: {
-        form: {
-          content: {
-            headerTitle: "Tell us what worked",
-            headerDescription: "A short note helps the next buyer.",
-            submitButtonLabel: "Send feedback",
-            thankYouTitle: "Received",
-            thankYouMessage: "Thanks for sharing.",
-            successAction: { kind: "message" },
-          },
-          fields: {
-            email: { enabled: true, required: true },
-            rating: { enabled: true, required: false, scale: 5 },
-            jobTitle: { enabled: false, required: false },
-            company: { enabled: true, required: false },
-            avatar: { enabled: false, required: false },
-            videoUrl: { enabled: false, required: false },
-            consent: {
-              enabled: true,
-              mode: "checkbox",
-              label: "I consent to sharing this testimonial.",
-            },
-          },
-          branding: {
-            logoAssetId: null,
-            logo: null,
-            colors: {
-              primary: "#111111",
-              background: "#ffffff",
-              foreground: "#0f172a",
-              accent: "#f8fafc",
-            },
-            fontFamily: "inter",
-            cornerRadius: "rounded",
-            mode: "light",
-            inputStyle: "outlined",
-            buttonStyle: "solid",
-            shadow: "subtle",
-            density: "default",
-            headerAlignment: "left",
-            headingWeight: "semibold",
-          },
-          behavior: {
-            allowAnonymous: true,
-            oauthProviders: ["google"],
-            notifyOnSubmission: true,
-            moderation: "auto",
-            allowFingerprintOptOut: true,
-          },
-          watermark: { show: true, position: "bottom-right" },
-          delivery: {
-            customDomain: null,
-            pathSuffix: "",
-            embedScriptEnabled: true,
-          },
-        },
-        moderation: {
-          autoModeration: false,
-          autoApproveVerified: true,
-          profanityFilterLevel: "STRICT",
-        },
-        visibilityAccess: {
-          visibility: "INVITE_ONLY",
-          isActive: false,
-        },
-        brand: {
-          brandColorPrimary: "#111111",
-          brandColorSecondary: "#222222",
-        },
-      },
-    });
+  it("creates projects from platform defaults and never reads user-set defaults", async () => {
+    // Project defaults are platform-governed (2026-06-13): creation must NOT read
+    // `User.defaults`. Explicit create fields are preserved; unset fields fall
+    // through to the DB column defaults rather than any per-user override.
     mockProjectCreate.mockResolvedValue({
       id: "project_1",
       userId: "user_1",
@@ -426,14 +357,14 @@ describe("ProjectsService allowed origins", () => {
       websiteUrl: null,
       collectionFormUrl: null,
       brandColorPrimary: "#abcdef",
-      brandColorSecondary: "#222222",
+      brandColorSecondary: null,
       socialLinks: null,
       tags: [],
-      visibility: "INVITE_ONLY",
+      visibility: "PRIVATE",
       isActive: true,
-      autoModeration: false,
-      autoApproveVerified: true,
-      profanityFilterLevel: "STRICT",
+      autoModeration: true,
+      autoApproveVerified: false,
+      profanityFilterLevel: "MODERATE",
       formConfig: null,
       createdAt: new Date("2026-05-02T00:00:00.000Z"),
       updatedAt: new Date("2026-05-02T00:00:00.000Z"),
@@ -452,28 +383,23 @@ describe("ProjectsService allowed origins", () => {
       isActive: true,
     });
 
-    expect(mockUserFindUnique).toHaveBeenCalledWith({
-      where: { id: "user_1" },
-      select: { defaults: true },
-    });
+    // No `User.defaults` read at creation time.
+    expect(mockUserFindUnique).not.toHaveBeenCalledWith(
+      expect.objectContaining({ select: { defaults: true } }),
+    );
     expect(mockProjectCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          name: "Acme",
+          slug: "acme",
           brandColorPrimary: "#abcdef",
-          brandColorSecondary: "#222222",
-          visibility: "INVITE_ONLY",
           isActive: true,
-          autoModeration: false,
-          autoApproveVerified: true,
-          profanityFilterLevel: "STRICT",
-          formConfig: expect.objectContaining({
-            content: expect.objectContaining({
-              headerTitle: "Tell us what worked",
-            }),
-          }),
         }),
       }),
     );
+    // Unset fields are not prefilled from any per-user override.
+    const createArg = mockProjectCreate.mock.calls[0][0];
+    expect(createArg.data.brandColorSecondary).toBeUndefined();
   });
 
   it("lists the default public surface hosts for a project as DTO-shaped rows", async () => {

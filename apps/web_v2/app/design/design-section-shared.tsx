@@ -64,10 +64,7 @@ export function SharedPrimitivesSection() {
 function PageHeaderShowcase() {
   return (
     <div>
-      <BlockHeader
-        label="PageHeader"
-        meta="default · compact · contained rail"
-      />
+      <BlockHeader label="PageHeader" meta="default · compact · full-bleed" />
       <div className="space-y-6">
         <Surface label="default — title + description + actions">
           <PageHeader
@@ -88,24 +85,6 @@ function PageHeaderShowcase() {
                   <PlusIcon className="size-3.5" /> New embed
                 </Button>
               </>
-            }
-            borderless
-          />
-        </Surface>
-
-        <Surface label="contained — 1152px app rail">
-          <PageHeader
-            contained
-            title="Projects"
-            description={
-              <>
-                7 projects <HeaderSep /> 142 responses
-              </>
-            }
-            actions={
-              <Button size="sm">
-                <PlusIcon className="size-3.5" /> New project
-              </Button>
             }
             borderless
           />
@@ -183,7 +162,6 @@ function PageToolbarShowcase() {
       />
       <Surface label="search + view toggle">
         <PageToolbar
-          contained
           stickyTop="0"
           leading={
             <SearchField

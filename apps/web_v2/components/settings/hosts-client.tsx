@@ -162,7 +162,7 @@ export function HostsClient({ project }: { project: V2ProjectDTO }) {
   const rows = hosts.data ?? [];
 
   return (
-    <PageBody contained padding="default">
+    <PageBody padding="default">
       <div className="space-y-8 pb-8">
         <SettingsSection
           id="hosted-surfaces"

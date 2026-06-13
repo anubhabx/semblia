@@ -4,74 +4,13 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { V2ProjectDTO } from "@workspace/types";
 import { GlobeIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ColorPicker, isValidHexColor } from "@/components/ui/color-picker";
 import { PageBody, SettingsSection, SettingsFooter } from "@/components/shared";
 import { useUpdateProject } from "@/hooks/api";
 import { projectInitials } from "@/lib/format";
 import { MediaUploader } from "@/components/media/media-uploader";
 import { normalizeProject } from "./shared/normalize";
-
-const HEX_RE = /^#([0-9a-fA-F]{3}){1,2}$/;
-
-function isValidHexColor(value: string): boolean {
-  return value === "" || HEX_RE.test(value.trim());
-}
-
-function ColorField({
-  id,
-  label,
-  helper,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  helper?: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const valid = isValidHexColor(value);
-  const safeColor = valid && value ? value : "#9ca3af";
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          aria-label={`${label} color picker`}
-          value={safeColor}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-10 cursor-pointer rounded-md border border-input bg-background"
-        />
-        <Input
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="#FF6B35"
-          className={cn(
-            "h-8 max-w-[10rem] font-mono text-[13px]",
-            !valid && "border-destructive/60 focus-visible:ring-destructive/30",
-          )}
-        />
-        <span
-          className="h-6 w-6 shrink-0 rounded-full border border-border"
-          style={{ backgroundColor: safeColor }}
-          aria-hidden
-        />
-      </div>
-      {!valid && (
-        <p className="text-[11px] text-destructive">
-          Enter a 3- or 6-digit hex color (e.g. #FF6B35).
-        </p>
-      )}
-      {valid && helper && (
-        <p className="text-[11px] text-muted-foreground">{helper}</p>
-      )}
-    </div>
-  );
-}
 
 export function BrandingForm({ project }: { project: V2ProjectDTO }) {
   const norm = React.useMemo(() => normalizeProject(project), [project]);
@@ -120,124 +59,129 @@ export function BrandingForm({ project }: { project: V2ProjectDTO }) {
     setBrandColorSecondary(norm.brandColorSecondary);
   }
 
-  const previewColor =
-    isValidHexColor(brandColorPrimary) && brandColorPrimary
-      ? brandColorPrimary
+  const primaryPreview =
+    isValidHexColor(brandColorPrimary) && brandColorPrimary.trim()
+      ? brandColorPrimary.trim()
       : "var(--brand)";
+  const secondaryPreview =
+    isValidHexColor(brandColorSecondary) && brandColorSecondary.trim()
+      ? brandColorSecondary.trim()
+      : "var(--muted-foreground)";
 
   return (
     <>
-      <PageBody contained padding="default">
-        <div className="space-y-8 pb-8">
-          <SettingsSection
-            id="logo"
-            title="Logo"
-            description="Used in the sidebar, public collection page, and embedded widgets."
-          >
-            <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label>Project logo</Label>
-                <MediaUploader
-                  purpose="PROJECT_LOGO"
-                  projectSlug={project.slug}
-                  value={logo}
-                  onChange={setLogo}
+      <PageBody padding="default" className="space-y-6 pb-8">
+        <SettingsSection
+          id="logo"
+          title="Logo"
+          description="Shown in the sidebar, on your public collection page, and in embedded widgets. Square images render best."
+        >
+          <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-start">
+            <div className="space-y-2">
+              <MediaUploader
+                purpose="PROJECT_LOGO"
+                projectSlug={project.slug}
+                value={logo}
+                onChange={setLogo}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                PNG, JPG, WebP, or GIF · up to 5 MB.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg bg-muted/40 p-3">
+              {logo?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo.url}
+                  alt=""
+                  className="size-10 rounded-md object-contain"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  PNG, JPG, WebP, or GIF. Square images render best.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                {logo?.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logo.url}
-                    alt=""
-                    className="size-10 rounded-md object-cover"
-                  />
-                ) : (
-                  <span
-                    className="flex size-10 items-center justify-center rounded-md text-xs font-semibold text-white"
-                    style={{ backgroundColor: previewColor }}
-                    aria-hidden
-                  >
-                    {projectInitials(project.name)}
-                  </span>
-                )}
-                <div className="text-[11px] leading-tight">
-                  <p className="font-medium text-foreground">Live preview</p>
-                  <p className="text-muted-foreground">Sidebar avatar render</p>
-                </div>
+              ) : (
+                <span
+                  className="flex size-10 items-center justify-center rounded-md text-xs font-semibold text-white"
+                  style={{ backgroundColor: primaryPreview }}
+                  aria-hidden
+                >
+                  {projectInitials(project.name)}
+                </span>
+              )}
+              <div className="text-[11px] leading-tight">
+                <p className="font-medium text-foreground">Live preview</p>
+                <p className="text-muted-foreground">Sidebar avatar</p>
               </div>
             </div>
-          </SettingsSection>
+          </div>
+        </SettingsSection>
 
-          <SettingsSection
-            id="colors"
-            title="Brand colors"
-            description="Drives accents on hosted pages and embedded widget previews."
-          >
-            <div className="grid gap-6 sm:grid-cols-2">
-              <ColorField
+        <SettingsSection
+          id="colors"
+          title="Brand colours"
+          description="Drive accents on your hosted collection page and embedded widget previews."
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="b-primary">Primary</Label>
+              <ColorPicker
                 id="b-primary"
                 label="Primary"
                 value={brandColorPrimary}
                 onChange={setBrandColorPrimary}
-                helper="Buttons, links, focus rings."
               />
-              <ColorField
+              <p className="text-[11px] text-muted-foreground">
+                Buttons, links, and focus rings.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="b-secondary">Secondary</Label>
+              <ColorPicker
                 id="b-secondary"
                 label="Secondary"
                 value={brandColorSecondary}
                 onChange={setBrandColorSecondary}
-                helper="Subtle accents and dividers."
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Subtle accents and dividers.
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="flex items-center gap-3 rounded-lg bg-muted/40 p-4"
+            role="group"
+            aria-label="Colour preview"
+          >
+            <span
+              className="flex size-10 items-center justify-center rounded-md text-xs font-semibold text-white"
+              style={{ backgroundColor: primaryPreview }}
+              aria-hidden
+            >
+              {projectInitials(project.name)}
+            </span>
+            <div className="flex flex-1 items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md px-2.5 py-1 text-xs font-medium text-white"
+                style={{ backgroundColor: primaryPreview }}
+                tabIndex={-1}
+              >
+                Primary button
+              </button>
+              <span
+                className="rounded-md border px-2.5 py-1 text-xs font-medium"
+                style={{
+                  borderColor: secondaryPreview,
+                  color: secondaryPreview,
+                }}
+              >
+                Secondary chip
+              </span>
+              <GlobeIcon
+                className="ml-auto size-3.5 text-muted-foreground"
+                aria-hidden
               />
             </div>
-            <div
-              className="flex items-center gap-3 rounded-lg border border-border p-4"
-              role="group"
-              aria-label="Color preview"
-            >
-              <span
-                className="flex size-10 items-center justify-center rounded-md text-xs font-semibold text-white"
-                style={{ backgroundColor: previewColor }}
-                aria-hidden
-              >
-                {projectInitials(project.name)}
-              </span>
-              <div className="flex flex-1 items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-md px-2.5 py-1 text-xs font-medium text-white"
-                  style={{ backgroundColor: previewColor }}
-                >
-                  Primary button
-                </button>
-                <span
-                  className="rounded-md border px-2.5 py-1 text-xs font-medium"
-                  style={{
-                    borderColor:
-                      isValidHexColor(brandColorSecondary) &&
-                      brandColorSecondary
-                        ? brandColorSecondary
-                        : "var(--border)",
-                    color:
-                      isValidHexColor(brandColorSecondary) &&
-                      brandColorSecondary
-                        ? brandColorSecondary
-                        : "var(--muted-foreground)",
-                  }}
-                >
-                  Secondary chip
-                </span>
-                <GlobeIcon
-                  className="ml-auto size-3.5 text-muted-foreground"
-                  aria-hidden
-                />
-              </div>
-            </div>
-          </SettingsSection>
-        </div>
+          </div>
+        </SettingsSection>
       </PageBody>
 
       <SettingsFooter

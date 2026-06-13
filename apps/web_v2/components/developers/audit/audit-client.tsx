@@ -74,7 +74,6 @@ export function AuditClient({ slug }: { slug: string }) {
   return (
     <DeveloperShell slug={slug} active="audit">
       <PageToolbar
-        contained
         leading={
           <FilterPills
             options={FILTERS}
@@ -93,7 +92,7 @@ export function AuditClient({ slug }: { slug: string }) {
         }
       />
 
-      <PageBody contained padding="bare" className="overflow-y-auto">
+      <PageBody padding="bare" className="overflow-y-auto">
         {isLoading ? (
           <div className="divide-y divide-border">
             <AuditEventRowSkeleton />

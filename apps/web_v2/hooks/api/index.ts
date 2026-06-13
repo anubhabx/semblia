@@ -4,11 +4,6 @@ export { useAuthToken } from "./use-auth-token";
 export { useCurrentOrganization } from "./use-organization-api";
 
 export {
-  useAccountDefaults,
-  useUpdateAccountDefaults,
-} from "./use-account-api";
-
-export {
   useProjectsList,
   useProject,
   useCreateProject,

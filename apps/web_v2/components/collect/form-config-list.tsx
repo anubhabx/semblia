@@ -195,7 +195,6 @@ export function FormConfigList({ slug }: { slug: string }) {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="Forms"
         actions={
           normalizedForms.length > 0 ? (
@@ -220,7 +219,7 @@ export function FormConfigList({ slug }: { slug: string }) {
         }
       />
 
-      <PageBody contained padding="bare" className="overflow-y-auto">
+      <PageBody padding="bare" className="overflow-y-auto">
         {!loading &&
           normalizedForms.length > 1 &&
           totalActiveWeight !== 100 &&

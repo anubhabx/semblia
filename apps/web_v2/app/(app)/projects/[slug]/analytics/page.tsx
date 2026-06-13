@@ -18,7 +18,6 @@ function AnalyticsSkeleton() {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title={<Skeleton className="h-7 w-32" />}
         description={<Skeleton className="h-3 w-48" />}
         toolbar={
@@ -29,7 +28,7 @@ function AnalyticsSkeleton() {
           </div>
         }
       />
-      <PageBody contained padding="default" contentClassName="space-y-4">
+      <PageBody padding="default" className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[108px] rounded-lg" />

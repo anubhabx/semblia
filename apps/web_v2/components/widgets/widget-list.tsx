@@ -197,7 +197,6 @@ export function WidgetList({ project }: WidgetListProps) {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="Widgets"
         actions={
           showToolbar ? (
@@ -248,7 +247,7 @@ export function WidgetList({ project }: WidgetListProps) {
         }
       />
 
-      <PageBody contained padding="bare" className="overflow-y-auto">
+      <PageBody padding="bare" className="overflow-y-auto">
         {loading ? (
           <GalleryGridSkeleton />
         ) : list.length === 0 ? (

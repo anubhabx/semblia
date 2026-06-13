@@ -165,13 +165,12 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader
-          contained
           title={<Skeleton className="h-5 w-40 animate-shimmer" />}
           description={
             <span className="inline-block h-3.5 w-64 animate-shimmer rounded bg-muted" />
           }
         />
-        <PageBody contained padding="compact" stack>
+        <PageBody padding="compact" stack>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-28 rounded-lg" />
@@ -188,7 +187,6 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="Analytics"
         actions={
           <>
@@ -239,7 +237,6 @@ export function AnalyticsDashboard({ projectSlug }: AnalyticsDashboardProps) {
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <PageBody
-        contained
         padding="compact"
         stack
         className={cn(

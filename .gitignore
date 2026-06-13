@@ -84,3 +84,4 @@ __pycache__
 .github/prompts/
 docs/raw/
 .tmp
+.playwright-mcp/

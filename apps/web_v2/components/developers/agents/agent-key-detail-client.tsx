@@ -234,11 +234,10 @@ export function AgentKeyDetailClient({
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader
-          contained
           title={<Skeleton className="h-5 w-40 animate-shimmer" />}
           description={<Skeleton className="h-3.5 w-56 animate-shimmer" />}
         />
-        <PageBody contained padding="default" contentClassName="space-y-4">
+        <PageBody padding="default" className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[...Array(4)].map((_, i) => (
               <Skeleton
@@ -255,12 +254,8 @@ export function AgentKeyDetailClient({
   if (!key) {
     return (
       <div className="flex flex-1 flex-col">
-        <PageHeader
-          contained
-          eyebrow="Developers · Agents"
-          title="Agent key not found"
-        />
-        <PageBody contained padding="default">
+        <PageHeader eyebrow="Developers · Agents" title="Agent key not found" />
+        <PageBody padding="default">
           <Empty className="py-12">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -287,7 +282,6 @@ export function AgentKeyDetailClient({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         eyebrow="Developers · Agents"
         title={key.name}
         description={
@@ -310,7 +304,6 @@ export function AgentKeyDetailClient({
       />
 
       <PageToolbar
-        contained
         leading={
           <PageTabs<Tab>
             options={[
@@ -324,7 +317,7 @@ export function AgentKeyDetailClient({
         }
       />
 
-      <PageBody contained padding="default" className="overflow-y-auto">
+      <PageBody padding="default" className="overflow-y-auto">
         {tab === "overview" && (
           <OverviewTab entry={key} preset={matchedPreset} />
         )}

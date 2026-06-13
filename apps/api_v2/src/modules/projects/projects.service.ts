@@ -297,13 +297,15 @@ export class ProjectsService {
       const organization = actor?.clerkOrgId
         ? await this.organizationsService.ensureForActor(actor)
         : null;
-      const accountDefaults = await this.getAccountDefaults(userId);
+      // Project defaults are platform-governed (not user-settable); always
+      // derive from the canonical system defaults.
+      const accountDefaults = parseAccountDefaults(null);
       const explicitLogoAsset = await this.resolveProjectLogoAssetId(
         body.logoAssetId,
         undefined,
       );
 
-      let project = await this.prisma.client.$transaction(
+      const project = await this.prisma.client.$transaction(
         async (tx): Promise<ProjectWithCounts> => {
           const createdProject = await tx.project.create({
             data: this.buildProjectCreateData(
@@ -333,21 +335,6 @@ export class ProjectsService {
           return createdProject;
         },
       );
-
-      if (!explicitLogoAsset && accountDefaults.brand?.logoAssetId) {
-        const cloned = await this.mediaService?.cloneProjectLogoAsset({
-          sourceAssetId: accountDefaults.brand.logoAssetId,
-          projectId: project.id,
-          actor: this.actorOrUser(actor, userId),
-        });
-        if (cloned) {
-          project = await this.prisma.client.project.update({
-            where: { id: project.id },
-            data: { logoAssetId: cloned.id },
-            select: PROJECT_SELECT,
-          });
-        }
-      }
 
       return this.toProjectResponse(
         project,
@@ -1837,15 +1824,6 @@ export class ProjectsService {
         ) as Prisma.InputJsonValue | null,
       ),
     };
-  }
-
-  private async getAccountDefaults(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      select: { defaults: true },
-    });
-
-    return parseAccountDefaults(user?.defaults);
   }
 
   private buildProjectUpdateData(

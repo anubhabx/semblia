@@ -434,14 +434,9 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader contained title="Profile" />
+      <PageHeader title="Profile" />
 
-      <PageBody
-        contained
-        padding="default"
-        withFooter
-        contentClassName="space-y-8"
-      >
+      <PageBody padding="default" withFooter className="space-y-8">
         {/* Identity — photo + name merged */}
         <SettingsSection
           id="identity"
@@ -499,6 +494,7 @@ export default function ProfilePage() {
           title="Email addresses"
           description="Sign in with any verified email. Primary address receives account notifications."
           staggerIndex={1}
+          flush
           actions={
             <Button
               size="sm"
@@ -511,25 +507,23 @@ export default function ProfilePage() {
             </Button>
           }
         >
-          <div className="overflow-hidden rounded-lg border border-border">
-            <div className="divide-y divide-border">
-              {!isLoaded
-                ? Array.from({ length: 1 }, (_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3">
-                      <Skeleton className="h-4 w-48" />
-                    </div>
-                  ))
-                : user?.emailAddresses.map((addr) => (
-                    <EmailRow
-                      key={addr.id}
-                      addr={addr}
-                      isPrimary={addr.id === user.primaryEmailAddress?.id}
-                      onVerify={() => setVerifyTarget(addr)}
-                      onMakePrimary={() => makePrimary(addr)}
-                      onRemove={() => setRemoveTarget(addr)}
-                    />
-                  ))}
-            </div>
+          <div className="divide-y divide-border">
+            {!isLoaded
+              ? Array.from({ length: 1 }, (_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-5 py-3">
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                ))
+              : user?.emailAddresses.map((addr) => (
+                  <EmailRow
+                    key={addr.id}
+                    addr={addr}
+                    isPrimary={addr.id === user.primaryEmailAddress?.id}
+                    onVerify={() => setVerifyTarget(addr)}
+                    onMakePrimary={() => makePrimary(addr)}
+                    onRemove={() => setRemoveTarget(addr)}
+                  />
+                ))}
           </div>
         </SettingsSection>
 
@@ -539,6 +533,7 @@ export default function ProfilePage() {
           title="Connected accounts"
           description="Sign in faster by linking an external provider."
           staggerIndex={2}
+          flush
           actions={
             <Button
               variant="outline"
@@ -555,54 +550,52 @@ export default function ProfilePage() {
             </Button>
           }
         >
-          <div className="overflow-hidden rounded-lg border border-border">
-            <div className="divide-y divide-border">
-              {!isLoaded ? (
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="size-6 rounded-full" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              ) : user?.externalAccounts.length === 0 ? (
-                <div className="px-4 py-4 text-sm text-muted-foreground text-center">
-                  No connected accounts.
-                </div>
-              ) : (
-                user?.externalAccounts.map((acct) => {
-                  const Icon =
-                    acct.provider === "google"
-                      ? GoogleLogoIcon
-                      : acct.provider === "github"
-                        ? GithubLogoIcon
-                        : LinkIcon;
-                  return (
-                    <div
-                      key={acct.id}
-                      className="flex items-center justify-between gap-3 px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Icon className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="text-sm text-foreground capitalize">
-                            {acct.provider}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {acct.emailAddress || acct.username}
-                          </p>
-                        </div>
+          <div className="divide-y divide-border">
+            {!isLoaded ? (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="size-6 rounded-full" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            ) : user?.externalAccounts.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-muted-foreground text-center">
+                No connected accounts.
+              </div>
+            ) : (
+              user?.externalAccounts.map((acct) => {
+                const Icon =
+                  acct.provider === "google"
+                    ? GoogleLogoIcon
+                    : acct.provider === "github"
+                      ? GithubLogoIcon
+                      : LinkIcon;
+                return (
+                  <div
+                    key={acct.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground capitalize">
+                          {acct.provider}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {acct.emailAddress || acct.username}
+                        </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDisconnectTarget(acct)}
-                      >
-                        Disconnect
-                      </Button>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDisconnectTarget(acct)}
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </SettingsSection>
 
@@ -612,33 +605,31 @@ export default function ProfilePage() {
           title="Danger zone"
           description="Irreversible actions that affect your account."
           staggerIndex={3}
+          tone="danger"
+          flush
         >
-          <div className="overflow-hidden rounded-xl border border-destructive/30 bg-destructive/[0.03] dark:bg-destructive/[0.06]">
-            <div className="divide-y divide-destructive/15">
-              <div className="flex items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="text-sm font-medium text-destructive">
-                    Delete account
-                  </p>
-                  <p className="text-xs text-muted-foreground max-w-[42ch]">
-                    Permanently delete your account and all associated data.
-                    This cannot be undone.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 tactile"
-                  onClick={() => {
-                    setDeleteConfirmText("");
-                    setDeleteDialogOpen(true);
-                  }}
-                >
-                  <TrashIcon className="size-3.5 mr-1" />
-                  Delete
-                </Button>
-              </div>
+          <div className="flex items-center justify-between gap-4 px-5 py-4">
+            <div>
+              <p className="text-sm font-medium text-destructive">
+                Delete account
+              </p>
+              <p className="text-xs text-muted-foreground max-w-[42ch]">
+                Permanently delete your account and all associated data. This
+                cannot be undone.
+              </p>
             </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="shrink-0 tactile"
+              onClick={() => {
+                setDeleteConfirmText("");
+                setDeleteDialogOpen(true);
+              }}
+            >
+              <TrashIcon className="size-3.5 mr-1" />
+              Delete
+            </Button>
           </div>
         </SettingsSection>
       </PageBody>

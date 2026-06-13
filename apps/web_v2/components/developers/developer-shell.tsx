@@ -197,7 +197,6 @@ export function DeveloperShell({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="Developers"
         actions={actions}
         toolbar={<SubTabs slug={slug} active={active} />}

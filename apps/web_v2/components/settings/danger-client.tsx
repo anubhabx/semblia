@@ -258,84 +258,84 @@ export function DangerClient({ project }: { project: V2ProjectDTO }) {
   }
 
   return (
-    <PageBody contained padding="default">
+    <PageBody padding="default">
       <div className="space-y-8 pb-8">
         <SettingsSection
           id="danger"
           title="Danger zone"
           description="Irreversible actions. Double-check before clicking."
+          tone="danger"
+          flush
         >
-          <div className="overflow-hidden rounded-xl border border-destructive/30 bg-destructive/[0.03] dark:bg-destructive/[0.06]">
-            <div className="divide-y divide-destructive/15">
-              {canTransferOwnership &&
-                (ownershipTransfer.data ? (
-                  <PendingTransferRow
-                    transfer={ownershipTransfer.data}
-                    onCancel={handleCancelTransfer}
-                    disabled={cancelTransfer.isPending}
-                  />
-                ) : (
-                  <div className="flex items-center justify-between gap-4 p-5">
-                    <div>
-                      <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <TransferIcon
-                          className="size-4 text-muted-foreground"
-                          aria-hidden
-                        />
-                        Transfer ownership
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {noEligibleMembers ? (
-                          <>
-                            Ownership can only move to an existing member.{" "}
-                            <Link
-                              href={`/projects/${project.slug}/settings/members`}
-                              className="font-medium text-foreground underline-offset-2 hover:underline"
-                            >
-                              Add a member
-                            </Link>{" "}
-                            first.
-                          </>
-                        ) : (
-                          "Move primary ownership to an existing project member."
-                        )}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        members.isLoading ||
-                        ownershipTransfer.isLoading ||
-                        noEligibleMembers
-                      }
-                      onClick={() => setTransferOpen(true)}
-                      className="shrink-0"
-                    >
-                      Transfer
-                    </Button>
+          <div className="divide-y divide-destructive/15">
+            {canTransferOwnership &&
+              (ownershipTransfer.data ? (
+                <PendingTransferRow
+                  transfer={ownershipTransfer.data}
+                  onCancel={handleCancelTransfer}
+                  disabled={cancelTransfer.isPending}
+                />
+              ) : (
+                <div className="flex items-center justify-between gap-4 p-5">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <TransferIcon
+                        className="size-4 text-muted-foreground"
+                        aria-hidden
+                      />
+                      Transfer ownership
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {noEligibleMembers ? (
+                        <>
+                          Ownership can only move to an existing member.{" "}
+                          <Link
+                            href={`/projects/${project.slug}/settings/members`}
+                            className="font-medium text-foreground underline-offset-2 hover:underline"
+                          >
+                            Add a member
+                          </Link>{" "}
+                          first.
+                        </>
+                      ) : (
+                        "Move primary ownership to an existing project member."
+                      )}
+                    </p>
                   </div>
-                ))}
-
-              <div className="flex items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="text-sm font-medium text-destructive">
-                    Delete project
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Permanently deletes the project, forms, widgets, and
-                    testimonials.
-                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={
+                      members.isLoading ||
+                      ownershipTransfer.isLoading ||
+                      noEligibleMembers
+                    }
+                    onClick={() => setTransferOpen(true)}
+                    className="shrink-0"
+                  >
+                    Transfer
+                  </Button>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteOpen(true)}
-                  className="tactile shrink-0"
-                >
-                  Delete
-                </Button>
+              ))}
+
+            <div className="flex items-center justify-between gap-4 p-5">
+              <div>
+                <p className="text-sm font-medium text-destructive">
+                  Delete project
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Permanently deletes the project, forms, widgets, and
+                  testimonials.
+                </p>
               </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteOpen(true)}
+                className="tactile shrink-0"
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </SettingsSection>

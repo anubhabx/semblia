@@ -256,7 +256,6 @@ export function ProjectsClient() {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        contained
         title="Projects"
         description={
           loading ? (
@@ -319,17 +318,12 @@ export function ProjectsClient() {
       />
 
       <PageBody padding="bare" className="flex flex-1 flex-col overflow-y-auto">
-        {/* Gutters sit outside the rail so the rail lines up exactly with the
-            contained PageHeader band above (which gets its gutters from the
-            header element itself). */}
         {transfers.length > 0 && (
           <div className="px-4 sm:px-6">
-            <div className="mx-auto w-full max-w-6xl">
-              <IncomingTransfers
-                transfers={transfers}
-                onReview={setReviewTransfer}
-              />
-            </div>
+            <IncomingTransfers
+              transfers={transfers}
+              onReview={setReviewTransfer}
+            />
           </div>
         )}
 
@@ -338,40 +332,38 @@ export function ProjectsClient() {
           <EmptyProjects />
         ) : (
           <div className="px-4 pb-16 sm:px-6">
-            <div className="mx-auto w-full max-w-6xl">
-              {loading ? (
-                view === "list" ? (
-                  <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-                    {[0, 1, 2].map((i) => (
-                      <ProjectRowSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
-                    {[0, 1, 2].map((i) => (
-                      <ProjectCardSkeleton key={i} />
-                    ))}
-                  </div>
-                )
-              ) : loadFailed ? (
-                <LoadFailed onRetry={() => refetch()} />
-              ) : filtered.length === 0 && search ? (
-                <EmptySearch query={search} onClear={() => setSearch("")} />
-              ) : view === "list" ? (
+            {loading ? (
+              view === "list" ? (
                 <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-                  {filtered.map((project, i) => (
-                    <ProjectRow key={project.id} project={project} index={i} />
+                  {[0, 1, 2].map((i) => (
+                    <ProjectRowSkeleton key={i} />
                   ))}
                 </div>
               ) : (
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
-                  {filtered.map((project, i) => (
-                    <ProjectCard key={project.id} project={project} index={i} />
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {[0, 1, 2].map((i) => (
+                    <ProjectCardSkeleton key={i} />
                   ))}
-                  {showGhostTile && <NewProjectTile index={filtered.length} />}
                 </div>
-              )}
-            </div>
+              )
+            ) : loadFailed ? (
+              <LoadFailed onRetry={() => refetch()} />
+            ) : filtered.length === 0 && search ? (
+              <EmptySearch query={search} onClear={() => setSearch("")} />
+            ) : view === "list" ? (
+              <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+                {filtered.map((project, i) => (
+                  <ProjectRow key={project.id} project={project} index={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filtered.map((project, i) => (
+                  <ProjectCard key={project.id} project={project} index={i} />
+                ))}
+                {showGhostTile && <NewProjectTile index={filtered.length} />}
+              </div>
+            )}
           </div>
         )}
       </PageBody>

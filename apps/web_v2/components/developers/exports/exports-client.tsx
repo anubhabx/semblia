@@ -125,7 +125,6 @@ export function ExportsClient({ slug }: { slug: string }) {
       }
     >
       <PageToolbar
-        contained
         leading={
           <FilterPills
             options={FILTERS}
@@ -144,7 +143,7 @@ export function ExportsClient({ slug }: { slug: string }) {
         }
       />
 
-      <PageBody contained padding="bare" className="overflow-y-auto">
+      <PageBody padding="bare" className="overflow-y-auto">
         {isLoading ? (
           <div className="divide-y divide-border">
             <ExportDeliveryRowSkeleton />

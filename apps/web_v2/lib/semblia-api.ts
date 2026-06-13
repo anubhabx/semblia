@@ -67,8 +67,6 @@ import type {
   V2CreateIntegrationConnectionBody,
   V2UpdateIntegrationConnectionBody,
   V2CreateNativeIntegrationExportBody,
-  V2AccountDefaultsDTO,
-  V2UpdateAccountDefaultsBody,
   V2FormConfigDTO,
   V2ProjectVisibility,
   V2CreateUploadIntentBody,
@@ -290,19 +288,6 @@ export function updateNotificationPreferences(
     token,
     body,
   );
-}
-
-// ── Account defaults ───────────────────────────────────────────────────────
-
-export function fetchAccountDefaults(token: string | null) {
-  return api<V2AccountDefaultsDTO>("/account/defaults", token);
-}
-
-export function updateAccountDefaults(
-  token: string | null,
-  body: V2UpdateAccountDefaultsBody,
-) {
-  return patch<V2AccountDefaultsDTO>("/account/defaults", token, body);
 }
 
 // ── Media ──────────────────────────────────────────────────────────────────
