@@ -19,11 +19,18 @@ import type {
 } from "../schema/definition.js";
 import type { ButtonStyle } from "../theme.js";
 import { escapeAttr, escapeHtml, jsonScriptPayload } from "./escape.js";
-import { renderField } from "./fields.js";
+import { FILE_ACCEPT, renderField } from "./fields.js";
 import { formCss, themeVarsCss } from "./css.js";
 import { FORM_RUNTIME_SCRIPT } from "./runtime-script.js";
 
 export { FORM_RUNTIME_SCRIPT } from "./runtime-script.js";
+
+/**
+ * Advisory client-side cap for a submission attachment, mirroring the API
+ * default (`StorageService.maxBytesFor(SUBMISSION_ATTACHMENT)`). The API is the
+ * authority; this only spares an obviously-too-large upload a round trip.
+ */
+export const FILE_MAX_BYTES = 100 * 1024 * 1024;
 
 export interface RenderedForm {
   /** The HTML — a full document for `renderPublishedFormPage`, a fragment for the embed. */
@@ -33,6 +40,12 @@ export interface RenderedForm {
    * hashes these into its CSP `script-src`. Empty for the embed fragment.
    */
   inlineScripts: string[];
+  /**
+   * True when the rendered form has at least one file question and can upload
+   * (page, not the submitted state). The serving runtime widens `connect-src`
+   * for the upload-intent + presigned PUT only when this is set.
+   */
+  requiresUpload: boolean;
 }
 
 export interface RenderFormOptions {
@@ -81,6 +94,15 @@ function submitAction(formPath: string): string {
   return path ? `${path}/__submit` : "/__submit";
 }
 
+function uploadAction(formPath: string): string {
+  const path = formPath.replace(/\/+$/, "");
+  return path ? `${path}/__upload` : "/__upload";
+}
+
+function hasFileQuestion(doc: PublishedFormDoc): boolean {
+  return doc.structure.questions.some((q) => q.type === "file");
+}
+
 function renderHeader(content: FormContent, brandFallback?: string | null): string {
   const brand = content.brandName.trim() || (brandFallback ?? "").trim();
   const logo = safeUrl(content.logoUrl);
@@ -115,9 +137,15 @@ function renderSuccess(content: FormContent): string {
   );
 }
 
-function renderForm(doc: PublishedFormDoc, opts: RenderFormOptions): string {
+function renderForm(
+  doc: PublishedFormDoc,
+  opts: RenderFormOptions,
+  interactive: boolean,
+): string {
   const { content, structure } = doc;
-  const fields = structure.questions.map(renderField).join("");
+  const fields = structure.questions
+    .map((q) => renderField(q, interactive))
+    .join("");
   const style = buttonStyleOf(doc);
   const action = opts.actionUrl ?? submitAction(opts.formPath ?? "/");
   const submit =
@@ -130,15 +158,24 @@ function renderForm(doc: PublishedFormDoc, opts: RenderFormOptions): string {
   );
 }
 
-function configIsland(doc: PublishedFormDoc): string {
+function configIsland(doc: PublishedFormDoc, uploadUrl: string | null): string {
   const showIf: Record<string, unknown> = {};
   for (const q of doc.structure.questions) {
     if (q.showIf) showIf[q.id] = q.showIf;
   }
-  const cfg = {
+  const cfg: Record<string, unknown> = {
     conversational: doc.layout.preset === "conversational",
     showIf,
   };
+  // Only forms with a file question carry upload config; the constant runtime
+  // reads it to presign + PUT each chosen file before submit.
+  if (uploadUrl && hasFileQuestion(doc)) {
+    cfg.upload = {
+      url: uploadUrl,
+      maxBytes: FILE_MAX_BYTES,
+      accept: FILE_ACCEPT,
+    };
+  }
   return `<script type="application/json" data-sf-config>${jsonScriptPayload(cfg)}</script>`;
 }
 
@@ -154,7 +191,7 @@ function watermark(show: boolean): string {
 function renderScopeInner(
   doc: PublishedFormDoc,
   opts: RenderFormOptions,
-  mode: { pageCss: boolean; interactive: boolean },
+  mode: { pageCss: boolean; interactive: boolean; uploadUrl?: string | null },
 ): string {
   const preset = doc.layout.preset;
   const styleCss =
@@ -164,7 +201,7 @@ function renderScopeInner(
   const header = renderHeader(doc.content, opts.brandFallback);
   const body = opts.submitted
     ? renderSuccess(doc.content)
-    : renderForm(doc, opts);
+    : renderForm(doc, opts, mode.interactive);
   const footer = watermark(opts.watermark !== false);
 
   const root =
@@ -174,7 +211,10 @@ function renderScopeInner(
       : `<div class="sf-root">${header}${body}${footer}</div>`;
 
   // The config island feeds the executable runtime; only the page runs it.
-  const island = mode.interactive && !opts.submitted ? configIsland(doc) : "";
+  const island =
+    mode.interactive && !opts.submitted
+      ? configIsland(doc, mode.uploadUrl ?? null)
+      : "";
   return `<style>${styleCss}</style>${root}${island}`;
 }
 
@@ -190,7 +230,12 @@ export function renderPublishedFormPage(
   const brand =
     doc.content.brandName.trim() || (opts.brandFallback ?? "").trim();
   const title = doc.content.headline.trim() || brand || "Feedback";
-  const inner = renderScopeInner(doc, opts, { pageCss: true, interactive: true });
+  const uploadUrl = uploadAction(opts.formPath ?? "/");
+  const inner = renderScopeInner(doc, opts, {
+    pageCss: true,
+    interactive: true,
+    uploadUrl,
+  });
   const script = opts.submitted ? "" : `<script>${FORM_RUNTIME_SCRIPT}</script>`;
   const html =
     `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
@@ -201,6 +246,7 @@ export function renderPublishedFormPage(
   return {
     html,
     inlineScripts: opts.submitted ? [] : [FORM_RUNTIME_SCRIPT],
+    requiresUpload: !opts.submitted && hasFileQuestion(doc),
   };
 }
 
@@ -217,7 +263,8 @@ export function renderPublishedFormFragment(
   const preset = doc.layout.preset;
   const inner = renderScopeInner(doc, opts, { pageCss: false, interactive: false });
   const html = `<div class="sf-scope ${SCOPE_CLASS[preset]}" part="root">${inner}</div>`;
-  return { html, inlineScripts: [] };
+  // Embeds run no script and cannot upload; file questions render a fallback.
+  return { html, inlineScripts: [], requiresUpload: false };
 }
 
 // ── Legacy / safety surfaces ─────────────────────────────────────────────────

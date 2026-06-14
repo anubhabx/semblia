@@ -738,6 +738,14 @@ function QuestionRow({
             />
           ) : null}
 
+          {question.type === "file" ? (
+            <p className="rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+              Visitors can attach an image, audio, or video file (up to
+              100&nbsp;MB). Uploads run on the hosted form and full page;
+              embedded forms point visitors to the hosted form instead.
+            </p>
+          ) : null}
+
           <ConditionEditor
             question={question}
             others={others}

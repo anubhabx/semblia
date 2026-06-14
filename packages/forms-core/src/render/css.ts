@@ -87,6 +87,12 @@ export const BASE_CSS = `
 .sf-file::file-selector-button{font:inherit;font-weight:560;cursor:pointer;
   margin-right:12px;padding:7px 12px;border:0;border-radius:calc(var(--tf-radius-field) - 2px);
   color:var(--tf-accent-soft-text);background:var(--tf-accent-soft)}
+.sf-file-status{font-size:.82rem;color:var(--tf-text-muted)}
+.sf-file-status[data-error]{color:#b42318}
+.sf-file-noscript{display:block;font-size:.82rem;color:var(--tf-text-muted)}
+.sf-file-fallback{margin:0;font-size:.9rem;color:var(--tf-text-muted);line-height:1.5;
+  padding:11px 14px;border:1px dashed var(--tf-border-strong);
+  border-radius:var(--tf-radius-field);background:var(--tf-surface-raised)}
 .sf-stars{display:inline-flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px}
 .sf-star{cursor:pointer;font-size:30px;line-height:1;color:var(--tf-border-strong);
   transition:color .1s,transform .1s;user-select:none}

@@ -8,6 +8,13 @@ const envSchema = z
     FORMS_RUNTIME_SIGNING_SECRET: z.string().min(32).optional(),
     FORMS_RUNTIME_PUBLIC_BASE_DOMAIN: z.string().default("collect.semblia.com"),
     FORMS_RUNTIME_ASSET_BASE_URL: z.string().url().optional(),
+    /**
+     * Space-separated CSP `connect-src` origins the browser may PUT a presigned
+     * attachment to (the storage bucket host). Only applied to forms that have a
+     * file question. Defaults to `https:` so uploads work out of the box; tighten
+     * to the exact bucket origin in production.
+     */
+    FORMS_RUNTIME_UPLOAD_CONNECT_SRC: z.string().default("https:"),
     FORMS_RUNTIME_API_TIMEOUT_MS: z.coerce
       .number()
       .int()

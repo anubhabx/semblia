@@ -75,6 +75,15 @@ export const runtimeFormsSubmitBodySchema = z
   })
   .strict();
 
+export const runtimeFormsUploadIntentBodySchema = z
+  .object({
+    context: hostedFormRequestContextSchema,
+    contentType: z.string().trim().min(1).max(120),
+    byteSize: z.number().int().positive(),
+    checksumSha256: z.string().trim().min(1).max(128).optional(),
+  })
+  .strict();
+
 export const publishStudioDraftBodySchema = z
   .object({
     expectedVersion: z.number().int().min(1),
@@ -96,6 +105,9 @@ export type HostedFormRequestContextDto = z.infer<
 >;
 export type RuntimeFormsSubmitBodyDto = z.infer<
   typeof runtimeFormsSubmitBodySchema
+>;
+export type RuntimeFormsUploadIntentBodyDto = z.infer<
+  typeof runtimeFormsUploadIntentBodySchema
 >;
 export type PublishStudioDraftBodyDto = z.infer<
   typeof publishStudioDraftBodySchema

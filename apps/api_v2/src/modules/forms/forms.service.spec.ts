@@ -59,6 +59,7 @@ const mockGetStudioDraft = vi.fn();
 const mockSaveStudioDraft = vi.fn();
 const mockActivatePublicSubmitAssets = vi.fn();
 const mockAttachPublicSubmissionAssets = vi.fn();
+const mockCreateRuntimeUploadIntent = vi.fn();
 const mockCreateForProjectReviewers = vi.fn();
 const mockEnqueueSubmission = vi.fn();
 
@@ -132,6 +133,7 @@ const studioDraftsServiceMock = {
 const mediaServiceMock = {
   activatePublicSubmitAssets: mockActivatePublicSubmitAssets,
   attachPublicSubmissionAssets: mockAttachPublicSubmissionAssets,
+  createRuntimeSubmissionUploadIntent: mockCreateRuntimeUploadIntent,
   toDto: vi.fn(() => null),
 } as unknown as MediaService;
 
@@ -230,6 +232,13 @@ describe("FormsService", () => {
     mockStudioDraftUpdateMany.mockResolvedValue({ count: 1 });
     mockActivatePublicSubmitAssets.mockResolvedValue(undefined);
     mockAttachPublicSubmissionAssets.mockResolvedValue(undefined);
+    mockCreateRuntimeUploadIntent.mockResolvedValue({
+      assetId: "asset_1",
+      uploadUrl: "https://bucket.example/put",
+      storageKey: "projects/p/submissions/attachments/asset_1.png",
+      requiredHeaders: { "Content-Type": "image/png" },
+      expiresAt: "2026-06-14T00:10:00.000Z",
+    });
     mockEnqueueSubmission.mockResolvedValue([]);
   });
 
@@ -1019,6 +1028,94 @@ describe("FormsService", () => {
       }),
     );
     expect(result).toEqual({ redirectTo: null });
+  });
+
+  it("createRuntimeUploadIntent scopes the asset to the resolved project and the forwarded browser principal", async () => {
+    mockPublicSurfaceHostFindFirst.mockResolvedValue(null);
+    mockProjectFindFirst.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+    });
+    mockCollectionFormFindFirst.mockResolvedValue(makeForm({ isActive: true }));
+    // The submit principal derivation: the forwarded browser IP, not the runtime's.
+    mockGetClientIp.mockReturnValue("203.0.113.7");
+
+    const service = makeService(mediaServiceMock);
+    const result = await service.createRuntimeUploadIntent(
+      {
+        context: { projectPublicSlug: "acme", formSlug: null, path: "/" },
+        contentType: "image/png",
+        byteSize: 2048,
+      },
+      {
+        headers: {
+          "x-semblia-original-host": "acme.collect.semblia.com",
+          "x-semblia-original-forwarded-for": "203.0.113.7",
+        },
+      },
+    );
+
+    expect(mockCreateRuntimeUploadIntent).toHaveBeenCalledWith({
+      projectId: "project_1",
+      principal: "203.0.113.7",
+      contentType: "image/png",
+      byteSize: 2048,
+      checksumSha256: undefined,
+    });
+    expect(result).toMatchObject({
+      assetId: "asset_1",
+      uploadUrl: "https://bucket.example/put",
+    });
+  });
+
+  it("submitRuntimeForm threads uploaded mediaAssetIds[] into the attach pipeline", async () => {
+    mockPublicSurfaceHostFindFirst.mockResolvedValue(null);
+    mockProjectFindFirst.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+      autoModeration: true,
+      autoApproveVerified: false,
+    });
+    mockCollectionFormFindFirst.mockResolvedValueOnce(
+      makeForm({ isActive: true }),
+    );
+    mockCollectionFormSubmissionCreate.mockResolvedValue({
+      id: "submission_1",
+    });
+
+    const service = makeService(mediaServiceMock);
+    await service.submitRuntimeForm(
+      {
+        context: { projectPublicSlug: "acme", formSlug: null, path: "/" },
+        contentType: "application/x-www-form-urlencoded",
+        body: [
+          "answers%5BauthorName%5D=Ada",
+          "answers%5Bcontent%5D=Great",
+          "answers%5Bphoto%5D=asset_a",
+          "mediaAssetIds%5B%5D=asset_a",
+          "mediaAssetIds%5B%5D=asset_b",
+        ].join("&"),
+      },
+      {
+        headers: { "x-semblia-original-host": "acme.collect.semblia.com" },
+      },
+    );
+
+    expect(mockActivatePublicSubmitAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assetIds: expect.arrayContaining(["asset_a", "asset_b"]),
+      }),
+    );
+    expect(mockAttachPublicSubmissionAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assetIds: ["asset_a", "asset_b"],
+        submissionId: "submission_1",
+      }),
+    );
   });
 
   it("submitRuntimeForm reuses the resolved hosted target without re-running public origin trust", async () => {

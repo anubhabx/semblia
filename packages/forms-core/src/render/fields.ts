@@ -116,11 +116,34 @@ function renderDropdown(q: FormQuestion): string {
     `<option value="" disabled selected hidden>${escapeHtml(placeholder)}</option>${options}</select>`;
 }
 
-function renderFile(q: FormQuestion): string {
-  return `<input class="sf-input sf-file" type="file" id="${escapeAttr(q.id)}" name="${escapeAttr(fieldName(q.id))}"${q.required ? " required" : ""}${describedBy(q)}>`;
+/**
+ * The content types the API accepts for a SUBMISSION_ATTACHMENT
+ * (`StorageService.allowedContentTypes`): images, audio, and video. Used for the
+ * native `accept` filter and the client-side upload guard.
+ */
+export const FILE_ACCEPT = "image/*,audio/*,video/*";
+
+function renderFile(q: FormQuestion, interactive: boolean): string {
+  // Embeds run no script (no shadow-root execution) and cannot presign an
+  // upload, so a file question degrades to an honest note pointing at the full
+  // hosted form instead of an inert picker.
+  if (!interactive) {
+    return (
+      `<p class="sf-file-fallback" role="note">Attaching files isn't available here. ` +
+      `Open the full form to add an attachment.</p>`
+    );
+  }
+  // The control posts under `answers[<id>]`; the runtime replaces that value
+  // with the uploaded asset id before submit. `data-sf-file` marks it for the
+  // runtime, and the status line + `<noscript>` make the JS requirement honest.
+  return (
+    `<input class="sf-input sf-file" type="file" id="${escapeAttr(q.id)}" name="${escapeAttr(fieldName(q.id))}" accept="${FILE_ACCEPT}"${q.required ? " required" : ""}${describedBy(q)} data-sf-file>` +
+    `<span class="sf-file-status" data-sf-file-status hidden></span>` +
+    `<noscript><span class="sf-file-noscript">File uploads need JavaScript enabled.</span></noscript>`
+  );
 }
 
-function renderControl(q: FormQuestion): string {
+function renderControl(q: FormQuestion, interactive: boolean): string {
   switch (q.type) {
     case "shorttext":
       return renderTextual(q, "text");
@@ -141,7 +164,7 @@ function renderControl(q: FormQuestion): string {
     case "dropdown":
       return renderDropdown(q);
     case "file":
-      return renderFile(q);
+      return renderFile(q, interactive);
     default: {
       // Exhaustiveness guard — a new question type must add a renderer.
       const never: never = q.type;
@@ -150,8 +173,12 @@ function renderControl(q: FormQuestion): string {
   }
 }
 
-/** Render one question as a labelled field wrapper. `showIf` is carried as data for the runtime. */
-export function renderField(q: FormQuestion): string {
+/**
+ * Render one question as a labelled field wrapper. `showIf` is carried as data
+ * for the runtime. `interactive` is false for embeds (no executable script), so
+ * file questions render a fallback note rather than an inert picker.
+ */
+export function renderField(q: FormQuestion, interactive = true): string {
   const showIf = q.showIf
     ? ` data-show-if="${escapeAttr(JSON.stringify(q.showIf))}" hidden`
     : "";
@@ -165,8 +192,8 @@ export function renderField(q: FormQuestion): string {
     q.type === "checkbox";
   if (grouped) {
     return `<fieldset class="sf-field sf-field-${q.type}" data-qid="${escapeAttr(q.id)}"${showIf}>` +
-      `<legend class="sf-legend">${labelBlock(q)}</legend>${renderControl(q)}</fieldset>`;
+      `<legend class="sf-legend">${labelBlock(q)}</legend>${renderControl(q, interactive)}</fieldset>`;
   }
   return `<div class="sf-field sf-field-${q.type}" data-qid="${escapeAttr(q.id)}"${showIf}>` +
-    `<label class="sf-field-label" for="${escapeAttr(q.id)}">${labelBlock(q)}</label>${renderControl(q)}</div>`;
+    `<label class="sf-field-label" for="${escapeAttr(q.id)}">${labelBlock(q)}</label>${renderControl(q, interactive)}</div>`;
 }

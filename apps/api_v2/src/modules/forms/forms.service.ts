@@ -50,6 +50,7 @@ import {
   type ProjectFormsParamsDto,
   type PublishStudioDraftBodyDto,
   type RuntimeFormsSubmitBodyDto,
+  type RuntimeFormsUploadIntentBodyDto,
   type StudioDraftBodyDto,
   type ThemeTelemetryBatchDto,
   type UpdateFormBodyDto,
@@ -650,6 +651,53 @@ export class FormsService {
     };
   }
 
+  /**
+   * Mint a presigned SUBMISSION_ATTACHMENT upload intent for a hosted form.
+   * Scoped to the resolved form's project and the forwarded browser IP as the
+   * `public` principal — the SAME principal `submitRuntimeForm` derives — so the
+   * later submit can activate + attach the asset (see MediaService's
+   * `createdByActorId === principal` checks). Deriving a different principal
+   * here would make attachment linking fail at submit time.
+   */
+  async createRuntimeUploadIntent(
+    input: RuntimeFormsUploadIntentBodyDto,
+    request: PublicSubmitRequest,
+  ) {
+    if (!this.mediaService) {
+      throw new InternalServerErrorException(
+        "FormsService requires MediaService for submission attachments",
+      );
+    }
+
+    const originalHost = this.getRuntimeOriginalHost(request, input.context);
+    const originalPath = this.readHeader(request, "x-semblia-original-path");
+    if (originalPath && normalizePath(originalPath) !== input.context.path) {
+      throw new BadRequestException("Hosted form path does not match request");
+    }
+
+    const resolution = await this.resolveHostedFormTarget(
+      input.context,
+      originalHost,
+    );
+
+    const forwardedFor =
+      this.readHeader(request, "x-semblia-original-forwarded-for") ??
+      this.readHeader(request, "x-forwarded-for");
+    const principal = this.publicSubmitTrustService.getClientIp({
+      headers: forwardedFor ? { "x-forwarded-for": forwardedFor } : {},
+      ip: this.firstForwardedIp(forwardedFor) ?? request.ip,
+      socket: request.socket,
+    });
+
+    return this.mediaService.createRuntimeSubmissionUploadIntent({
+      projectId: resolution.project.id,
+      principal,
+      contentType: input.contentType,
+      byteSize: input.byteSize,
+      checksumSha256: input.checksumSha256,
+    });
+  }
+
   async submitPublic(
     params: FormParamsDto,
     body: CreateFormSubmissionBodyDto,
@@ -1010,6 +1058,12 @@ export class FormsService {
     };
 
     const rating = this.parseRuntimeRating(value("rating"));
+    const mediaAssetIds = Array.isArray(parsed.mediaAssetIds)
+      ? parsed.mediaAssetIds
+          .filter((id): id is string => typeof id === "string" && !!id.trim())
+          .map((id) => id.trim())
+          .slice(0, 10)
+      : undefined;
     const candidate = {
       authorName: value("authorName", "name"),
       authorEmail: this.nullableValue(value("authorEmail", "email")),
@@ -1018,6 +1072,7 @@ export class FormsService {
       content: value("content", "testimonial", "message"),
       rating,
       answers,
+      ...(mediaAssetIds && mediaAssetIds.length > 0 ? { mediaAssetIds } : {}),
       source: "hosted_form",
     };
     const result = createFormSubmissionBodySchema.safeParse(candidate);
@@ -1040,17 +1095,25 @@ export class FormsService {
   private parseRuntimeUrlEncodedBody(body: string): Record<string, unknown> {
     const answers: Record<string, unknown> = {};
     const topLevel: Record<string, unknown> = {};
+    const mediaAssetIds: string[] = [];
     const params = new URLSearchParams(body);
     for (const [key, value] of params.entries()) {
       const answerMatch = key.match(/^answers\[([^\]]+)\]$/);
       if (answerMatch?.[1]) {
         answers[answerMatch[1]] = value;
+      } else if (key === "mediaAssetIds" || key === "mediaAssetIds[]") {
+        // Repeated keys (one per uploaded attachment) accumulate into an array.
+        if (value.trim()) mediaAssetIds.push(value.trim());
       } else {
         topLevel[key] = value;
       }
     }
 
-    return { ...topLevel, answers };
+    return {
+      ...topLevel,
+      ...(mediaAssetIds.length > 0 ? { mediaAssetIds } : {}),
+      answers,
+    };
   }
 
   private parseRuntimeRating(value: string | undefined) {

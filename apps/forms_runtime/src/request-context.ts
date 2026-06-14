@@ -7,6 +7,7 @@ export type HostedFormRequestContext = {
 
 const submitSuffix = "/__submit";
 const embedSuffix = "/__embed";
+const uploadSuffix = "/__upload";
 
 /** `/feedback/__embed` → `/feedback`; non-embed paths pass through. */
 export function toEmbeddedFormPath(path: string): string {
@@ -27,6 +28,15 @@ export function toSubmittedFormPath(path: string): string {
   if (normalized === submitSuffix) return "/";
   if (!normalized.endsWith(submitSuffix)) return normalized;
   const formPath = normalized.slice(0, -submitSuffix.length);
+  return formPath || "/";
+}
+
+/** `/feedback/__upload` → `/feedback`; the form path the upload intent scopes to. */
+export function toUploadFormPath(path: string): string {
+  const normalized = normalizePath(path);
+  if (normalized === uploadSuffix) return "/";
+  if (!normalized.endsWith(uploadSuffix)) return normalized;
+  const formPath = normalized.slice(0, -uploadSuffix.length);
   return formPath || "/";
 }
 

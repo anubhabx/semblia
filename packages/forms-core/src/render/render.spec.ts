@@ -95,6 +95,60 @@ describe("renderPublishedFormPage", () => {
   });
 });
 
+describe("file questions", () => {
+  function withFileQuestion() {
+    const doc = defaultFormDefinition({ brandName: "Acme" });
+    doc.structure.questions.push({
+      id: "screenshot",
+      type: "file",
+      label: "Attach a screenshot",
+      placeholder: "",
+      description: "",
+      required: false,
+      options: [],
+      showIf: null,
+    });
+    return publishFormDefinition(doc);
+  }
+
+  it("the page carries upload config + the file control and flags requiresUpload", () => {
+    const { html, requiresUpload } = renderPublishedFormPage(withFileQuestion(), {
+      formPath: "/feedback",
+    });
+    expect(requiresUpload).toBe(true);
+    expect(html).toContain('type="file"');
+    expect(html).toContain("data-sf-file");
+    // Upload config travels in the JSON island, addressed at the runtime path.
+    expect(html).toContain('"upload"');
+    expect(html).toContain("/feedback/__upload");
+  });
+
+  it("a form without a file question never opens the upload path", () => {
+    const { html, requiresUpload } = renderPublishedFormPage(
+      publishedWith("card"),
+    );
+    expect(requiresUpload).toBe(false);
+    expect(html).not.toContain('"upload"');
+    expect(html).not.toContain("__upload");
+  });
+
+  it("the embed fragment degrades a file question to a fallback note, not an inert picker", () => {
+    const { html, requiresUpload } = renderPublishedFormFragment(
+      withFileQuestion(),
+      { brandFallback: "Acme" },
+    );
+    expect(requiresUpload).toBe(false);
+    expect(html).toContain("sf-file-fallback");
+    expect(html).not.toContain('type="file"');
+  });
+
+  it("the constant runtime script owns the presign + attach flow", () => {
+    // Locks the behaviour into the single hashed script (stable CSP source).
+    expect(FORM_RUNTIME_SCRIPT).toContain("mediaAssetIds[]");
+    expect(FORM_RUNTIME_SCRIPT).toContain("cfg.upload");
+  });
+});
+
 describe("renderPublishedFormFragment", () => {
   it("is a script-free Shadow DOM fragment, not a document", () => {
     const { html, inlineScripts } = renderPublishedFormFragment(

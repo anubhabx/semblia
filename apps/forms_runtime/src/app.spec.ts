@@ -1,14 +1,67 @@
 import { createHash } from "node:crypto";
 import { FORM_RUNTIME_SCRIPT } from "@workspace/forms-core/render";
+import {
+  defaultFormDefinition,
+  publishFormDefinition,
+} from "@workspace/forms-core/schema";
 import { describe, expect, it } from "vitest";
 import { createFormsRuntimeApp } from "./app.js";
 import { loadEnv } from "./env.js";
 import { createMockRuntimeServices } from "./mock-services.js";
+import type { FormsRuntimeServices } from "./types.js";
 
 const env = loadEnv({
   FORMS_RUNTIME_MODE: "mock",
   FORMS_RUNTIME_PUBLIC_BASE_DOMAIN: "collect.semblia.com",
 });
+
+/** A services stub whose form has a file question, to exercise the upload path. */
+function fileFormServices(): FormsRuntimeServices {
+  const def = defaultFormDefinition({ brandName: "Acme Launchpad" });
+  def.structure.questions.push({
+    id: "screenshot",
+    type: "file",
+    label: "Attach a screenshot",
+    placeholder: "",
+    description: "",
+    required: false,
+    options: [],
+    showIf: null,
+  });
+  const config = publishFormDefinition(def);
+  return {
+    async resolveForm(context) {
+      return {
+        project: {
+          id: "project_mock",
+          slug: context.projectPublicSlug,
+          name: "Acme Launchpad",
+          publicSlug: context.projectPublicSlug,
+          brandColorPrimary: "#0f766e",
+        },
+        form: {
+          id: "form_mock",
+          slug: context.formSlug,
+          name: "Customer feedback",
+          description: null,
+          config,
+          publishedAt: new Date("2026-05-30T00:00:00.000Z").toISOString(),
+        },
+      };
+    },
+    async submitForm() {
+      return { redirectTo: "/?submitted=1" };
+    },
+    async createUploadIntent() {
+      return {
+        assetId: "asset_runtime_1",
+        uploadUrl: "https://bucket.example/put",
+        requiredHeaders: { "Content-Type": "image/png" },
+        expiresAt: "2026-06-14T00:10:00.000Z",
+      };
+    },
+  };
+}
 
 const expectedScriptHash = `sha256-${createHash("sha256")
   .update(FORM_RUNTIME_SCRIPT, "utf8")
@@ -155,5 +208,59 @@ describe("createFormsRuntimeApp", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
     await expect(response.json()).resolves.toMatchObject({ ok: true });
+  });
+
+  it("mints a presigned upload intent via the same-origin proxy", async () => {
+    const app = createFormsRuntimeApp(env, fileFormServices());
+    const response = await app.request(
+      "http://acme.collect.semblia.com/feedback/__upload",
+      {
+        method: "POST",
+        body: JSON.stringify({ contentType: "image/png", byteSize: 2048 }),
+        headers: { "content-type": "application/json" },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      assetId: "asset_runtime_1",
+      uploadUrl: "https://bucket.example/put",
+    });
+  });
+
+  it("rejects an upload intent with a malformed body", async () => {
+    const app = createFormsRuntimeApp(env, fileFormServices());
+    const response = await app.request(
+      "http://acme.collect.semblia.com/__upload",
+      {
+        method: "POST",
+        body: JSON.stringify({ contentType: "image/png" }),
+        headers: { "content-type": "application/json" },
+      },
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("opens connect-src only for forms that upload, never for plain forms", async () => {
+    const fileApp = createFormsRuntimeApp(env, fileFormServices());
+    const fileResp = await fileApp.request("http://acme.collect.semblia.com/");
+    const fileCsp = fileResp.headers.get("content-security-policy") ?? "";
+    expect(fileCsp).toContain("connect-src 'self' https:");
+    expect(fileCsp).not.toContain("connect-src 'none'");
+
+    const plainApp = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const plainResp = await plainApp.request("http://acme.collect.semblia.com/");
+    const plainCsp = plainResp.headers.get("content-security-policy") ?? "";
+    expect(plainCsp).toContain("connect-src 'none'");
+  });
+
+  it("serves the local-dev attachment sink for the mock upload flow", async () => {
+    const app = createFormsRuntimeApp(env, createMockRuntimeServices());
+    const response = await app.request(
+      "http://acme.collect.semblia.com/__mock-upload",
+      { method: "PUT", body: "binary" },
+    );
+    expect(response.status).toBe(200);
   });
 });

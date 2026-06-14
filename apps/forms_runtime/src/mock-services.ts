@@ -40,5 +40,15 @@ export function createMockRuntimeServices(): FormsRuntimeServices {
     async submitForm() {
       return { redirectTo: "/?submitted=1" };
     },
+    async createUploadIntent() {
+      // Local dev has no S3: hand back a same-origin sink so the upload PUT
+      // succeeds and the end-to-end file flow can be exercised at localhost.
+      return {
+        assetId: `asset_mock_${Math.random().toString(36).slice(2, 10)}`,
+        uploadUrl: "/__mock-upload",
+        requiredHeaders: {},
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      };
+    },
   };
 }

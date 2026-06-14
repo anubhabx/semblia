@@ -9,8 +9,10 @@
  *
  * It is pure progressive enhancement. With scripts disabled the form is fully
  * usable: every question shows, native `required`/validation works, and submit
- * is a native POST. This script only adds conditional reveal, conversational
- * stepping, and step-level validation.
+ * is a native POST. This script adds conditional reveal, conversational
+ * stepping, step-level validation, and — when the form has a file question —
+ * presigned attachment upload before submit (config arrives via the island's
+ * `upload` block, so the script bytes stay constant for CSP hashing).
  *
  * No backticks or `${}` appear in the body so it survives being embedded in a
  * template literal verbatim.
@@ -69,4 +71,30 @@ nextBtn.addEventListener("click",function(){go(1)});
 form.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.tagName!=="TEXTAREA"){var act=activeFields();if(stepIndex<act.length-1){e.preventDefault();go(1)}}})}
 form.addEventListener("input",applyShowIf);form.addEventListener("change",applyShowIf);
 applyShowIf();if(conv)layoutSteps();
+var up=cfg.upload;
+function addHidden(name,val){var h=document.createElement("input");h.type="hidden";h.name=name;h.value=val;form.appendChild(h)}
+function qidOf(input){var m=(input.name||"").match(/^answers\\[(.+)\\]$/);return m?m[1]:input.id}
+function statusEl(input){var f=input.closest?input.closest(".sf-field"):null;return f?f.querySelector("[data-sf-file-status]"):null}
+function setStatus(input,msg,err){var s=statusEl(input);if(!s)return;if(msg){s.hidden=false;s.textContent=msg;if(err)s.setAttribute("data-error","1");else s.removeAttribute("data-error")}else{s.hidden=true;s.textContent=""}}
+function pendingFiles(){var all=form.querySelectorAll("input[type=file]");var out=[];for(var i=0;i<all.length;i++){var fi=all[i];if(!fi.disabled&&fi.files&&fi.files.length>0)out.push(fi)}return out}
+function uploadOne(input){var file=input.files[0];
+if(up.maxBytes&&file.size>up.maxBytes){return Promise.reject(new Error("too-large"))}
+setStatus(input,"Uploading "+(file.name||"file")+"\\u2026",false);
+return fetch(up.url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({contentType:file.type||"application/octet-stream",byteSize:file.size})})
+.then(function(r){if(!r.ok)throw new Error("intent");return r.json()})
+.then(function(intent){if(!intent||!intent.uploadUrl||!intent.assetId)throw new Error("intent");
+return fetch(intent.uploadUrl,{method:"PUT",headers:intent.requiredHeaders||{},body:file}).then(function(pr){if(!pr.ok)throw new Error("put");return intent.assetId})})
+.then(function(assetId){var qid=qidOf(input);addHidden("answers["+qid+"]",assetId);addHidden("mediaAssetIds[]",assetId);input.disabled=true;setStatus(input,(file.name||"File")+" attached",false)})
+.catch(function(e){setStatus(input,e&&e.message==="too-large"?"This file is too large.":"Upload failed \\u2014 please try again.",true);throw e})}
+if(up&&up.url){var submitBtn2=form.querySelector("button[type=submit]");
+form.addEventListener("submit",function(e){
+var list=pendingFiles();if(!list.length)return;
+e.preventDefault();
+if(form.getAttribute("data-sf-uploading")==="1")return;
+form.setAttribute("data-sf-uploading","1");
+if(submitBtn2)submitBtn2.disabled=true;
+var chain=Promise.resolve();
+for(var i=0;i<list.length;i++){(function(inp){chain=chain.then(function(){return uploadOne(inp)})})(list[i])}
+chain.then(function(){if(submitBtn2)submitBtn2.disabled=false;form.removeAttribute("data-sf-uploading");form.submit()})
+.catch(function(){if(submitBtn2)submitBtn2.disabled=false;form.removeAttribute("data-sf-uploading")})})}
 })();`;

@@ -4,6 +4,7 @@ import type {
   FormsRuntimeServices,
   HostedFormRequestMetadata,
   HostedFormResolveResult,
+  HostedFormUploadIntentResult,
 } from "./types.js";
 
 function toApiContext(context: {
@@ -62,6 +63,34 @@ export function createApiRuntimeServices(
           ...runtimeForwardHeaders(input.metadata),
         },
       );
+    },
+    async createUploadIntent(input) {
+      const intent = await runtimeApiPost<
+        HostedFormUploadIntentResult & { storageKey?: string }
+      >(
+        env,
+        "/runtime/forms/upload-intent",
+        {
+          context: toApiContext(input.context),
+          contentType: input.contentType,
+          byteSize: input.byteSize,
+          ...(input.checksumSha256
+            ? { checksumSha256: input.checksumSha256 }
+            : {}),
+        },
+        {
+          "x-semblia-original-host": input.context.host,
+          "x-semblia-original-path": input.context.path,
+          ...runtimeForwardHeaders(input.metadata),
+        },
+      );
+      // The internal storage key never reaches the browser.
+      return {
+        assetId: intent.assetId,
+        uploadUrl: intent.uploadUrl,
+        requiredHeaders: intent.requiredHeaders ?? {},
+        expiresAt: intent.expiresAt,
+      };
     },
   };
 }

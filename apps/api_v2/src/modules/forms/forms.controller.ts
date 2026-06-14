@@ -31,6 +31,7 @@ import {
   publishStudioDraftBodySchema,
   publicFormsListQuerySchema,
   runtimeFormsSubmitBodySchema,
+  runtimeFormsUploadIntentBodySchema,
   studioDraftBodySchema,
   themeTelemetryBatchSchema,
   type CreateFormBodyDto,
@@ -41,6 +42,7 @@ import {
   type PublishStudioDraftBodyDto,
   type PublicFormsListQueryDto,
   type RuntimeFormsSubmitBodyDto,
+  type RuntimeFormsUploadIntentBodyDto,
   type StudioDraftBodyDto,
   type ThemeTelemetryBatchDto,
   type UpdateFormBodyDto,
@@ -259,5 +261,19 @@ export class RuntimeFormsController {
   ) {
     this.signatureService.verify(request, "/runtime/forms/submit");
     return this.formsService.submitRuntimeForm(body, request);
+  }
+
+  @Public()
+  @SkipThrottle()
+  @UseGuards(FormsRuntimeThrottlerGuard)
+  @Throttle({ "forms-runtime-upload-intent": { limit: 60, ttl: seconds(60) } })
+  @Post("upload-intent")
+  uploadIntent(
+    @Body(new ZodValidationPipe(runtimeFormsUploadIntentBodySchema))
+    body: RuntimeFormsUploadIntentBodyDto,
+    @Req() request: PublicSubmitRequest,
+  ) {
+    this.signatureService.verify(request, "/runtime/forms/upload-intent");
+    return this.formsService.createRuntimeUploadIntent(body, request);
   }
 }

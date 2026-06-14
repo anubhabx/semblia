@@ -15,12 +15,14 @@ import {
   resolveRequestContext,
   toEmbeddedFormPath,
   toSubmittedFormPath,
+  toUploadFormPath,
 } from "./request-context.js";
 import type { FormsRuntimeServices } from "./types.js";
 
-type RuntimeVariables = { formScriptSrc?: string };
+type RuntimeVariables = { formScriptSrc?: string; formConnectSrc?: string };
 
 const maxBodyBytes = 64 * 1024;
+const maxUploadIntentBytes = 4 * 1024;
 
 /** CSP `'sha256-…'` source for an inline script, so it executes without `'unsafe-inline'`. */
 function scriptHash(script: string): string {
@@ -33,7 +35,10 @@ function scriptSrcFor(scripts: string[]): string {
   return `script-src ${scripts.map(scriptHash).join(" ")}`;
 }
 
-function buildSecurityHeaders(scriptSrc: string): Record<string, string> {
+function buildSecurityHeaders(
+  scriptSrc: string,
+  connectSrc: string,
+): Record<string, string> {
   return {
     "content-security-policy": [
       "default-src 'none'",
@@ -45,7 +50,7 @@ function buildSecurityHeaders(scriptSrc: string): Record<string, string> {
       "style-src 'unsafe-inline'",
       "font-src 'self'",
       scriptSrc,
-      "connect-src 'none'",
+      connectSrc,
     ].join("; "),
     "permissions-policy":
       "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
@@ -56,8 +61,15 @@ function buildSecurityHeaders(scriptSrc: string): Record<string, string> {
   };
 }
 
-function applySecurityHeaders(c: Context, scriptSrc?: string): void {
-  const headers = buildSecurityHeaders(scriptSrc ?? "script-src 'none'");
+function applySecurityHeaders(
+  c: Context,
+  scriptSrc?: string,
+  connectSrc?: string,
+): void {
+  const headers = buildSecurityHeaders(
+    scriptSrc ?? "script-src 'none'",
+    connectSrc ?? "connect-src 'none'",
+  );
   for (const [name, value] of Object.entries(headers)) {
     c.header(name, value);
   }
@@ -93,7 +105,7 @@ export function createFormsRuntimeApp(
 
   app.use("*", async (c, next) => {
     await next();
-    applySecurityHeaders(c, c.get("formScriptSrc"));
+    applySecurityHeaders(c, c.get("formScriptSrc"), c.get("formConnectSrc"));
   });
 
   app.onError((error, c) => {
@@ -103,6 +115,70 @@ export function createFormsRuntimeApp(
   });
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  // Local-dev attachment sink: the mock upload intent points file PUTs here so
+  // the end-to-end flow works without S3. Never matched in api mode.
+  app.put("/__mock-upload", (c) => c.body(null, 200));
+
+  // Presigned upload intent for a submission attachment — same-origin POST from
+  // the hosted page runtime. Proxies (signed) to api_v2, which scopes the asset
+  // to the resolved form's project + the forwarded browser IP (the submit
+  // principal), then the browser PUTs the file straight to the returned URL.
+  app.post("*", async (c, next) => {
+    const url = new URL(c.req.url);
+    if (!url.pathname.endsWith("/__upload")) {
+      await next();
+      return;
+    }
+    const host = resolveRuntimeHost(
+      c.req.header("x-semblia-original-host"),
+      c.req.header("host"),
+      url,
+      env,
+    );
+    const formPath = toUploadFormPath(url.pathname);
+    const context = resolveRequestContext({
+      host,
+      url: formPath,
+      baseDomain: env.FORMS_RUNTIME_PUBLIC_BASE_DOMAIN,
+    });
+    const raw = await c.req.text();
+    if (new TextEncoder().encode(raw).byteLength > maxUploadIntentBytes) {
+      return c.text("Request body too large", 413);
+    }
+    let parsed: { contentType?: unknown; byteSize?: unknown; checksumSha256?: unknown };
+    try {
+      parsed = JSON.parse(raw || "{}");
+    } catch {
+      return c.json({ error: "invalid_body" }, 400);
+    }
+    if (
+      typeof parsed.contentType !== "string" ||
+      typeof parsed.byteSize !== "number" ||
+      !Number.isFinite(parsed.byteSize) ||
+      parsed.byteSize <= 0
+    ) {
+      return c.json({ error: "invalid_body" }, 400);
+    }
+    try {
+      const intent = await services.createUploadIntent({
+        context,
+        contentType: parsed.contentType,
+        byteSize: parsed.byteSize,
+        ...(typeof parsed.checksumSha256 === "string"
+          ? { checksumSha256: parsed.checksumSha256 }
+          : {}),
+        metadata: {
+          userAgent: c.req.header("user-agent"),
+          forwardedFor: c.req.header("x-forwarded-for"),
+        },
+      });
+      return c.json(intent, 200);
+    } catch (error) {
+      console.error("forms_runtime upload intent failed", error);
+      return c.json({ error: "upload_intent_failed" }, 502);
+    }
+  });
 
   // Form submission — native POST from the hosted page (303 redirect) or a
   // cross-origin fetch from the embed loader (`?embed=1` → JSON + CORS).
@@ -227,6 +303,7 @@ export function createFormsRuntimeApp(
     const submitted = url.searchParams.get("submitted") === "1";
     let html: string;
     let scripts: string[];
+    let requiresUpload = false;
     try {
       // Config flows through migrate + publish so an unmigratable row fails
       // loudly here rather than rendering an unstyled form.
@@ -238,6 +315,7 @@ export function createFormsRuntimeApp(
       });
       html = rendered.html;
       scripts = rendered.inlineScripts;
+      requiresUpload = rendered.requiresUpload;
     } catch (error) {
       console.error("forms_runtime page render failed", error);
       html = renderFormStubPageHtml({ brandName: resolved.project.name });
@@ -245,6 +323,14 @@ export function createFormsRuntimeApp(
     }
 
     c.set("formScriptSrc", scriptSrcFor(scripts));
+    // Open connect-src only for forms that upload: 'self' for the upload-intent
+    // proxy, the configured storage origin for the presigned PUT.
+    if (requiresUpload) {
+      c.set(
+        "formConnectSrc",
+        `connect-src 'self' ${env.FORMS_RUNTIME_UPLOAD_CONNECT_SRC}`,
+      );
+    }
     return c.html(html, 200, {
       "cache-control": submitted
         ? "no-store"

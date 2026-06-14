@@ -398,7 +398,7 @@ describe("ProjectsService allowed origins", () => {
       }),
     );
     // Unset fields are not prefilled from any per-user override.
-    const createArg = mockProjectCreate.mock.calls[0][0];
+    const createArg = mockProjectCreate.mock.calls[0]![0];
     expect(createArg.data.brandColorSecondary).toBeUndefined();
   });
 

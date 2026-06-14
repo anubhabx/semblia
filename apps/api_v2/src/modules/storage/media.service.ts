@@ -92,6 +92,30 @@ export class MediaService {
     });
   }
 
+  /**
+   * Mint a pending SUBMISSION_ATTACHMENT intent for the signed forms_runtime
+   * path, where the project + principal are already resolved upstream (the
+   * forwarded browser IP must equal the eventual submit principal). Content type
+   * and size are validated by `createPendingIntent` -> `assertContent`.
+   */
+  async createRuntimeSubmissionUploadIntent(input: {
+    projectId: string;
+    principal: string;
+    contentType: string;
+    byteSize: number;
+    checksumSha256?: string;
+  }) {
+    return this.createPendingIntent({
+      purpose: MediaAssetPurpose.SUBMISSION_ATTACHMENT,
+      contentType: input.contentType,
+      byteSize: input.byteSize,
+      checksumSha256: input.checksumSha256,
+      projectId: input.projectId,
+      actorType: "public",
+      actorId: input.principal,
+    });
+  }
+
   async confirmUpload(
     actor: ActorContext,
     assetId: string,

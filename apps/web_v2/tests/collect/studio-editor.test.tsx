@@ -49,12 +49,37 @@ describe("StudioEditor", () => {
 
   it("switches layout preset", async () => {
     const user = userEvent.setup();
-    let latest: FormDefinitionDoc | null = null;
-    render(<Harness onDoc={(d) => (latest = d)} />);
+    // Object ref, not a `let` closed over by onDoc: avoids the control-flow
+    // `never`-narrowing TS applies to closure-assigned locals.
+    const captured: { doc: FormDefinitionDoc | null } = { doc: null };
+    render(<Harness onDoc={(d) => (captured.doc = d)} />);
 
     await user.click(screen.getByRole("tab", { name: "Layout" }));
     await user.click(screen.getByRole("button", { name: /split/i }));
-    expect(latest?.layout.preset).toBe("split");
+    expect(captured.doc?.layout.preset).toBe("split");
+  });
+
+  it("explains file-upload constraints in the question editor", async () => {
+    const user = userEvent.setup();
+    const doc = defaultFormDefinition({ brandName: "Acme" });
+    doc.structure.questions.push({
+      id: "attachment",
+      type: "file",
+      label: "Attach a screenshot",
+      placeholder: "",
+      description: "",
+      required: false,
+      options: [],
+      showIf: null,
+    });
+    render(<StudioEditor doc={doc} onChange={() => {}} />);
+
+    await user.click(screen.getByRole("tab", { name: "Questions" }));
+    const detailToggles = screen.getAllByRole("button", {
+      name: /edit question details/i,
+    });
+    await user.click(detailToggles[detailToggles.length - 1]!);
+    expect(screen.getByText(/uploads run on the hosted form/i)).toBeTruthy();
   });
 
   it("exposes the full theme knob surface", async () => {
