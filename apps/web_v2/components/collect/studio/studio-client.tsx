@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { isValidHexColor } from "@/components/ui/color-picker";
 import { cn } from "@/lib/utils";
 import { StudioEditor } from "./studio-editor";
-import { StudioPreview } from "./studio-preview";
+import { PreviewCanvas } from "./preview-canvas";
 
 /** Project branding the studio inherits from / falls back to. */
 export interface StudioProject {
@@ -245,7 +245,11 @@ export function StudioClient({
           />
         </div>
         <div className="flex flex-col max-lg:min-h-[70vh] lg:h-full lg:min-h-0 lg:flex-1">
-          <StudioPreview doc={effectiveDoc ?? doc} />
+          <PreviewCanvas
+            doc={effectiveDoc ?? doc}
+            project={project}
+            slug={slug}
+          />
         </div>
       </div>
     </div>
