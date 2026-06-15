@@ -46,9 +46,10 @@ function buildSecurityHeaders(
       "form-action 'self'",
       "frame-ancestors 'none'",
       "img-src 'self' https: data:",
-      // The form's inline <style> block; webfonts stay an explicit opt-in.
+      // The form's inline <style> block (incl. its @font-face) and the brand
+      // font it ships as a self-contained data-URI woff2 — no external origin.
       "style-src 'unsafe-inline'",
-      "font-src 'self'",
+      "font-src 'self' data:",
       scriptSrc,
       connectSrc,
     ].join("; "),

@@ -33,7 +33,7 @@ export const PRESETS: Record<PresetId, FormPreset> = {
       radius: 2,
       density: "cozy",
       typePairing: "geist",
-      surfaceStyle: "bordered",
+      surfaceStyle: "elevated",
       accentIntensity: "balanced",
       neutralTone: "auto",
       buttonStyle: "solid",
@@ -57,7 +57,7 @@ export const PRESETS: Record<PresetId, FormPreset> = {
   },
 };
 
-export const DEFAULT_PRESET_ID: PresetId = "clean";
+export const DEFAULT_PRESET_ID: PresetId = "default";
 
 /** Combine a preset's seed with a brand color into resolvable theme inputs. */
 export function resolvePreset(

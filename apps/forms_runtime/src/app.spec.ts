@@ -104,6 +104,8 @@ describe("createFormsRuntimeApp", () => {
     expect(csp).toContain(`script-src '${expectedScriptHash}'`);
     expect(csp).not.toContain("'unsafe-inline'; script");
     expect(csp).toContain("style-src 'unsafe-inline'");
+    // Self-contained brand font ships as a data-URI woff2 — no external origin.
+    expect(csp).toContain("font-src 'self' data:");
     expect(csp).not.toContain("script-src 'none'");
     expect(csp).not.toContain("fonts.googleapis.com");
   });

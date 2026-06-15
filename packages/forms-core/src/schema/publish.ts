@@ -20,7 +20,7 @@ import {
 export function defaultFormDefinition(
   overrides: { brandName?: string; brandColor?: string } = {},
 ): FormDefinitionDoc {
-  const inputs = resolvePreset("clean", overrides.brandColor ?? "#4f46e5");
+  const inputs = resolvePreset("default", overrides.brandColor ?? "#4f46e5");
   return formDefinitionDocSchema.parse({
     schemaVersion: FORM_SCHEMA_VERSION,
     structure: {
@@ -50,7 +50,7 @@ export function defaultFormDefinition(
       ],
     },
     layout: { preset: "card" },
-    theme: { preset: "clean", inputs },
+    theme: { preset: "default", inputs },
     content: {
       brandName: overrides.brandName ?? "",
       headline: "Share your experience",

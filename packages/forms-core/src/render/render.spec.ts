@@ -76,6 +76,18 @@ describe("renderPublishedFormPage", () => {
     expect(html).toContain('"conversational":true');
   });
 
+  it("carries its brand font self-contained (no external request)", () => {
+    // The default form pairs Geist; the page must ship its own @font-face as a
+    // data-URI so it renders identically in preview, studio iframe, and prod.
+    const { html } = renderPublishedFormPage(publishedWith("card"));
+    expect(html).toContain("@font-face");
+    expect(html).toContain('font-family:"Geist"');
+    expect(html).toContain("src:url(data:font/woff2;base64,");
+    // Never a third-party font request.
+    expect(html).not.toContain("fonts.googleapis.com");
+    expect(html).not.toContain("fonts.gstatic.com");
+  });
+
   it("conditional questions are hidden up front and carried as data for the runtime", () => {
     const doc = defaultFormDefinition();
     doc.structure.questions.push({
@@ -162,6 +174,14 @@ describe("renderPublishedFormFragment", () => {
     // No executable scripts run in a shadow root.
     expect(html).not.toContain("<script");
     expect(inlineScripts).toEqual([]);
+  });
+
+  it("ships no embedded font — embeds inherit the host page's typography", () => {
+    const { html } = renderPublishedFormFragment(publishedWith("card"), {
+      brandFallback: "Acme",
+    });
+    expect(html).not.toContain("@font-face");
+    expect(html).not.toContain("data:font/woff2");
   });
 });
 

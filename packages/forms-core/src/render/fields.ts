@@ -81,6 +81,19 @@ function renderScale(
   return `<div class="${className}" role="radiogroup" aria-labelledby="${escapeAttr(q.id)}-label">${items}</div>`;
 }
 
+/**
+ * NPS is the 0–10 recommend scale, so it renders as a single connected segmented
+ * control with anchored endpoint captions — far clearer than a wrapping grid of
+ * loose chips.
+ */
+function renderNps(q: FormQuestion): string {
+  return (
+    renderScale(q, NPS_SCALE, "sf-nps") +
+    `<div class="sf-scale-ends" aria-hidden="true">` +
+    `<span>Not likely</span><span>Very likely</span></div>`
+  );
+}
+
 function renderEmoji(q: FormQuestion): string {
   const items = EMOJI_SCALE.map(({ value, glyph, label }) => {
     const inputId = `${q.id}-emoji-${value}`;
@@ -112,8 +125,16 @@ function renderDropdown(q: FormQuestion): string {
   const options = q.options
     .map((option) => `<option value="${escapeAttr(option)}">${escapeHtml(option)}</option>`)
     .join("");
-  return `<select class="sf-input sf-select" id="${escapeAttr(q.id)}" name="${escapeAttr(fieldName(q.id))}"${q.required ? " required" : ""}${describedBy(q)}>` +
-    `<option value="" disabled selected hidden>${escapeHtml(placeholder)}</option>${options}</select>`;
+  // A wrapped native select + inline SVG chevron: the chevron inherits the theme
+  // (currentColor) so it reads correctly in light and dark, unlike a fixed-color
+  // background triangle.
+  return (
+    `<span class="sf-select-wrap">` +
+    `<select class="sf-input sf-select" id="${escapeAttr(q.id)}" name="${escapeAttr(fieldName(q.id))}"${q.required ? " required" : ""}${describedBy(q)}>` +
+    `<option value="" disabled selected hidden>${escapeHtml(placeholder)}</option>${options}</select>` +
+    `<svg class="sf-select-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>` +
+    `</span>`
+  );
 }
 
 /**
@@ -154,7 +175,7 @@ function renderControl(q: FormQuestion, interactive: boolean): string {
     case "stars":
       return renderStars(q);
     case "nps":
-      return renderScale(q, NPS_SCALE, "sf-nps");
+      return renderNps(q);
     case "emoji":
       return renderEmoji(q);
     case "radio":

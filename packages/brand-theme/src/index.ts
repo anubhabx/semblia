@@ -120,19 +120,19 @@ export interface ResolvedThemeSnapshot {
 
 const RADIUS_PX: Record<RadiusScale, number> = {
   0: 0,
-  1: 6,
-  2: 12,
-  3: 18,
-  4: 26,
+  1: 8,
+  2: 14,
+  3: 20,
+  4: 28,
 };
 
 /** Fields cap lower than containers so high radius never makes inputs pill-shaped. */
 const RADIUS_FIELD_PX: Record<RadiusScale, number> = {
   0: 0,
-  1: 6,
+  1: 7,
   2: 10,
-  3: 12,
-  4: 14,
+  3: 13,
+  4: 16,
 };
 
 const TYPE_PAIRINGS: Record<TypePairingId, string> = {
@@ -193,26 +193,28 @@ function neutralBasis(
 function lightSurfaces(hue: number, cScale: number): Surfaces {
   const c = (x: number) => x * cScale;
   return {
-    background: oklchToHex({ l: 0.985, c: c(0.006), h: hue }),
-    surface: oklchToHex({ l: 0.998, c: c(0.003), h: hue }),
+    // The page is a soft, brand-tinted canvas a step below the card, so an
+    // elevated or bordered card visibly lifts off it instead of floating on white.
+    background: oklchToHex({ l: 0.974, c: c(0.008), h: hue }),
+    surface: oklchToHex({ l: 0.995, c: c(0.004), h: hue }),
     surfaceRaised: "#ffffff",
-    text: oklchToHex({ l: 0.22, c: c(0.01), h: hue }),
-    mutedText: oklchToHex({ l: 0.5, c: c(0.012), h: hue }),
-    border: oklchToHex({ l: 0.9, c: c(0.008), h: hue }),
-    borderStrong: oklchToHex({ l: 0.82, c: c(0.01), h: hue }),
+    text: oklchToHex({ l: 0.21, c: c(0.014), h: hue }),
+    mutedText: oklchToHex({ l: 0.47, c: c(0.016), h: hue }),
+    border: oklchToHex({ l: 0.915, c: c(0.01), h: hue }),
+    borderStrong: oklchToHex({ l: 0.84, c: c(0.014), h: hue }),
   };
 }
 
 function darkSurfaces(hue: number, cScale: number): Surfaces {
   const c = (x: number) => x * cScale;
   return {
-    background: oklchToHex({ l: 0.17, c: c(0.012), h: hue }),
-    surface: oklchToHex({ l: 0.215, c: c(0.012), h: hue }),
-    surfaceRaised: oklchToHex({ l: 0.26, c: c(0.012), h: hue }),
-    text: oklchToHex({ l: 0.96, c: c(0.006), h: hue }),
-    mutedText: oklchToHex({ l: 0.72, c: c(0.012), h: hue }),
-    border: oklchToHex({ l: 0.32, c: c(0.012), h: hue }),
-    borderStrong: oklchToHex({ l: 0.42, c: c(0.014), h: hue }),
+    background: oklchToHex({ l: 0.165, c: c(0.014), h: hue }),
+    surface: oklchToHex({ l: 0.205, c: c(0.015), h: hue }),
+    surfaceRaised: oklchToHex({ l: 0.245, c: c(0.016), h: hue }),
+    text: oklchToHex({ l: 0.965, c: c(0.006), h: hue }),
+    mutedText: oklchToHex({ l: 0.74, c: c(0.014), h: hue }),
+    border: oklchToHex({ l: 0.305, c: c(0.014), h: hue }),
+    borderStrong: oklchToHex({ l: 0.4, c: c(0.018), h: hue }),
   };
 }
 
@@ -234,9 +236,11 @@ function shiftL(hex: string, delta: number): string {
 
 function surfaceShadow(style: SurfaceStyle, scheme: "light" | "dark"): string {
   if (style !== "elevated") return "none";
+  // A soft, multi-layer shadow reads as a single physical lift rather than a
+  // hard drop — the difference between "designed" and "rounded rectangle".
   return scheme === "dark"
-    ? "0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45)"
-    : "0 1px 2px rgba(16,18,24,.05), 0 8px 24px rgba(16,18,24,.08)";
+    ? "0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.5), 0 24px 56px rgba(0,0,0,.42)"
+    : "0 1px 2px rgba(17,20,45,.05), 0 5px 14px rgba(17,20,45,.06), 0 18px 42px rgba(17,20,45,.07)";
 }
 
 // ── Resolution ───────────────────────────────────────────────────────────────

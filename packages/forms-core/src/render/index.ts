@@ -21,6 +21,7 @@ import type { ButtonStyle } from "../theme.js";
 import { escapeAttr, escapeHtml, jsonScriptPayload } from "./escape.js";
 import { FILE_ACCEPT, renderField } from "./fields.js";
 import { formCss, themeVarsCss } from "./css.js";
+import { EMBEDDED_FONT_CSS } from "./fonts.generated.js";
 import { FORM_RUNTIME_SCRIPT } from "./runtime-script.js";
 
 export { FORM_RUNTIME_SCRIPT } from "./runtime-script.js";
@@ -187,6 +188,16 @@ function watermark(show: boolean): string {
   );
 }
 
+/**
+ * The self-contained `@font-face` for the form's type pairing (subset woff2,
+ * data-URI) so the served page carries its own brand font with no external
+ * request — identical in the studio iframe preview and production. Embeds keep
+ * the host page's fonts (`system`/`inherit` pairings) and never load this.
+ */
+function fontFaceCss(doc: PublishedFormDoc): string {
+  return EMBEDDED_FONT_CSS[doc.theme.inputs.typePairing] ?? "";
+}
+
 /** Build the markup inside the `.sf-scope` element (shared by page + fragment). */
 function renderScopeInner(
   doc: PublishedFormDoc,
@@ -195,6 +206,7 @@ function renderScopeInner(
 ): string {
   const preset = doc.layout.preset;
   const styleCss =
+    (mode.pageCss ? fontFaceCss(doc) : "") +
     themeVarsCss(doc.derived) +
     formCss(preset) +
     (mode.pageCss ? PAGE_CSS : "");
