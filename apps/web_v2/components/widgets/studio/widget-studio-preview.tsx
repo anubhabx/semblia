@@ -177,9 +177,22 @@ function ensureStageCss() {
   document.head.appendChild(style);
 }
 
+function matchesMedia(query: string): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(query).matches
+  );
+}
+
 /**
  * Auto-theme pulse — when theme === "system", we cycle the resolved preview
  * between light and dark every 5s so the user sees what visitors will see.
+ *
+ * Respects `prefers-reduced-motion`: when motion is reduced we do NOT cycle
+ * (the periodic light↔dark flip is exactly the kind of non-essential motion
+ * WCAG 2.3.3 asks us to suppress) and instead resolve once to the viewer's
+ * own color-scheme preference so "System" still previews something truthful.
  */
 function useAutoThemePreview(active: boolean): boolean {
   const [preferDark, setPreferDark] = React.useState(false);
@@ -187,6 +200,10 @@ function useAutoThemePreview(active: boolean): boolean {
   React.useEffect(() => {
     if (!active) {
       setPreferDark(false);
+      return;
+    }
+    if (matchesMedia("(prefers-reduced-motion: reduce)")) {
+      setPreferDark(matchesMedia("(prefers-color-scheme: dark)"));
       return;
     }
     setPreferDark(false);

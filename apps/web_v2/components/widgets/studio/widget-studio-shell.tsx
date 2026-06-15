@@ -332,25 +332,25 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
           <div className="flex min-h-0 flex-1 flex-col">
             {/* Mobile body — tab views */}
             <div className="relative min-h-0 flex-1">
-              <MobileTabPanel active={mobileTab === "layout"}>
+              <MobileTabPanel tab="layout" active={mobileTab === "layout"}>
                 <WidgetStudioControls
                   widgetId={widgetId}
                   mobileSection="layout"
                 />
               </MobileTabPanel>
-              <MobileTabPanel active={mobileTab === "style"}>
+              <MobileTabPanel tab="style" active={mobileTab === "style"}>
                 <WidgetStudioControls
                   widgetId={widgetId}
                   mobileSection="style"
                 />
               </MobileTabPanel>
-              <MobileTabPanel active={mobileTab === "content"}>
+              <MobileTabPanel tab="content" active={mobileTab === "content"}>
                 <WidgetStudioControls
                   widgetId={widgetId}
                   mobileSection="content"
                 />
               </MobileTabPanel>
-              <MobileTabPanel active={mobileTab === "preview"}>
+              <MobileTabPanel tab="preview" active={mobileTab === "preview"}>
                 <WidgetStudioPreview
                   widgetId={widgetId}
                   items={previewItems}
@@ -409,14 +409,19 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
 }
 
 function MobileTabPanel({
+  tab,
   active,
   children,
 }: {
+  tab: MobileTab;
   active: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
+      role="tabpanel"
+      id={`studio-tabpanel-${tab}`}
+      aria-labelledby={`studio-tab-${tab}`}
       className={cn(
         "absolute inset-0 overflow-hidden",
         active ? "visible" : "invisible",
@@ -431,6 +436,7 @@ function MobileTabPanel({
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
 function MobileTabButton({
+  tab,
   Icon,
   label,
   active,
@@ -447,6 +453,8 @@ function MobileTabButton({
       type="button"
       onClick={onClick}
       role="tab"
+      id={`studio-tab-${tab}`}
+      aria-controls={`studio-tabpanel-${tab}`}
       aria-selected={active}
       className={cn(
         "flex flex-1 items-center justify-center gap-1 text-[11px] font-medium transition-colors",
