@@ -7,6 +7,7 @@ const apiEnv: FormsRuntimeEnv = {
   FORMS_RUNTIME_API_BASE_URL: "https://api.semblia.test/v2",
   FORMS_RUNTIME_SIGNING_SECRET: "s".repeat(32),
   FORMS_RUNTIME_PUBLIC_BASE_DOMAIN: "collect.semblia.test",
+  FORMS_RUNTIME_UPLOAD_CONNECT_SRC: "https:",
   FORMS_RUNTIME_API_TIMEOUT_MS: 5000,
   PORT: 3007,
 };
