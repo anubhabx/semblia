@@ -51,11 +51,18 @@ if(nextBtn)nextBtn.style.display=atLast?"none":"inline-flex";
 if(submitBtn)submitBtn.style.display=atLast?"inline-flex":"none";
 var cur=act[stepIndex];if(cur){var fi=cur.querySelector("input,textarea,select");if(fi)try{fi.focus()}catch(e){}}}
 function currentValid(){var act=activeFields(),cur=act[stepIndex];if(!cur)return true;
+if(!requiredChecksValid(cur,true))return false;
 var ctrls=cur.querySelectorAll("input,textarea,select");
 for(var i=0;i<ctrls.length;i++){if(!ctrls[i].disabled&&!ctrls[i].checkValidity()){ctrls[i].reportValidity();return false}}return true}
 function go(delta){if(delta>0&&!currentValid())return;var act=activeFields();
 stepIndex=Math.min(Math.max(0,stepIndex+delta),Math.max(0,act.length-1));layoutSteps()}
 function applyShowIf(){for(var i=0;i<fields.length;i++)setFieldShown(fields[i],visibleByRule(fields[i]));if(conv)layoutSteps()}
+function requiredChecksValid(root,report){var groups=root.querySelectorAll("[data-required-checkbox]");for(var g=0;g<groups.length;g++){
+var boxes=groups[g].querySelectorAll("input[type=checkbox]");if(!boxes.length)continue;var checked=false;
+for(var b=0;b<boxes.length;b++){if(boxes[b].checked){checked=true;break}}
+boxes[0].setCustomValidity(checked?"":"Please select at least one option.");if(!checked){if(report)boxes[0].reportValidity();return false}}return true}
+function clearRequiredChecks(){var groups=form.querySelectorAll("[data-required-checkbox]");for(var g=0;g<groups.length;g++){
+var boxes=groups[g].querySelectorAll("input[type=checkbox]");if(!boxes.length)continue;for(var b=0;b<boxes.length;b++){if(boxes[b].checked){boxes[0].setCustomValidity("");break}}}}
 if(conv){scope.setAttribute("data-conv","");
 var fieldsWrap=form.querySelector(".sf-fields"),actions=form.querySelector(".sf-actions");
 var prog=document.createElement("div");prog.className="sf-conv-progress";
@@ -69,7 +76,7 @@ if(actions){actions.insertBefore(backBtn,actions.firstChild);actions.appendChild
 backBtn.addEventListener("click",function(){go(-1)});
 nextBtn.addEventListener("click",function(){go(1)});
 form.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.tagName!=="TEXTAREA"){var act=activeFields();if(stepIndex<act.length-1){e.preventDefault();go(1)}}})}
-form.addEventListener("input",applyShowIf);form.addEventListener("change",applyShowIf);
+form.addEventListener("input",function(){clearRequiredChecks();applyShowIf()});form.addEventListener("change",function(){clearRequiredChecks();applyShowIf()});
 applyShowIf();if(conv)layoutSteps();
 var up=cfg.upload;
 function addHidden(name,val){var h=document.createElement("input");h.type="hidden";h.name=name;h.value=val;form.appendChild(h)}
@@ -86,8 +93,10 @@ return fetch(up.url,{method:"POST",headers:{"content-type":"application/json"},b
 return fetch(intent.uploadUrl,{method:"PUT",headers:intent.requiredHeaders||{},body:file}).then(function(pr){if(!pr.ok)throw new Error("put");return intent.assetId})})
 .then(function(assetId){var qid=qidOf(input);addHidden("answers["+qid+"]",assetId);addHidden("mediaAssetIds[]",assetId);input.disabled=true;setStatus(input,(file.name||"File")+" attached",false)})
 .catch(function(e){setStatus(input,e&&e.message==="too-large"?"This file is too large.":"Upload failed \\u2014 please try again.",true);throw e})}
+form.addEventListener("submit",function(e){if(!requiredChecksValid(form,true))e.preventDefault()});
 if(up&&up.url){var submitBtn2=form.querySelector("button[type=submit]");
 form.addEventListener("submit",function(e){
+if(e.defaultPrevented)return;
 var list=pendingFiles();if(!list.length)return;
 e.preventDefault();
 if(form.getAttribute("data-sf-uploading")==="1")return;

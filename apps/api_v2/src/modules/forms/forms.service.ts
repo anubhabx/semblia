@@ -10,6 +10,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import type { FormQuestion } from "@workspace/forms-core/schema";
 import {
   ModerationStatus,
   Prisma,
@@ -751,6 +752,8 @@ export class FormsService {
     const idempotencyKey = this.readHeader(request, "idempotency-key");
     const payloadHash = hashIdempotencyPayload(request.rawBody);
 
+    this.assertRequiredFormAnswers(form, body);
+
     await this.assertNotRecentDuplicateSubmit({
       projectId: trust.projectId,
       formId: form.id,
@@ -1096,10 +1099,23 @@ export class FormsService {
     const answers: Record<string, unknown> = {};
     const topLevel: Record<string, unknown> = {};
     const mediaAssetIds: string[] = [];
+    const appendAnswer = (id: string, value: string) => {
+      const current = answers[id];
+      if (Array.isArray(current)) {
+        current.push(value);
+      } else if (current !== undefined) {
+        answers[id] = [current, value];
+      } else {
+        answers[id] = [value];
+      }
+    };
     const params = new URLSearchParams(body);
     for (const [key, value] of params.entries()) {
+      const answerArrayMatch = key.match(/^answers\[([^\]]+)\]\[\]$/);
       const answerMatch = key.match(/^answers\[([^\]]+)\]$/);
-      if (answerMatch?.[1]) {
+      if (answerArrayMatch?.[1]) {
+        appendAnswer(answerArrayMatch[1], value);
+      } else if (answerMatch?.[1]) {
         answers[answerMatch[1]] = value;
       } else if (key === "mediaAssetIds" || key === "mediaAssetIds[]") {
         // Repeated keys (one per uploaded attachment) accumulate into an array.
@@ -1154,6 +1170,100 @@ export class FormsService {
     }
 
     return null;
+  }
+
+  private assertRequiredFormAnswers(
+    form: FormRecord,
+    body: CreateFormSubmissionBodyDto,
+  ) {
+    const config = resolvePublishedFormConfig(form.config);
+    for (const question of config.structure.questions) {
+      if (!question.required) continue;
+      if (!this.isRequiredQuestionVisible(question, body)) continue;
+      if (!this.hasSubmittedAnswer(question, body)) {
+        throw new BadRequestException("Missing required hosted form answer");
+      }
+    }
+  }
+
+  private isRequiredQuestionVisible(
+    question: FormQuestion,
+    body: CreateFormSubmissionBodyDto,
+  ) {
+    if (!question.showIf) return true;
+    const value = this.answerValue(question.showIf.questionId, body);
+    if (value === undefined || value === null || value === "") return false;
+    const expected = question.showIf.value;
+    const leftNumber = Number(value);
+    const rightNumber = Number(expected);
+    const numeric = Number.isFinite(leftNumber) && Number.isFinite(rightNumber);
+
+    switch (question.showIf.op) {
+      case "eq":
+        return String(value) === String(expected);
+      case "neq":
+        return String(value) !== String(expected);
+      case "gt":
+        return numeric && leftNumber > rightNumber;
+      case "lt":
+        return numeric && leftNumber < rightNumber;
+      case "gte":
+        return numeric && leftNumber >= rightNumber;
+      case "lte":
+        return numeric && leftNumber <= rightNumber;
+      case "includes":
+        return Array.isArray(value)
+          ? value.map(String).includes(String(expected))
+          : String(value).includes(String(expected));
+      default:
+        return true;
+    }
+  }
+
+  private hasSubmittedAnswer(
+    question: FormQuestion,
+    body: CreateFormSubmissionBodyDto,
+  ) {
+    const value = this.answerValue(question.id, body);
+    if (Array.isArray(value)) {
+      return value.some((item) => this.isSubmittedAnswerValue(item));
+    }
+    return this.isSubmittedAnswerValue(value);
+  }
+
+  private answerValue(id: string, body: CreateFormSubmissionBodyDto) {
+    const answers = this.toRecord(body.answers) ?? {};
+    if (answers[id] !== undefined) return answers[id];
+
+    switch (id) {
+      case "authorName":
+      case "name":
+        return body.authorName;
+      case "authorEmail":
+      case "email":
+        return body.authorEmail;
+      case "authorRole":
+      case "jobTitle":
+        return body.authorRole;
+      case "authorCompany":
+      case "company":
+        return body.authorCompany;
+      case "content":
+      case "testimonial":
+      case "message":
+        return body.content;
+      case "rating":
+        return body.rating;
+      default:
+        return undefined;
+    }
+  }
+
+  private isSubmittedAnswerValue(value: unknown) {
+    if (typeof value === "string") return value.trim().length > 0;
+    if (typeof value === "number") return Number.isFinite(value);
+    if (typeof value === "boolean") return value;
+    return value !== null && value !== undefined;
   }
 
   private resolveInitialModeration(

@@ -106,6 +106,8 @@ function renderEmoji(q: FormQuestion): string {
 function renderChoice(q: FormQuestion, multiple: boolean): string {
   const type = multiple ? "checkbox" : "radio";
   const name = multiple ? `answers[${q.id}][]` : fieldName(q.id);
+  const requiredGroup =
+    multiple && q.required ? " data-required-checkbox" : "";
   const items = q.options
     .map((option, i) => {
       const inputId = `${q.id}-choice-${i}`;
@@ -117,7 +119,7 @@ function renderChoice(q: FormQuestion, multiple: boolean): string {
     })
     .join("");
   const role = multiple ? "group" : "radiogroup";
-  return `<div class="sf-choices" role="${role}" aria-labelledby="${escapeAttr(q.id)}-label">${items}</div>`;
+  return `<div class="sf-choices" role="${role}" aria-labelledby="${escapeAttr(q.id)}-label"${requiredGroup}>${items}</div>`;
 }
 
 function renderDropdown(q: FormQuestion): string {

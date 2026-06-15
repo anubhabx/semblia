@@ -162,6 +162,26 @@ describe("file questions", () => {
     expect(FORM_RUNTIME_SCRIPT).toContain("mediaAssetIds[]");
     expect(FORM_RUNTIME_SCRIPT).toContain("cfg.upload");
   });
+
+  it("marks required checkbox groups for runtime at-least-one validation", () => {
+    const doc = defaultFormDefinition({ brandName: "Acme" });
+    doc.structure.questions.push({
+      id: "reasons",
+      type: "checkbox",
+      label: "What helped?",
+      placeholder: "",
+      description: "",
+      required: true,
+      options: ["Speed", "Support"],
+      showIf: null,
+    });
+
+    const { html } = renderPublishedFormPage(publishFormDefinition(doc));
+
+    expect(html).toContain('name="answers[reasons][]"');
+    expect(html).toContain("data-required-checkbox");
+    expect(FORM_RUNTIME_SCRIPT).toContain("requiredChecksValid");
+  });
 });
 
 describe("renderPublishedFormFragment", () => {

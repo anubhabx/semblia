@@ -125,4 +125,57 @@ describe("<semblia-form>", () => {
     );
     expect(el.shadowRoot?.innerHTML).toContain("sf-success");
   });
+
+  it("validates required checkbox groups before embedded submit", async () => {
+    const formFragment =
+      `<div part="root"><form class="sf-form" method="post" ` +
+      `action="https://acme.collect.semblia.com/__submit?embed=1">` +
+      `<div data-required-checkbox>` +
+      `<input type="checkbox" name="answers[reasons][]" value="Speed">` +
+      `<input type="checkbox" name="answers[reasons][]" value="Support">` +
+      `</div><button type="submit">Send</button></form></div>`;
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => formFragment } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => "{}" } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => `<div part="root"><div class="sf-success">Thanks!</div></div>`,
+      } as Response);
+
+    const el = document.createElement("semblia-form");
+    el.setAttribute("project", "acme");
+    const loaded = new Promise((resolve) =>
+      el.addEventListener("semblia:load", resolve, { once: true }),
+    );
+    document.body.appendChild(el);
+    await loaded;
+
+    const form = el.shadowRoot?.querySelector("form") as HTMLFormElement;
+    const firstChoice = form.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    form.requestSubmit();
+    await Promise.resolve();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(firstChoice?.validationMessage).toBe("Choose at least one option");
+
+    const submitted = new Promise((resolve) =>
+      el.addEventListener("semblia:submit", resolve, { once: true }),
+    );
+    if (firstChoice) {
+      firstChoice.checked = true;
+      firstChoice.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    form.requestSubmit();
+    await submitted;
+
+    expect(firstChoice?.validationMessage).toBe("");
+    const submitOptions = fetchSpy.mock.calls[1]?.[1] as RequestInit;
+    expect(String(submitOptions.body)).toContain(
+      "answers%5Breasons%5D%5B%5D=Speed",
+    );
+  });
 });

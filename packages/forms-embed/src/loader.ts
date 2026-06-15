@@ -108,11 +108,34 @@ export class SembliaFormElement extends HTMLElement {
   private wireForm(): void {
     const form = this.shadowRoot?.querySelector("form");
     if (!form) return;
+    form.addEventListener("input", () => {
+      this.syncRequiredCheckboxGroups(form);
+    });
+    form.addEventListener("change", () => {
+      this.syncRequiredCheckboxGroups(form);
+    });
     form.addEventListener("submit", (event) => {
-      if (!form.reportValidity()) return;
       event.preventDefault();
+      this.syncRequiredCheckboxGroups(form);
+      if (!form.reportValidity()) return;
       void this.submit(form);
     });
+  }
+
+  private syncRequiredCheckboxGroups(form: HTMLFormElement): void {
+    form
+      .querySelectorAll<HTMLElement>("[data-required-checkbox]")
+      .forEach((group) => {
+        const boxes = Array.from(
+          group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+        );
+        if (boxes.length === 0) return;
+        const valid = boxes.some((box) => box.checked);
+        group.toggleAttribute("data-invalid", !valid);
+        boxes[0]?.setCustomValidity(
+          valid ? "" : "Choose at least one option",
+        );
+      });
   }
 
   private async submit(form: HTMLFormElement): Promise<void> {

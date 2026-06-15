@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
   UnprocessableEntityException,
@@ -9,7 +10,10 @@ import {
   PublicSubmitTrustMode,
   StudioDraftResourceType,
 } from "@workspace/database/prisma";
-import { defaultFormDefinition } from "@workspace/forms-core/schema";
+import {
+  defaultFormDefinition,
+  publishFormDefinition,
+} from "@workspace/forms-core/schema";
 import { FormsService } from "./forms.service.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { ConfigService } from "@nestjs/config";
@@ -997,6 +1001,8 @@ describe("FormsService", () => {
           "answers%5BauthorEmail%5D=ada%40example.com",
           "answers%5Bcontent%5D=Great",
           "answers%5Brating%5D=5",
+          "answers%5Breasons%5D%5B%5D=Speed",
+          "answers%5Breasons%5D%5B%5D=Support",
         ].join("&"),
       },
       {
@@ -1016,6 +1022,7 @@ describe("FormsService", () => {
           authorEmail: "ada@example.com",
           content: "Great",
           rating: "5",
+          reasons: ["Speed", "Support"],
         }),
         ratingValue: 5,
         moderationStatus: ModerationStatus.PENDING,
@@ -1028,6 +1035,55 @@ describe("FormsService", () => {
       }),
     );
     expect(result).toEqual({ redirectTo: null });
+  });
+
+  it("submitRuntimeForm rejects missing required checkbox answers", async () => {
+    const doc = defaultFormDefinition();
+    doc.structure.questions.push({
+      id: "reasons",
+      type: "checkbox",
+      label: "What helped?",
+      placeholder: "",
+      description: "",
+      required: true,
+      options: ["Speed", "Support"],
+      showIf: null,
+    });
+    mockPublicSurfaceHostFindFirst.mockResolvedValue(null);
+    mockProjectFindFirst.mockResolvedValue({
+      id: "project_1",
+      slug: "acme",
+      name: "Acme",
+      brandColorPrimary: "#0f766e",
+      autoModeration: true,
+      autoApproveVerified: false,
+    });
+    mockCollectionFormFindFirst.mockResolvedValueOnce(
+      makeForm({
+        isActive: true,
+        config: publishFormDefinition(doc),
+      }),
+    );
+
+    const service = makeService();
+    await expect(
+      service.submitRuntimeForm(
+        {
+          context: { projectPublicSlug: "acme", formSlug: null, path: "/" },
+          contentType: "application/x-www-form-urlencoded",
+          body: [
+            "answers%5BauthorName%5D=Ada",
+            "answers%5Bcontent%5D=Great",
+          ].join("&"),
+        },
+        {
+          headers: {
+            "x-semblia-original-host": "acme.collect.semblia.com",
+          },
+        },
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockCollectionFormSubmissionCreate).not.toHaveBeenCalled();
   });
 
   it("createRuntimeUploadIntent scopes the asset to the resolved project and the forwarded browser principal", async () => {
