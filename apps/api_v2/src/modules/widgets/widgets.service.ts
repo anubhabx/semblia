@@ -42,6 +42,7 @@ import {
   type CreateWidgetBodyDto,
   type PublishWidgetDraftBodyDto,
   type ProjectWidgetsParamsDto,
+  type PublicWidgetFragmentParamsDto,
   type StudioDraftBodyDto,
   type PublicWidgetParamsDto,
   type UpdateWidgetBodyDto,
@@ -403,7 +404,10 @@ export class WidgetsService {
     return response;
   }
 
-  async getPublicEmbedFragment(params: PublicWidgetParamsDto): Promise<string> {
+  async getPublicEmbedFragment(
+    params: PublicWidgetFragmentParamsDto,
+  ): Promise<string> {
+    await this.assertPublicEmbedBelongsToProjectSlug(params);
     const response = await this.getPublicEmbed(params);
     const snapshot =
       response.widget.publishedSnapshot ??
@@ -627,16 +631,17 @@ export class WidgetsService {
       moderationStatus: ModerationStatus.APPROVED,
     } satisfies Prisma.CollectionFormSubmissionWhereInput;
 
-    if (
-      widget.contentMode === WidgetContentMode.HANDPICKED &&
-      widget.pickedIds.length > 0
-    ) {
+    if (widget.contentMode === WidgetContentMode.HANDPICKED) {
+      if (widget.pickedIds.length === 0) {
+        return [];
+      }
+
       const picked = await this.prisma.client.collectionFormSubmission.findMany(
         {
-        where: {
-          ...baseWhere,
-          id: { in: widget.pickedIds },
-        },
+          where: {
+            ...baseWhere,
+            id: { in: widget.pickedIds },
+          },
           select: PUBLIC_SUBMISSION_SELECT,
         },
       );
@@ -651,13 +656,30 @@ export class WidgetsService {
 
     const testimonials =
       await this.prisma.client.collectionFormSubmission.findMany({
-      where: baseWhere,
-      orderBy: { createdAt: "desc" },
-      take: widget.maxItems,
-      select: PUBLIC_SUBMISSION_SELECT,
-    });
+        where: baseWhere,
+        orderBy: { createdAt: "desc" },
+        take: widget.maxItems,
+        select: PUBLIC_SUBMISSION_SELECT,
+      });
 
     return testimonials.map((item) => this.toPublicTestimonial(item));
+  }
+
+  private async assertPublicEmbedBelongsToProjectSlug(
+    params: PublicWidgetFragmentParamsDto,
+  ) {
+    const widget = await this.prisma.client.widget.findFirst({
+      where: {
+        id: params.widgetId,
+        kind: WidgetType.EMBED,
+        isActive: true,
+        Project: { slug: params.slug },
+      },
+      select: { id: true },
+    });
+    if (!widget) {
+      throw new NotFoundException("Widget not found");
+    }
   }
 
   private toPublicTestimonial(submission: PublicTestimonialRecord) {

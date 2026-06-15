@@ -641,27 +641,82 @@ describe("WidgetsService", () => {
     );
   });
 
-  it("getPublicEmbedFragment renders SSR HTML and stable public cache validators", async () => {
+  it("getPublicEmbed keeps empty handpicked widgets empty", async () => {
     mockWidgetFindFirst.mockResolvedValue(
       makeWidget({
         id: "widget_embed",
-        layout: LayoutType.GRID,
-        maxItems: 2,
+        contentMode: WidgetContentMode.HANDPICKED,
+        pickedIds: [],
       }),
     );
+
+    const service = makeService();
+    const result = await service.getPublicEmbed({ widgetId: "widget_embed" });
+
+    expect(result.testimonials).toEqual([]);
+    expect(mockSubmissionFindMany).not.toHaveBeenCalled();
+    expect(mockRedisSet).toHaveBeenCalledWith(
+      "v2:widgets:embed:widget_embed",
+      JSON.stringify(result),
+      "EX",
+      60,
+    );
+  });
+
+  it("getPublicEmbedFragment renders SSR HTML and stable public cache validators", async () => {
+    mockWidgetFindFirst
+      .mockResolvedValueOnce({ id: "widget_embed" })
+      .mockResolvedValueOnce(
+        makeWidget({
+          id: "widget_embed",
+          layout: LayoutType.GRID,
+          maxItems: 2,
+        }),
+      );
     mockSubmissionFindMany.mockResolvedValue([makeSubmission()]);
 
     const service = makeService();
     const html = await service.getPublicEmbedFragment({
+      slug: "acme",
       widgetId: "widget_embed",
     });
 
+    expect(mockWidgetFindFirst).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "widget_embed",
+          Project: { slug: "acme" },
+        }),
+        select: { id: true },
+      }),
+    );
     expect(html).toContain("sw-grid");
     expect(html).toContain("Ada");
     expect(html).toContain("--semblia-widget-accent");
     expect(service.getPublicCacheControl()).toContain("max-age=60");
     expect(service.getPublicEtag(html, { weak: false })).toMatch(/^"[^"]+"$/);
     expect(service.getPublicEtag({ html })).toMatch(/^W\/"[^"]+"$/);
+  });
+
+  it("getPublicEmbedFragment rejects a mismatched project slug before reading the embed cache", async () => {
+    mockWidgetFindFirst.mockResolvedValue(null);
+    mockRedisGet.mockResolvedValue(
+      JSON.stringify({
+        widget: { id: "widget_embed" },
+        testimonials: [],
+      }),
+    );
+
+    const service = makeService();
+    await expect(
+      service.getPublicEmbedFragment({
+        slug: "wrong-project",
+        widgetId: "widget_embed",
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(mockRedisGet).not.toHaveBeenCalled();
   });
 
   it("getPublicWall returns a safe cached payload without authorEmail", async () => {
