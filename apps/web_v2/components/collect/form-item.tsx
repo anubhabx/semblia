@@ -9,7 +9,6 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ClipboardText as ClipboardTextIcon,
   PencilIcon,
   CopyIcon,
   TrashIcon,
@@ -20,6 +19,7 @@ import {
 } from "@phosphor-icons/react";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
 import { InlineName } from "./inline-name";
+import { FormCardPreview } from "./form-card-preview";
 import { AbWeightDialog } from "./ab-weight-dialog";
 
 /* ─── Skeleton loader ─────────────────────────────────────────────────────── */
@@ -132,14 +132,16 @@ export const FormItem = React.memo(function FormItem({
         leading={
           <div
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted",
+              "relative h-9 w-[3.5rem] shrink-0 overflow-hidden rounded-md border border-border bg-muted",
               inactive && "opacity-60",
             )}
           >
-            <ClipboardTextIcon
-              className="size-4 text-muted-foreground"
-              weight="regular"
-              aria-hidden
+            <FormCardPreview
+              preset={entry.layoutPreset}
+              brandColor={entry.brandColor}
+              appearance={entry.appearance}
+              brandName={entry.brandName}
+              className="absolute inset-0"
             />
           </div>
         }

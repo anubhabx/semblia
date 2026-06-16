@@ -3,8 +3,6 @@
 import * as React from "react";
 import { toast } from "sonner";
 import {
-  Globe as GlobeIcon,
-  Code as CodeIcon,
   PencilSimple as PencilIcon,
   Copy as CopyIcon,
   Trash as TrashIcon,
@@ -23,6 +21,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { InlineName } from "@/components/collect/inline-name";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
+import { WidgetLayoutPreview } from "./widget-layout-preview";
 
 const LAYOUT_LABEL: Record<WidgetListEntry["layout"], string> = {
   carousel: "Carousel",
@@ -132,33 +131,20 @@ export const WidgetRow = React.memo(function WidgetRow({
         aria-label={`${entry.name} (${LAYOUT_LABEL[entry.layout]})`}
         padding="default"
         leading={
-          /* Color swatch with kind icon */
+          /* Mini preview of the widget's layout */
           <div
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-lg",
-              "transition-all duration-200",
+              "relative h-9 w-[3.5rem] shrink-0 overflow-hidden rounded-md border border-border bg-muted",
               !entry.isActive && "opacity-60",
             )}
-            style={{
-              backgroundColor: `${entry.accent}20`,
-              border: `1.5px solid ${entry.accent}40`,
-            }}
           >
-            {isWall ? (
-              <GlobeIcon
-                className="size-4"
-                style={{ color: entry.accent }}
-                weight="fill"
-                aria-hidden
-              />
-            ) : (
-              <CodeIcon
-                className="size-4"
-                style={{ color: entry.accent }}
-                weight="bold"
-                aria-hidden
-              />
-            )}
+            <WidgetLayoutPreview
+              layout={entry.layout}
+              kind={entry.kind}
+              accent={entry.accent}
+              theme={entry.theme}
+              className="absolute inset-0"
+            />
           </div>
         }
         title={
