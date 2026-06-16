@@ -1,4 +1,5 @@
 import type {
+  V2WidgetConfig,
   V2WidgetListEntry,
   V2WidgetType,
   V2LayoutType,
@@ -8,8 +9,10 @@ import type {
   WidgetKind,
   WidgetLayout,
   WidgetListEntry,
+  WidgetStudioConfig,
   WidgetTheme,
 } from "./widget-types";
+import { syncStudioConfig } from "./widget-presets";
 
 const KIND_MAP: Record<V2WidgetType, WidgetKind> = {
   EMBED: "embed",
@@ -50,4 +53,16 @@ export function dtoToWidgetListEntry(
       lastLoadAt: dto.lastLoadAt != null ? Date.parse(dto.lastLoadAt) : null,
     },
   };
+}
+
+/**
+ * Build a full, editable `WidgetStudioConfig` from a widget's published API
+ * config. `definition` is the shared `WidgetDefinitionDoc` source of truth, so
+ * `syncStudioConfig` derives every studio field (kind/layout/theme/tokens/
+ * visibility/behavior/content/wall) from it deterministically.
+ */
+export function dtoToWidgetStudioConfig(
+  config: V2WidgetConfig,
+): WidgetStudioConfig {
+  return syncStudioConfig({ name: config.name, definition: config.definition });
 }

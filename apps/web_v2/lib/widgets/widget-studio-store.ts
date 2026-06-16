@@ -58,6 +58,19 @@ interface WidgetStudioStore {
 
   // ── Project-level ──────────────────────────────────────────────
   ensureProject: (slug: string, opts?: { brandColor?: string | null }) => void;
+  /** Replace the rail's widget list with real API-backed entries. */
+  setWidgets: (slug: string, entries: WidgetListEntry[]) => void;
+  /**
+   * Seed an editable snapshot for an API widget id (idempotent — never
+   * clobbers in-progress local edits). Used to hydrate the studio on cold
+   * load / direct-nav from the server's published config or saved draft.
+   */
+  hydrateWidget: (
+    slug: string,
+    widgetId: string,
+    config: WidgetStudioConfig,
+    opts?: { base?: Partial<WidgetListEntry>; isFirstRun?: boolean },
+  ) => void;
   createWidget: (
     slug: string,
     opts: {
@@ -216,76 +229,6 @@ function syncEntryFromDraft(
   };
 }
 
-// ── Seed entries (mock projects start with one starter widget per kind) ─────
-
-const SEEDED_SLUGS = new Set<string>();
-
-function seedProject(
-  state: WidgetStudioStore,
-  slug: string,
-  brandColor: string | null,
-): Partial<WidgetStudioStore> {
-  if (SEEDED_SLUGS.has(slug)) return {};
-  if (state.widgetsByProject[slug]?.length) {
-    SEEDED_SLUGS.add(slug);
-    return {};
-  }
-
-  const carouselId = newWidgetId();
-  const wallId = newWidgetId();
-  const carousel = buildDefaultWidgetConfig({
-    kind: "embed",
-    layout: "carousel",
-    projectSlug: slug,
-    projectBrandColor: brandColor,
-    name: "Homepage carousel",
-  });
-  const wall = buildDefaultWidgetConfig({
-    kind: "wall",
-    projectSlug: slug,
-    projectBrandColor: brandColor,
-    name: "Public Wall of Love",
-  });
-
-  const now = Date.now();
-  const entries: WidgetListEntry[] = [
-    {
-      ...entryFromConfig(carouselId, carousel),
-      isActive: true,
-      createdAt: now - 86_400_000 * 14,
-      metrics: {
-        totalLoads: 4820,
-        avgLoadMs: 312,
-        lastLoadAt: now - 3_600_000,
-      },
-    },
-    {
-      ...entryFromConfig(wallId, wall),
-      isActive: true,
-      createdAt: now - 86_400_000 * 6,
-      metrics: {
-        totalLoads: 1203,
-        avgLoadMs: 428,
-        lastLoadAt: now - 7_200_000,
-      },
-    },
-  ];
-
-  const snapshots: Record<string, WidgetSnapshot> = {
-    [carouselId]: snapshotOf(carousel, false),
-    [wallId]: snapshotOf(wall, false),
-  };
-
-  SEEDED_SLUGS.add(slug);
-  return {
-    widgetsByProject: {
-      ...state.widgetsByProject,
-      [slug]: entries,
-    },
-    snapshots: { ...state.snapshots, ...snapshots },
-  };
-}
-
 // ── Store ───────────────────────────────────────────────────────────────────
 
 export const useWidgetStudioStore = create<WidgetStudioStore>()(
@@ -296,8 +239,40 @@ export const useWidgetStudioStore = create<WidgetStudioStore>()(
       device: "desktop",
 
       // ── Project-level ─────────────────────────────────────
-      ensureProject: (slug, opts) => {
-        set((s) => seedProject(s, slug, opts?.brandColor ?? null));
+      ensureProject: (slug) => {
+        set((s) =>
+          s.widgetsByProject[slug]
+            ? s
+            : { widgetsByProject: { ...s.widgetsByProject, [slug]: [] } },
+        );
+      },
+
+      setWidgets: (slug, entries) => {
+        set((s) => ({
+          widgetsByProject: { ...s.widgetsByProject, [slug]: entries },
+        }));
+      },
+
+      hydrateWidget: (slug, widgetId, config, opts) => {
+        set((s) => {
+          // Never overwrite a snapshot the user is actively editing.
+          if (s.snapshots[widgetId]) return s;
+          const list = s.widgetsByProject[slug] ?? [];
+          const entry = entryFromConfig(widgetId, config, opts?.base);
+          const exists = list.some((e) => e.id === widgetId);
+          return {
+            snapshots: {
+              ...s.snapshots,
+              [widgetId]: snapshotOf(config, opts?.isFirstRun ?? false),
+            },
+            widgetsByProject: {
+              ...s.widgetsByProject,
+              [slug]: exists
+                ? list.map((e) => (e.id === widgetId ? { ...e, ...entry } : e))
+                : [...list, entry],
+            },
+          };
+        });
       },
 
       createWidget: (slug, opts) => {
@@ -635,7 +610,7 @@ export const useWidgetStudioStore = create<WidgetStudioStore>()(
     }),
     {
       name: "semblia:widget-studio:v1",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? window.localStorage : noopStorage,
       ),
@@ -648,6 +623,9 @@ export const useWidgetStudioStore = create<WidgetStudioStore>()(
         const snapshots = state?.snapshots ?? {};
         return {
           ...state,
+          // The rail is now fed from real API data; drop any phantom widgets
+          // seeded into older persisted state so they don't linger.
+          widgetsByProject: {},
           snapshots: Object.fromEntries(
             Object.entries(snapshots).map(([id, snap]) => [
               id,

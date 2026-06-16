@@ -24,9 +24,24 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useProject, useResponsesList } from "@/hooks/api";
+import {
+  useProject,
+  useResponsesList,
+  useWidget,
+  useWidgetDraft,
+  useWidgetsList,
+} from "@/hooks/api";
 import { selectPreviewTestimonials } from "@/lib/widgets/widget-fallback-testimonials";
 import { toWidgetTestimonial } from "@/lib/widgets/widget-testimonial-type";
+import {
+  dtoToWidgetListEntry,
+  dtoToWidgetStudioConfig,
+} from "@/lib/widgets/dto-adapter";
+import {
+  buildDefaultWidgetConfig,
+  syncStudioConfig,
+} from "@/lib/widgets/widget-presets";
+import type { WidgetStudioConfig } from "@/lib/widgets/widget-types";
 import {
   useWidgetStudioStore,
   isWidgetDirty,
@@ -65,7 +80,8 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   );
   const allSnapshots = useWidgetStudioStore((s) => s.snapshots);
 
-  const ensureProject = useWidgetStudioStore((s) => s.ensureProject);
+  const setWidgets = useWidgetStudioStore((s) => s.setWidgets);
+  const hydrateWidget = useWidgetStudioStore((s) => s.hydrateWidget);
   const save = useWidgetStudioStore((s) => s.save);
   const reset = useWidgetStudioStore((s) => s.reset);
   const setName = useWidgetStudioStore((s) => s.setName);
@@ -98,19 +114,80 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   // ── Project hydration / preview testimonials ────────────────
   const projectQuery = useProject(slug);
   const project = projectQuery.data ?? null;
+  const accent = project?.brandColorPrimary ?? "#6366f1";
   const approvedQuery = useResponsesList(slug, {
     moderationStatus: "APPROVED",
     pageSize: 200,
   });
 
-  // Gate render until persist has had a chance to rehydrate. zustand persist
-  // does not block first render, so a direct deep link can race the store
-  // and falsely conclude the widget is missing.
-  const [hydrated, setHydrated] = React.useState(false);
+  // ── API-backed studio data ──────────────────────────────────
+  // The studio is keyed by the API widget id in the route. Feed the rail from
+  // the real list and seed an editable snapshot from the server (saved draft
+  // preferred, else the published config) so reload / direct-nav survive
+  // instead of bailing to "this widget no longer exists".
+  const listQuery = useWidgetsList(slug);
+  const widgetQuery = useWidget(slug, widgetId);
+  const draftQuery = useWidgetDraft(slug, widgetId);
+
   React.useEffect(() => {
-    ensureProject(slug, { brandColor: project?.brandColorPrimary ?? null });
-    setHydrated(true);
-  }, [slug, project?.brandColorPrimary, ensureProject]);
+    if (!listQuery.data) return;
+    setWidgets(
+      slug,
+      listQuery.data.map((dto) => dtoToWidgetListEntry(dto, accent)),
+    );
+  }, [listQuery.data, slug, accent, setWidgets]);
+
+  React.useEffect(() => {
+    if (snapshot) return; // already seeded / live edits in progress
+    const detail = widgetQuery.data;
+    if (!detail) return;
+    if (draftQuery.isLoading) return; // let a saved draft resolve first
+
+    let config: WidgetStudioConfig;
+    try {
+      const draftDoc = draftQuery.data?.draft;
+      config = draftDoc
+        ? syncStudioConfig(draftDoc as Partial<WidgetStudioConfig>)
+        : dtoToWidgetStudioConfig(detail.config);
+    } catch {
+      // Never crash the studio on a malformed doc — fall back to a valid
+      // default seeded from the widget's kind/layout.
+      const listEntry = dtoToWidgetListEntry(detail.entry, accent);
+      config = buildDefaultWidgetConfig({
+        kind: listEntry.kind,
+        layout: listEntry.layout,
+        projectSlug: slug,
+        projectBrandColor: accent,
+        name: detail.config.name,
+      });
+    }
+
+    hydrateWidget(slug, widgetId, config, {
+      isFirstRun: firstRunFlag,
+      base: {
+        isActive: detail.entry.isActive,
+        createdAt: Date.parse(detail.entry.createdAt),
+        updatedAt: Date.parse(detail.entry.updatedAt),
+        metrics: {
+          totalLoads: detail.entry.totalLoads,
+          avgLoadMs: detail.entry.avgLoadMs,
+          lastLoadAt: detail.entry.lastLoadAt
+            ? Date.parse(detail.entry.lastLoadAt)
+            : null,
+        },
+      },
+    });
+  }, [
+    snapshot,
+    widgetQuery.data,
+    draftQuery.isLoading,
+    draftQuery.data,
+    slug,
+    widgetId,
+    accent,
+    firstRunFlag,
+    hydrateWidget,
+  ]);
 
   const previewItems = React.useMemo(() => {
     const real = (approvedQuery.data?.items ?? []).map(toWidgetTestimonial);
@@ -210,8 +287,12 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     }
   }, [firstRunFlag, setQuery]);
 
-  // ── Loading state during hydration ──────────────────────────
-  if (!hydrated) {
+  // ── Loading: resolving the widget / project, or seeding its snapshot ─
+  if (
+    widgetQuery.isLoading ||
+    (!widgetQuery.isError && !snapshot) ||
+    (!project && !projectQuery.isError)
+  ) {
     return (
       <div
         ref={dialogRef}
@@ -223,8 +304,8 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     );
   }
 
-  // ── Bail out when widget doesn't exist (post-delete or stale link) ─
-  if (!draft || !project) {
+  // ── Bail only when the widget is genuinely gone (404 / deleted) ─
+  if (widgetQuery.isError || !draft || !project) {
     return (
       <div
         ref={dialogRef}
