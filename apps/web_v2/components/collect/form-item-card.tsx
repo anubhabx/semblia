@@ -120,6 +120,9 @@ export const FormItemCard = React.memo(function FormItemCard({
         <div className="relative block aspect-[16/10] overflow-hidden">
           <FormCardPreview
             preset={entry.layoutPreset}
+            brandColor={entry.brandColor}
+            appearance={entry.appearance}
+            brandName={entry.brandName}
             inactive={inactive}
             className="absolute inset-0"
           />

@@ -39,6 +39,12 @@ export interface FormConfigEntry {
   lastSubmissionAt: number | null;
   /** v4 layout preset, or null while the config is pre-v4 / malformed. */
   layoutPreset: FormLayoutPreset | null;
+  /** Brand color from the form's theme, used to tint the gallery preview. */
+  brandColor: string | null;
+  /** Resolved light/dark appearance for the preview (system → light). */
+  appearance: "light" | "dark";
+  /** Brand name shown in the preview chrome. */
+  brandName: string | null;
 }
 
 const PRESETS: ReadonlySet<string> = new Set([
@@ -61,6 +67,33 @@ function extractLayoutPreset(config: unknown): FormLayoutPreset | null {
     : null;
 }
 
+function extractTheme(config: unknown): {
+  brandColor: string | null;
+  appearance: "light" | "dark";
+  brandName: string | null;
+} {
+  const fallback = {
+    brandColor: null,
+    appearance: "light" as const,
+    brandName: null,
+  };
+  if (!config || typeof config !== "object") return fallback;
+  const doc = config as {
+    theme?: { inputs?: { brandColor?: unknown; appearance?: unknown } };
+    content?: { brandName?: unknown };
+  };
+  const inputs = doc.theme?.inputs;
+  const brandColor =
+    typeof inputs?.brandColor === "string" ? inputs.brandColor : null;
+  // Preview is a single still — resolve "system" to light.
+  const appearance = inputs?.appearance === "dark" ? "dark" : "light";
+  const brandName =
+    typeof doc.content?.brandName === "string" && doc.content.brandName
+      ? doc.content.brandName
+      : null;
+  return { brandColor, appearance, brandName };
+}
+
 export function dtoToFormConfigEntry(
   dto: V2FormConfigEntry,
   config?: unknown,
@@ -80,5 +113,6 @@ export function dtoToFormConfigEntry(
     lastSubmissionAt:
       dto.lastSubmissionAt != null ? Date.parse(dto.lastSubmissionAt) : null,
     layoutPreset: extractLayoutPreset(config),
+    ...extractTheme(config),
   };
 }

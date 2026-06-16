@@ -154,6 +154,8 @@ export const WidgetCard = React.memo(function WidgetCard({
         <WidgetLayoutPreview
           layout={entry.layout}
           kind={entry.kind}
+          accent={entry.accent}
+          theme={entry.theme}
           inactive={!entry.isActive}
           className="absolute inset-0"
         />

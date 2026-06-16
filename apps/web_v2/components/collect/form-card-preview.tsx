@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * FormCardPreview — static SVG thumbnail keyed off the form's v4 layout
- * preset. The gallery stays fast and non-dynamic while each card still hints
- * at which hand-designed layout the form uses. Pre-v4 configs (preset null)
- * get a neutral placeholder until they are migrated.
+ * FormCardPreview — a clean, brand-themed mini-mockup of the form, keyed off its
+ * v4 layout preset. Not a live render (that's expensive) and not a crude wire
+ * sketch: a realistic miniature with brand color, a header, fields and a submit
+ * button so the gallery card reads as a small version of the actual form.
  */
 
 import * as React from "react";
@@ -13,176 +13,232 @@ import type { FormLayoutPreset } from "@/lib/collect/forms-list";
 
 interface FormCardPreviewProps {
   preset?: FormLayoutPreset | null;
+  brandColor?: string | null;
+  appearance?: "light" | "dark";
+  brandName?: string | null;
   inactive?: boolean;
   className?: string;
 }
 
+interface Palette {
+  brand: string;
+  page: string;
+  surface: string;
+  field: string;
+  text: string;
+  sub: string;
+  line: string;
+}
+
+function palette(brandColor?: string | null, dark?: boolean): Palette {
+  const brand = brandColor || "#4f46e5";
+  return dark
+    ? {
+        brand,
+        page: "#0b0b0d",
+        surface: "#161619",
+        field: "#1f1f23",
+        text: "#e7e7ea",
+        sub: "#8b8b93",
+        line: "#2a2a30",
+      }
+    : {
+        brand,
+        page: "#f4f4f5",
+        surface: "#ffffff",
+        field: "#fafafa",
+        text: "#1f1f23",
+        sub: "#9a9aa3",
+        line: "#e6e6ea",
+      };
+}
+
+/* ─── Mini primitives ─────────────────────────────────────────────────────── */
+
+function BrandRow({ p, name }: { p: Palette; name: string | null }) {
+  return (
+    <div className="mb-2 flex items-center gap-1">
+      <span
+        className="size-2 rounded-full"
+        style={{ background: p.brand }}
+        aria-hidden
+      />
+      <span
+        className="text-[6px] font-semibold tracking-tight"
+        style={{ color: p.text }}
+      >
+        {name || "Your brand"}
+      </span>
+    </div>
+  );
+}
+
+function Title({ p, children }: { p: Palette; children: React.ReactNode }) {
+  return (
+    <div
+      className="mb-2 text-[7.5px] font-semibold leading-tight tracking-tight"
+      style={{ color: p.text }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Field({
-  x,
-  y,
-  w,
-  h = 9,
+  p,
+  label = 7,
+  full,
 }: {
-  x: number;
-  y: number;
-  w: number;
-  h?: number;
+  p: Palette;
+  label?: number;
+  full?: boolean;
 }) {
   return (
-    <>
-      <rect
-        x={x}
-        y={y - 6}
-        width={Math.max(28, w * 0.32)}
-        height={3}
-        rx={1.5}
-        fill="var(--muted-foreground)"
-        opacity="0.35"
+    <div className={cn("mb-1.5", full && "w-full")}>
+      <div
+        className="mb-1 h-[2px] rounded-full opacity-70"
+        style={{ background: p.sub, width: label * 3 }}
+        aria-hidden
       />
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx={Math.min(4, h / 2)}
-        fill="var(--background)"
-        stroke="var(--border)"
-        strokeWidth="0.8"
+      <div
+        className="h-2.5 rounded-[3px] border"
+        style={{ background: p.field, borderColor: p.line }}
+        aria-hidden
       />
-    </>
+    </div>
   );
 }
 
-function ButtonBar({ x, y, w = 54 }: { x: number; y: number; w?: number }) {
+function SubmitButton({ p, w = 46 }: { p: Palette; w?: number }) {
   return (
-    <rect
-      x={x}
-      y={y}
-      width={w}
-      height={11}
-      rx={5.5}
-      fill="var(--primary)"
-      opacity="0.88"
-    />
+    <div
+      className="mt-1.5 flex h-3 items-center justify-center rounded-[3px]"
+      style={{ background: p.brand, width: w }}
+      aria-hidden
+    >
+      <span className="h-[2px] w-4 rounded-full bg-white/85" />
+    </div>
   );
 }
 
-function CardPreview() {
+/* ─── Per-preset miniatures ───────────────────────────────────────────────── */
+
+function CardPreview({ p, name }: { p: Palette; name: string | null }) {
   return (
-    <>
-      <rect
-        x={50}
-        y={12}
-        width={100}
-        height={101}
-        rx={6}
-        fill="var(--card)"
-        stroke="var(--border)"
-        strokeWidth="0.8"
-      />
-      <Field x={62} y={34} w={76} />
-      <Field x={62} y={56} w={76} />
-      <Field x={62} y={78} w={76} />
-      <ButtonBar x={62} y={94} w={76} />
-    </>
+    <div
+      className="flex h-full w-full items-center justify-center p-3"
+      style={{ background: p.page }}
+    >
+      <div
+        className="w-[72%] rounded-md border p-2.5"
+        style={{
+          background: p.surface,
+          borderColor: p.line,
+          boxShadow: "0 6px 16px -10px rgba(0,0,0,0.25)",
+        }}
+      >
+        <BrandRow p={p} name={name} />
+        <Title p={p}>How was your experience?</Title>
+        <Field p={p} label={6} />
+        <Field p={p} label={9} />
+        <SubmitButton p={p} w={50} />
+      </div>
+    </div>
   );
 }
 
-function InlinePreview() {
+function InlinePreview({ p, name }: { p: Palette; name: string | null }) {
   return (
-    <>
-      <Field x={40} y={32} w={120} />
-      <Field x={40} y={56} w={120} />
-      <Field x={40} y={80} w={120} />
-      <ButtonBar x={40} y={98} w={64} />
-    </>
+    <div className="h-full w-full p-3.5" style={{ background: p.surface }}>
+      <BrandRow p={p} name={name} />
+      <Title p={p}>Share your feedback</Title>
+      <Field p={p} label={6} full />
+      <Field p={p} label={8} full />
+      <Field p={p} label={5} full />
+      <SubmitButton p={p} w={42} />
+    </div>
   );
 }
 
-function SplitPreview() {
+function SplitPreview({ p, name }: { p: Palette; name: string | null }) {
   return (
-    <>
-      <rect
-        x={16}
-        y={12}
-        width={76}
-        height={101}
-        rx={6}
-        fill="var(--primary)"
-        opacity="0.22"
-      />
-      <circle cx={54} cy={48} r={10} fill="var(--primary)" opacity="0.5" />
-      <rect
-        x={36}
-        y={68}
-        width={36}
-        height={4}
-        rx={2}
-        fill="var(--primary)"
-        opacity="0.45"
-      />
-      <Field x={108} y={34} w={70} />
-      <Field x={108} y={58} w={70} />
-      <ButtonBar x={108} y={78} w={70} />
-    </>
+    <div className="flex h-full w-full">
+      <div
+        className="flex w-[40%] flex-col justify-center gap-1.5 p-2.5"
+        style={{ background: p.brand }}
+      >
+        <span className="size-3 rounded-full bg-white/30" aria-hidden />
+        <div className="h-[3px] w-10 rounded-full bg-white/55" aria-hidden />
+        <div className="h-[2px] w-8 rounded-full bg-white/35" aria-hidden />
+        <div className="h-[2px] w-9 rounded-full bg-white/35" aria-hidden />
+      </div>
+      <div className="flex-1 p-2.5" style={{ background: p.surface }}>
+        <BrandRow p={p} name={name} />
+        <Field p={p} label={6} full />
+        <Field p={p} label={8} full />
+        <SubmitButton p={p} w={40} />
+      </div>
+    </div>
   );
 }
 
-function ConversationalPreview() {
+function ConversationalPreview({ p }: { p: Palette; name: string | null }) {
   return (
-    <>
-      <rect
-        x={44}
-        y={28}
-        width={56}
-        height={5}
-        rx={2.5}
-        fill="var(--muted-foreground)"
-        opacity="0.4"
-      />
-      <Field x={44} y={52} w={112} h={14} />
-      <ButtonBar x={44} y={84} w={48} />
-      <rect
-        x={44}
-        y={104}
-        width={32}
-        height={3}
-        rx={1.5}
-        fill="var(--muted-foreground)"
-        opacity="0.25"
-      />
-    </>
+    <div
+      className="flex h-full w-full flex-col justify-center px-5"
+      style={{ background: p.surface }}
+    >
+      <div
+        className="mb-1 text-[5px] font-semibold tracking-[0.2em]"
+        style={{ color: p.brand }}
+      >
+        1 → 5
+      </div>
+      <div
+        className="mb-2 text-[10px] font-semibold leading-tight tracking-tight"
+        style={{ color: p.text }}
+      >
+        What did you think?
+      </div>
+      <div className="flex gap-1">
+        {["Loved it", "Good", "Okay"].map((c) => (
+          <span
+            key={c}
+            className="rounded-full border px-1.5 py-[2px] text-[5px] font-medium"
+            style={{ borderColor: p.line, color: p.sub }}
+          >
+            {c}
+          </span>
+        ))}
+      </div>
+      <SubmitButton p={p} w={44} />
+    </div>
   );
 }
 
-function LegacyPreview() {
+function LegacyPreview({ p }: { p: Palette }) {
   return (
-    <>
-      <rect
-        x={50}
-        y={12}
-        width={100}
-        height={101}
-        rx={6}
-        fill="none"
-        stroke="var(--border)"
-        strokeWidth="1"
-        strokeDasharray="4 4"
-      />
-      <rect
-        x={70}
-        y={56}
-        width={60}
-        height={5}
-        rx={2.5}
-        fill="var(--muted-foreground)"
-        opacity="0.3"
-      />
-    </>
+    <div
+      className="flex h-full w-full items-center justify-center"
+      style={{ background: p.page }}
+    >
+      <div
+        className="flex h-[64%] w-[70%] items-center justify-center rounded-md border border-dashed"
+        style={{ borderColor: p.line }}
+      >
+        <div
+          className="h-[3px] w-12 rounded-full opacity-50"
+          style={{ background: p.sub }}
+        />
+      </div>
+    </div>
   );
 }
 
-const PRESET_PREVIEW: Record<FormLayoutPreset, () => React.ReactElement> = {
+const PRESET_PREVIEW: Record<
+  FormLayoutPreset,
+  (args: { p: Palette; name: string | null }) => React.ReactElement
+> = {
   card: CardPreview,
   inline: InlinePreview,
   split: SplitPreview,
@@ -191,25 +247,30 @@ const PRESET_PREVIEW: Record<FormLayoutPreset, () => React.ReactElement> = {
 
 export function FormCardPreview({
   preset,
+  brandColor,
+  appearance = "light",
+  brandName,
   inactive,
   className,
 }: FormCardPreviewProps) {
-  const Preview = preset ? PRESET_PREVIEW[preset] : LegacyPreview;
+  const p = palette(brandColor, appearance === "dark");
+  const Preview = preset ? PRESET_PREVIEW[preset] : null;
+
   return (
-    <svg
-      viewBox="0 0 200 125"
+    <div
       role="img"
-      aria-label={
-        preset ? `${preset} layout preview` : "Legacy form layout preview"
-      }
+      aria-label={preset ? `${preset} form layout preview` : "Form preview"}
       className={cn(
-        "h-full w-full bg-muted/40 transition-opacity",
+        "h-full w-full overflow-hidden transition-opacity",
         inactive && "opacity-50 grayscale",
         className,
       )}
-      preserveAspectRatio="xMidYMid slice"
     >
-      <Preview />
-    </svg>
+      {Preview ? (
+        <Preview p={p} name={brandName ?? null} />
+      ) : (
+        <LegacyPreview p={p} />
+      )}
+    </div>
   );
 }
