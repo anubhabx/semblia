@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProjectSidebar } from "@/components/nav/project-sidebar";
+import { RememberLastProject } from "@/components/projects/remember-last-project";
 import { serverFetchProjectBySlug } from "@/lib/semblia-api-server";
 
 interface ProjectLayoutProps {
@@ -18,6 +19,7 @@ export default async function ProjectLayout({
 
   return (
     <>
+      <RememberLastProject slug={slug} />
       <ProjectSidebar slug={slug} project={project} />
       <div className="flex flex-1 flex-col lg:pl-56">{children}</div>
     </>
