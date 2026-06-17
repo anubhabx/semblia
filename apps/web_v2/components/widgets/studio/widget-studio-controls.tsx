@@ -88,7 +88,19 @@ export const WidgetStudioControls = React.memo(function WidgetStudioControls({
       <Header />
       {/* Desktop section nav (mobile uses the shell's bottom tab bar). */}
       {!mobileSection && <SectionNav active={active} onChange={setActive} />}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        // On desktop the in-panel nav owns the tab/panel relationship; on mobile
+        // the shell wraps this in its own tabpanel, so don't double up the role.
+        {...(!mobileSection
+          ? {
+              role: "tabpanel",
+              id: "widget-section-panel",
+              "aria-labelledby": `widget-section-tab-${active}`,
+              tabIndex: 0,
+            }
+          : {})}
+      >
         {body}
         <div className="h-12" />
       </div>
@@ -116,7 +128,9 @@ function SectionNav({
             key={id}
             type="button"
             role="tab"
+            id={`widget-section-tab-${id}`}
             aria-selected={on}
+            aria-controls="widget-section-panel"
             onClick={() => onChange(id)}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-[12px] font-medium transition-colors",

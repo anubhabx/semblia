@@ -80,7 +80,7 @@ export function AppearanceSection({ widgetId }: { widgetId: string }) {
     <div className="flex flex-col gap-7 px-5 py-5">
       {/* ── Starting point ─────────────────────────────────────── */}
       <Section
-        title="Style"
+        title="Preset"
         description="A coordinated starting point — tune any knob below."
         action={
           <button
@@ -202,7 +202,7 @@ export function AppearanceSection({ widgetId }: { widgetId: string }) {
             options={[
               { value: "compact", label: "Compact" },
               { value: "cozy", label: "Cozy" },
-              { value: "spacious", label: "Roomy" },
+              { value: "spacious", label: "Spacious" },
             ]}
           />
         </Field>
@@ -265,7 +265,6 @@ export function AppearanceSection({ widgetId }: { widgetId: string }) {
       {/* ── Type ───────────────────────────────────────────────── */}
       <Section title="Type">
         <TypefacePicker
-          base={theme}
           value={theme.typePairing}
           onChange={(v) => update("typePairing", v)}
         />
@@ -345,7 +344,6 @@ function TypefacePicker({
   value,
   onChange,
 }: {
-  base: WidgetBrandThemeInputs;
   value: WidgetBrandThemeInputs["typePairing"];
   onChange: (v: WidgetBrandThemeInputs["typePairing"]) => void;
 }) {
