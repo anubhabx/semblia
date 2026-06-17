@@ -77,6 +77,7 @@ import {
   Field,
   OptionCardGroup,
   Section,
+  SelectField,
   Segmented,
   SwitchRow,
   type OptionCard,
@@ -218,6 +219,7 @@ function SectionRail({
             onClick={() => onChange(id)}
             className={cn(
               "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55",
               "lg:flex-col lg:gap-1 lg:px-1 lg:py-2.5 lg:text-[10.5px]",
               active
                 ? "bg-brand/10 text-brand"
@@ -596,7 +598,7 @@ function BrandingSection({
           <button
             type="button"
             onClick={applyProjectBranding}
-            className="self-start text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            className="self-start rounded text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55"
           >
             Reset to project branding
           </button>
@@ -702,7 +704,7 @@ function QuestionsPanel({
             disabled={atMax}
             className={cn(
               "mt-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-xs font-medium text-muted-foreground transition-colors",
-              "hover:border-foreground/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-50",
+              "hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 disabled:pointer-events-none disabled:opacity-50",
             )}
           >
             <PlusIcon className="size-4" aria-hidden /> Add a question
@@ -747,7 +749,7 @@ function TypePicker({
                         onPick(t);
                         setOpen(false);
                       }}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55"
                     >
                       <Icon className="size-4 text-muted-foreground" />
                       <span className="truncate">
@@ -798,7 +800,7 @@ function QuestionRow({
             aria-label="Move up"
             disabled={index === 0}
             onClick={() => onMove(-1)}
-            className="transition-colors hover:text-foreground disabled:opacity-25"
+            className="rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-25"
           >
             <ArrowUpIcon className="size-3.5" aria-hidden />
           </button>
@@ -807,7 +809,7 @@ function QuestionRow({
             aria-label="Move down"
             disabled={index === total - 1}
             onClick={() => onMove(1)}
-            className="transition-colors hover:text-foreground disabled:opacity-25"
+            className="rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-25"
           >
             <ArrowDownIcon className="size-3.5" aria-hidden />
           </button>
@@ -839,7 +841,7 @@ function QuestionRow({
           aria-label="Edit question details"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55"
         >
           <CaretDownIcon
             className={cn("size-4 transition-transform", open && "rotate-180")}
@@ -857,7 +859,7 @@ function QuestionRow({
                 trigger={
                   <button
                     type="button"
-                    className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-muted/50"
+                    className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55"
                   >
                     <TypeIcon className="size-4 text-muted-foreground" />
                     <span className="flex-1 truncate text-left">
@@ -928,7 +930,7 @@ function QuestionRow({
             type="button"
             onClick={onRemove}
             disabled={total <= 1}
-            className="flex items-center gap-1.5 self-start text-xs font-medium text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+            className="flex items-center gap-1.5 self-start rounded text-xs font-medium text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-40"
           >
             <TrashIcon className="size-3.5" aria-hidden /> Remove question
           </button>
@@ -966,7 +968,7 @@ function OptionsEditor({
               aria-label="Remove option"
               disabled={options.length <= 1}
               onClick={() => onChange(options.filter((_, j) => j !== i))}
-              className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:text-destructive disabled:opacity-30"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-30"
             >
               <TrashIcon className="size-4" aria-hidden />
             </button>
@@ -1028,40 +1030,6 @@ function defaultRuleFor(q: FormQuestion): ShowIfRule {
   return { questionId: q.id, op, value };
 }
 
-/** A native-styled small select used only inside the condition editor. */
-function MiniSelect<T extends string>({
-  value,
-  onChange,
-  options,
-  ariaLabel,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ value: T; label: string }>;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="relative">
-      <select
-        aria-label={ariaLabel}
-        value={value}
-        onChange={(e) => onChange(e.target.value as T)}
-        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-2.5 pr-7 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <CaretDownIcon
-        className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-        aria-hidden
-      />
-    </div>
-  );
-}
-
 function ConditionEditor({
   question,
   others,
@@ -1093,7 +1061,7 @@ function ConditionEditor({
       </label>
       {enabled && rule ? (
         <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
-          <MiniSelect
+          <SelectField
             ariaLabel="When question"
             value={rule.questionId}
             onChange={(questionId) => {
@@ -1102,14 +1070,14 @@ function ConditionEditor({
             }}
             options={others.map((o) => ({ value: o.id, label: o.label }))}
           />
-          <MiniSelect
+          <SelectField
             ariaLabel="Condition"
             value={rule.op}
             onChange={(op) => onChange({ ...rule, op })}
             options={ops.map((op) => ({ value: op, label: OP_LABELS[op] }))}
           />
           {choices ? (
-            <MiniSelect
+            <SelectField
               ariaLabel="Value"
               value={String(rule.value)}
               onChange={(value) => onChange({ ...rule, value })}
@@ -1609,6 +1577,7 @@ function RadiusPicker({
             onClick={() => onChange(v)}
             className={cn(
               "flex flex-col items-center gap-1.5 rounded-lg border py-2.5 transition-[border-color,box-shadow]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-1",
               active
                 ? "border-brand ring-2 ring-brand/60"
                 : "border-border hover:border-foreground/25",
@@ -1707,7 +1676,7 @@ function ColorOverridesField({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+        className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55"
       >
         <span className="flex items-center gap-2 text-xs font-medium text-foreground">
           <SlidersIcon className="size-4 text-muted-foreground" aria-hidden />

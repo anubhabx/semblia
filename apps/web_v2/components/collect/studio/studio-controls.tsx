@@ -14,8 +14,19 @@ import * as React from "react";
 import { CheckIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type IconType = React.ComponentType<{ className?: string }>;
+
+/** Shared keyboard focus ring for the studio's hand-rolled controls. */
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55";
 
 // ── Section + Field ───────────────────────────────────────────────────────────
 
@@ -128,6 +139,7 @@ export function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+              FOCUS_RING,
               active
                 ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
                 : "text-muted-foreground hover:text-foreground",
@@ -194,6 +206,7 @@ export function OptionCardGroup<T extends string>({
             onClick={() => onChange(o.value)}
             className={cn(
               "group relative flex flex-col overflow-hidden rounded-xl border text-left transition-[border-color,box-shadow] duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-1",
               active
                 ? "border-brand ring-2 ring-brand/60"
                 : "border-border hover:border-foreground/25",
@@ -269,6 +282,40 @@ export function SwitchRow({
       </span>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </label>
+  );
+}
+
+// ── Compact select (shadcn, no native <select>) ───────────────────────────────
+
+export function SelectField<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  className,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  ariaLabel: string;
+  className?: string;
+}) {
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as T)}>
+      <SelectTrigger
+        aria-label={ariaLabel}
+        className={cn("h-9 w-full", className)}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
