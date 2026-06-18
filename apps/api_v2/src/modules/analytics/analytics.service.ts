@@ -165,12 +165,10 @@ export class AnalyticsService {
           apiRequests: true,
         },
       }),
-      this.prisma.client.collectionFormSubmission.count({
-        where: { projectId, createdAt: { gte: since } },
-      }),
-      this.prisma.client.formImpression.count({
-        where: { projectId, timestamp: { gte: since } },
-      }),
+      // FORMS-REBUILD(Phase 6): form submissions + form-view impressions are
+      // re-pointed onto FormResponse/FormView in Phase 6. Report zero for now.
+      Promise.resolve(0),
+      Promise.resolve(0),
       this.prisma.client.widgetAnalytics.count({
         where: { projectId, timestamp: { gte: since } },
       }),
@@ -250,28 +248,10 @@ export class AnalyticsService {
           apiRequests: true,
         },
       }),
-      this.prisma.client.formImpression.findMany({
-        where: {
-          projectId,
-          timestamp: { gte: querySince, lte: currentRange.until },
-        },
-        select: { timestamp: true },
-      }),
-      this.prisma.client.collectionFormSubmission.findMany({
-        where: {
-          projectId,
-          createdAt: { gte: querySince, lte: currentRange.until },
-        },
-        select: {
-          id: true,
-          answers: true,
-          ratingValue: true,
-          moderationStatus: true,
-          metadata: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
+      // FORMS-REBUILD(Phase 6): form-view impressions + responses are re-pointed
+      // onto FormView/FormResponse in Phase 6. No rows in the interim.
+      Promise.resolve([] as Array<{ timestamp: Date }>),
+      Promise.resolve([] as DashboardSubmissionRow[]),
       this.prisma.client.widgetAnalytics.findMany({
         where: {
           projectId,
@@ -381,34 +361,9 @@ export class AnalyticsService {
       throw new NotFoundException("Project not found");
     }
 
-    let formId: string | null = null;
-    if (body.formId) {
-      const form = await this.prisma.client.collectionForm.findFirst({
-        where: {
-          id: body.formId,
-          projectId: project.id,
-          isActive: true,
-        },
-        select: { id: true },
-      });
-      if (!form) {
-        throw new NotFoundException("Form not found");
-      }
-      formId = form.id;
-    }
-
-    await this.prisma.client.$transaction([
-      this.prisma.client.formImpression.create({
-        data: {
-          projectId: project.id,
-          formId,
-          ipAddress: context.ipAddress ?? null,
-          userAgent: context.userAgent ?? null,
-          timestamp: context.now ?? new Date(),
-        },
-      }),
-      this.incrementDailyMetric(project.id, "formViews", 1, context.now),
-    ]);
+    // FORMS-REBUILD(Phase 6): per-form view impressions land on FormView once the
+    // forms pipeline is rebuilt. For now we only roll up the daily formViews metric.
+    await this.incrementDailyMetric(project.id, "formViews", 1, context.now);
 
     return this.eventAccepted("form_view");
   }
@@ -462,43 +417,11 @@ export class AnalyticsService {
     body: SubmissionImpressionEventBodyDto,
     context: AnalyticsEventContext = {},
   ) {
-    const submission =
-      await this.prisma.client.collectionFormSubmission.findFirst({
-        where: {
-          id: body.submissionId,
-          moderationStatus: "APPROVED",
-        },
-        select: {
-          id: true,
-          projectId: true,
-        },
-      });
-    if (!submission) {
-      throw new NotFoundException("Submission not found");
-    }
-    const projectId = submission.projectId;
-
-    const widget = await this.prisma.client.widget.findFirst({
-      where: {
-        id: body.widgetId,
-        projectId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-      },
-    });
-    if (!widget) {
-      throw new NotFoundException("Widget not found");
-    }
-
-    await this.incrementDailyMetric(
-      projectId,
-      "submissionImpressions",
-      1,
-      context.now,
-    );
-
+    // FORMS-REBUILD(Phase 6): response (submission) impressions are re-pointed
+    // onto FormResponse in Phase 6. Until then there is no response to attribute
+    // an impression to, so the event is accepted as a no-op.
+    void body;
+    void context;
     return this.eventAccepted("submission_impression");
   }
 

@@ -19,7 +19,7 @@ import { timeAgo } from "@/lib/format";
 import type { WidgetListEntry } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
-import { InlineName } from "@/components/collect/inline-name";
+import { InlineName } from "@/components/studio/inline-name";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
 import { WidgetLayoutPreview } from "./widget-layout-preview";
 

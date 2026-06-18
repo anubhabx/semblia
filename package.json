@@ -20,8 +20,6 @@
     "api_v2:dev": "pnpm --filter api_v2 dev",
     "api_v2:build": "turbo build --filter api_v2",
     "api_v2:start": "pnpm --filter api_v2 start",
-    "forms_runtime:dev": "pnpm --filter forms_runtime dev",
-    "forms_runtime:build": "turbo build --filter forms_runtime",
     "admin:dev": "pnpm --filter admin dev",
     "admin:build": "turbo build --filter admin",
     "admin:start": "pnpm --filter admin start",

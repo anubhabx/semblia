@@ -26,13 +26,11 @@ import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   useProject,
-  useResponsesList,
   useWidget,
   useWidgetDraft,
   useWidgetsList,
 } from "@/hooks/api";
 import { selectPreviewTestimonials } from "@/lib/widgets/widget-fallback-testimonials";
-import { toWidgetTestimonial } from "@/lib/widgets/widget-testimonial-type";
 import {
   dtoToWidgetListEntry,
   dtoToWidgetStudioConfig,
@@ -115,10 +113,6 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   const projectQuery = useProject(slug);
   const project = projectQuery.data ?? null;
   const accent = project?.brandColorPrimary ?? "#6366f1";
-  const approvedQuery = useResponsesList(slug, {
-    moderationStatus: "APPROVED",
-    pageSize: 200,
-  });
 
   // ── API-backed studio data ──────────────────────────────────
   // The studio is keyed by the API widget id in the route. Feed the rail from
@@ -190,10 +184,12 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   ]);
 
   const previewItems = React.useMemo(() => {
-    const real = (approvedQuery.data?.items ?? []).map(toWidgetTestimonial);
-    const { items } = selectPreviewTestimonials(real, 12);
+    // FORMS-REBUILD(Phase 6): re-point widget preview to live approved
+    // FormResponses. Until the responses pipeline is rebuilt, the studio preview
+    // uses demo content only.
+    const { items } = selectPreviewTestimonials([], 12);
     return items;
-  }, [approvedQuery.data]);
+  }, []);
 
   // ── Initial focus ───────────────────────────────────────────
   React.useEffect(() => {

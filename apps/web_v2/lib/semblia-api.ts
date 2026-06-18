@@ -23,9 +23,6 @@ import type {
   V2InitiateProjectOwnershipTransferBody,
   V2PublicSurfaceHostDTO,
   V2PublicCreateUploadIntentBody,
-  V2ResponseDTO,
-  V2ResponseAnnotationDTO,
-  V2CollectionFormDTO,
   V2WidgetDTO,
   V2WidgetListEntry,
   V2StudioDraftDTO,
@@ -67,7 +64,6 @@ import type {
   V2CreateIntegrationConnectionBody,
   V2UpdateIntegrationConnectionBody,
   V2CreateNativeIntegrationExportBody,
-  V2FormConfigDTO,
   V2ProjectVisibility,
   V2CreateUploadIntentBody,
   V2UploadIntentDTO,
@@ -357,7 +353,6 @@ export function createProject(
     autoModeration?: boolean;
     autoApproveVerified?: boolean;
     profanityFilterLevel?: string | null;
-    formConfig?: V2FormConfigDTO | null;
   },
 ) {
   return post<V2ProjectDTO>("/projects", token, body);
@@ -681,172 +676,8 @@ export function fetchProjectActionAudit(
   );
 }
 
-// ── Responses ───────────────────────────────────────────────────────────────
-// Collected feedback. The canonical record is a CollectionFormSubmission,
-// exposed on the wire as V2ResponseDTO under /projects/:slug/responses.
-
-export function fetchResponses(
-  token: string | null,
-  slug: string,
-  params?: {
-    page?: number;
-    pageSize?: number;
-    moderationStatus?: string;
-    search?: string;
-    sort?: string;
-  },
-) {
-  // The wire contract names the status filter `status`; the web layer speaks
-  // `moderationStatus` (matching the DTO field), so translate at this boundary.
-  const { moderationStatus, ...rest } = params ?? {};
-  const query: Record<string, string | number> = { ...rest };
-  if (moderationStatus) query.status = moderationStatus;
-
-  return api<V2PaginatedResponse<V2ResponseDTO>>(
-    `/projects/${encodeURIComponent(slug)}/responses`,
-    token,
-    { params: query },
-  );
-}
-
-export function fetchResponse(
-  token: string | null,
-  slug: string,
-  responseId: string,
-) {
-  return api<V2ResponseDTO>(
-    `/projects/${encodeURIComponent(slug)}/responses/${encodeURIComponent(responseId)}`,
-    token,
-  );
-}
-
-export function createResponseAnnotation(
-  token: string | null,
-  slug: string,
-  responseId: string,
-  body: {
-    note?: string;
-    labels?: string[];
-    sentiment?: string;
-    metadata?: Record<string, unknown>;
-  },
-) {
-  return post<V2ResponseAnnotationDTO>(
-    `/projects/${encodeURIComponent(slug)}/responses/${encodeURIComponent(responseId)}/annotations`,
-    token,
-    body,
-  );
-}
-
-export function moderateResponse(
-  token: string | null,
-  slug: string,
-  responseId: string,
-  body: { moderationStatus: string; reason?: string },
-) {
-  // Wire contract expects `status`; web speaks `moderationStatus`.
-  return post<V2ResponseDTO>(
-    `/projects/${encodeURIComponent(slug)}/responses/${encodeURIComponent(responseId)}/moderation`,
-    token,
-    { status: body.moderationStatus, reason: body.reason },
-  );
-}
-
-// ── Forms ───────────────────────────────────────────────────────────────────
-
-export function fetchForms(token: string | null, slug: string) {
-  return api<V2CollectionFormDTO[]>(
-    `/projects/${encodeURIComponent(slug)}/forms`,
-    token,
-  );
-}
-
-export function fetchForm(token: string | null, slug: string, formId: string) {
-  return api<V2CollectionFormDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
-    token,
-  );
-}
-
-export function createForm(
-  token: string | null,
-  slug: string,
-  body: { name: string; description?: string; config?: unknown },
-) {
-  return post<V2CollectionFormDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms`,
-    token,
-    body,
-  );
-}
-
-export function duplicateForm(
-  token: string | null,
-  slug: string,
-  formId: string,
-): Promise<V2CollectionFormDTO> {
-  return post<V2CollectionFormDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/duplicate`,
-    token,
-  );
-}
-
-export function updateForm(
-  token: string | null,
-  slug: string,
-  formId: string,
-  body: Record<string, unknown>,
-) {
-  return patch<V2CollectionFormDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
-    token,
-    body,
-  );
-}
-
-export function deleteForm(token: string | null, slug: string, formId: string) {
-  return del(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
-    token,
-  );
-}
-
-export function fetchFormDraft(
-  token: string | null,
-  slug: string,
-  formId: string,
-) {
-  return api<V2StudioDraftDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft`,
-    token,
-  );
-}
-
-export function saveFormDraft(
-  token: string | null,
-  slug: string,
-  formId: string,
-  body: { draft: Record<string, unknown>; expectedVersion: number },
-) {
-  return put<V2StudioDraftDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft`,
-    token,
-    body,
-  );
-}
-
-export function publishFormDraft(
-  token: string | null,
-  slug: string,
-  formId: string,
-  body: { expectedVersion: number },
-) {
-  return put<V2StudioDraftDTO>(
-    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft/publish`,
-    token,
-    body,
-  );
-}
+// Forms + Responses client functions were removed in the forms rebuild
+// (docs/plans/2026-06-18-forms-rebuild.md). New clients land in Phases 5/6.
 
 // ── Widgets ─────────────────────────────────────────────────────────────────
 

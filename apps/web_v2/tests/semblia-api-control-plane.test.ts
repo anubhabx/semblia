@@ -4,7 +4,6 @@ import {
   cancelProjectOwnershipTransfer,
   createSubscriptionCheckout,
   createOutboundWebhookEndpoint,
-  duplicateForm,
   duplicateWidget,
   fetchMyProjectTransfers,
   fetchProjectOwnershipTransfer,
@@ -181,22 +180,6 @@ describe("semblia-api control-plane contracts", () => {
       "http://localhost:8100/v2/me/project-transfers/transfer_1/accept",
       expect.objectContaining({ method: "POST" }),
     );
-  });
-
-  it("duplicates collection forms through the project-scoped duplicate route", async () => {
-    await duplicateForm("session-token", "launchpad", "form_123");
-
-    const [, init] = vi.mocked(fetch).mock.calls[0];
-    expect(fetch).toHaveBeenCalledWith(
-      "http://localhost:8100/v2/projects/launchpad/forms/form_123/duplicate",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          Authorization: "Bearer session-token",
-        }),
-      }),
-    );
-    expect(init?.body).toBeUndefined();
   });
 
   it("duplicates widgets through the project-scoped duplicate route", async () => {

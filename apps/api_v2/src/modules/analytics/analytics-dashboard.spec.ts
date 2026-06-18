@@ -248,7 +248,11 @@ describe("AnalyticsService.getDashboard", () => {
     ).toBe(false);
   });
 
-  it("builds the dashboard from seeded analytics without leaking private fields", async () => {
+  it("builds the dashboard from live daily + widget analytics without leaking private fields", async () => {
+    // FORMS-REBUILD(Phase 6): the submission/impression-derived analytics
+    // (funnel, pipeline, ratings, top sources, submissionsByDayHour) are zeroed
+    // until FormResponse/FormView are rebuilt and re-pointed. The daily rollups,
+    // widget analytics, and API key usage remain live and are asserted here.
     const { service, mocks } = createDashboardService();
     seedDashboardMocks(mocks);
 
@@ -263,47 +267,16 @@ describe("AnalyticsService.getDashboard", () => {
       "2026-05-14",
       "2026-05-15",
     ]);
-    expect(result.daily.at(1)).toMatchObject({
-      formViews: 0,
-      formSubmissions: 0,
-      approved: 1,
-      widgetLoads: 0,
-      avgLoadMs: 0,
-      errorCount: 0,
-    });
+    // Per-day widget load metrics come from widgetAnalytics (still live).
     expect(result.daily.at(0)).toMatchObject({
       avgLoadMs: 200,
       errorCount: 1,
     });
-    const funnelValues = result.funnel.steps.map((step) => step.value);
-    expect(
-      funnelValues.every(
-        (value, index) =>
-          index === 0 || value <= (funnelValues[index - 1] ?? 0),
-      ),
-    ).toBe(true);
-    expect(
-      result.pipeline.pending +
-        result.pipeline.approved +
-        result.pipeline.rejected +
-        result.pipeline.flagged,
-    ).toBe(12);
-    expect(result.pipeline.totalWithAutoMod).toBe(12);
-    expect(result.ratings.distribution).toEqual(
-      expect.arrayContaining([
-        { rating: 2, count: 1 },
-        { rating: 5, count: 2 },
-      ]),
-    );
-    expect(result.topSources.map((entry) => entry.count)).toEqual(
-      [...result.topSources.map((entry) => entry.count)].sort((a, b) => b - a),
-    );
     expect(result.topCountries).toEqual([
       { countryCode: "US", impressions: 2 },
       { countryCode: "UNKNOWN", impressions: 1 },
     ]);
     expect(isSortedDescending(result.topCountries, "impressions")).toBe(true);
-    expect(result.contentPerformance).toEqual([]);
     expect(result.deviceSplit).toEqual({
       mobile: 1,
       tablet: 1,
@@ -319,22 +292,15 @@ describe("AnalyticsService.getDashboard", () => {
         series: [],
       }),
     ]);
-    expect(result.submissionsByDayHour).toEqual(
-      expect.arrayContaining([{ day: 3, hour: 3, count: 2 }]),
-    );
+    // Submission-derived sections are zeroed during the rebuild.
+    expect(result.pipeline.totalWithAutoMod).toBe(0);
+    expect(result.ratings.distribution).toEqual([]);
+    expect(result.topSources).toEqual([]);
+    expect(result.contentPerformance).toEqual([]);
+    expect(result.submissionsByDayHour).toEqual([]);
+    expect(result.funnel.steps.map((step) => step.value)).toEqual([0, 0, 0]);
     expect(result.previous).toBeTruthy();
     expect(result.alerts).toEqual([]);
-
-    const submissionSelect =
-      mocks.collectionFormSubmissionFindMany.mock.calls[0]?.[0]?.select ?? {};
-    expect(Object.hasOwn(submissionSelect, "answers")).toBe(true);
-    expect(Object.hasOwn(submissionSelect, "authorEmail")).toBe(false);
-    expect(Object.hasOwn(submissionSelect, "ipAddress")).toBe(false);
-    expect(Object.hasOwn(submissionSelect, "userAgent")).toBe(false);
-    expect(Object.hasOwn(submissionSelect, "privateMetadata")).toBe(false);
-    expect(mocks.formImpressionFindMany.mock.calls[0]?.[0]?.select).toEqual({
-      timestamp: true,
-    });
     expect(
       /should-not-leak|203\.0\.113|PrivateBrowser|keyHash|authorEmail|ipAddress|userAgent/i.test(
         JSON.stringify(result),

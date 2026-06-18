@@ -8,6 +8,9 @@
  * exclusive options, `OptionCardGroup` for choices that deserve a visual
  * preview (themes, layouts, surface/button/radius tiles), `Section`/`Field`
  * for structure, `SwitchRow` for booleans.
+ *
+ * Design-system-generic (no feature coupling). Shared by the Widget Studio and,
+ * once rebuilt, the Form Studio.
  */
 
 import * as React from "react";

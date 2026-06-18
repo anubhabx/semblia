@@ -12,7 +12,6 @@ import {
   MemberRole,
   MediaAssetPurpose,
   MediaAssetStatus,
-  ModerationStatus,
   NotificationType,
   Prisma,
   type ProjectMember,
@@ -66,7 +65,6 @@ const PROJECT_SELECT = {
   logoAsset: true,
   projectType: true,
   websiteUrl: true,
-  collectionFormUrl: true,
   brandColorPrimary: true,
   brandColorSecondary: true,
   socialLinks: true,
@@ -76,12 +74,10 @@ const PROJECT_SELECT = {
   autoModeration: true,
   autoApproveVerified: true,
   profanityFilterLevel: true,
-  formConfig: true,
   createdAt: true,
   updatedAt: true,
   _count: {
     select: {
-      collectionFormSubmissions: true,
       widgets: true,
       apiKeys: true,
     },
@@ -242,25 +238,9 @@ export class ProjectsService {
       }),
     ]);
 
-    const projectIds = projects.map((project) => project.id);
-    const pendingModerationCounts =
-      projectIds.length === 0
-        ? []
-        : await this.prisma.client.collectionFormSubmission.groupBy({
-            by: ["projectId"],
-            where: {
-              moderationStatus: ModerationStatus.PENDING,
-              projectId: { in: projectIds },
-            },
-            _count: { _all: true },
-          });
-
-    const pendingModerationByProjectId = new Map(
-      pendingModerationCounts.map((entry) => [
-        entry.projectId,
-        entry._count._all,
-      ]),
-    );
+    // FORMS-REBUILD(Phase 6): pending-moderation counts come from FormResponse
+    // once the responses pipeline is rebuilt. Report zero pending for now.
+    const pendingModerationByProjectId = new Map<string, number>();
 
     const accessByProjectId = await this.buildAccessByProjectId(
       userId,
@@ -362,15 +342,8 @@ export class ProjectsService {
 
     if (!project) throw new NotFoundException("Project not found");
 
-    const pendingModeration =
-      await this.prisma.client.collectionFormSubmission.count({
-        where: {
-          projectId: project.id,
-          moderationStatus: ModerationStatus.PENDING,
-        },
-      });
-
-    return this.toProjectResponse(project, pendingModeration, access);
+    // FORMS-REBUILD(Phase 6): pending-moderation count comes from FormResponse.
+    return this.toProjectResponse(project, 0, access);
   }
 
   async update(
@@ -392,15 +365,8 @@ export class ProjectsService {
         select: PROJECT_SELECT,
       });
 
-      const pendingModeration =
-        await this.prisma.client.collectionFormSubmission.count({
-          where: {
-            projectId: updatedProject.id,
-            moderationStatus: ModerationStatus.PENDING,
-          },
-        });
-
-      return this.toProjectResponse(updatedProject, pendingModeration, access);
+      // FORMS-REBUILD(Phase 6): pending-moderation count comes from FormResponse.
+      return this.toProjectResponse(updatedProject, 0, access);
     } catch (error: unknown) {
       if (this.isPrismaNotFoundError(error)) {
         throw new NotFoundException("Project not found");
@@ -1783,7 +1749,6 @@ export class ProjectsService {
     accountDefaults = parseAccountDefaults(null),
     logoAssetId?: string | null,
   ): Prisma.ProjectUncheckedCreateInput {
-    const formDefaults = accountDefaults.form;
     const moderationDefaults = accountDefaults.moderation;
     const visibilityAccessDefaults = accountDefaults.visibilityAccess;
     const brandDefaults = accountDefaults.brand;
@@ -1798,7 +1763,6 @@ export class ProjectsService {
       logoAssetId: logoAssetId ?? undefined,
       projectType: body.projectType ?? undefined,
       websiteUrl: body.websiteUrl,
-      collectionFormUrl: body.collectionFormUrl,
       brandColorPrimary:
         body.brandColorPrimary !== undefined
           ? body.brandColorPrimary
@@ -1818,11 +1782,6 @@ export class ProjectsService {
         body.profanityFilterLevel !== undefined
           ? body.profanityFilterLevel
           : (moderationDefaults?.profanityFilterLevel ?? undefined),
-      formConfig: this.toNullableJsonInput(
-        this.stripFormConfigHydratedLogo(
-          body.formConfig !== undefined ? body.formConfig : formDefaults,
-        ) as Prisma.InputJsonValue | null,
-      ),
     };
   }
 
@@ -1843,9 +1802,6 @@ export class ProjectsService {
         : { disconnect: true };
     if (body.projectType !== undefined) data.projectType = body.projectType;
     if (body.websiteUrl !== undefined) data.websiteUrl = body.websiteUrl;
-    if (body.collectionFormUrl !== undefined) {
-      data.collectionFormUrl = body.collectionFormUrl;
-    }
     if (body.brandColorPrimary !== undefined) {
       data.brandColorPrimary = body.brandColorPrimary;
     }
@@ -1867,14 +1823,6 @@ export class ProjectsService {
     if (body.profanityFilterLevel !== undefined) {
       data.profanityFilterLevel = body.profanityFilterLevel;
     }
-    if (body.formConfig !== undefined) {
-      data.formConfig = this.toNullableJsonInput(
-        this.stripFormConfigHydratedLogo(
-          body.formConfig,
-        ) as Prisma.InputJsonValue | null,
-      );
-    }
-
     return data;
   }
 
@@ -1918,7 +1866,7 @@ export class ProjectsService {
       logo: this.mediaService?.toDto(project.logoAsset) ?? null,
       projectType: project.projectType,
       websiteUrl: project.websiteUrl,
-      collectionFormUrl: project.collectionFormUrl,
+      collectionFormUrl: null,
       brandColorPrimary: project.brandColorPrimary,
       brandColorSecondary: project.brandColorSecondary,
       socialLinks: project.socialLinks as ProjectJsonShape,
@@ -1928,11 +1876,11 @@ export class ProjectsService {
       autoModeration: project.autoModeration,
       autoApproveVerified: project.autoApproveVerified,
       profanityFilterLevel: project.profanityFilterLevel,
-      formConfig: project.formConfig as ProjectJsonShape,
+      formConfig: null,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
       _count: {
-        responses: project._count.collectionFormSubmissions,
+        responses: 0,
         pendingModeration,
         widgets: project._count.widgets,
         apiKeys: project._count.apiKeys,

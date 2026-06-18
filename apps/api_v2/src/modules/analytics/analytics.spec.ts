@@ -16,14 +16,9 @@ const GUARDS_METADATA = "__guards__";
 
 const mockAnalyticsFindMany = vi.fn();
 const mockAnalyticsUpsert = vi.fn();
-const mockSubmissionCount = vi.fn();
-const mockSubmissionFindFirst = vi.fn();
-const mockFormImpressionCount = vi.fn();
-const mockFormImpressionCreate = vi.fn();
 const mockWidgetAnalyticsCount = vi.fn();
 const mockWidgetAnalyticsCreate = vi.fn();
 const mockProjectFindUnique = vi.fn();
-const mockCollectionFormFindFirst = vi.fn();
 const mockWidgetFindFirst = vi.fn();
 const mockPublicSurfaceHostFindFirst = vi.fn();
 const mockTransaction = vi.fn();
@@ -37,17 +32,6 @@ const prismaMock = {
     },
     project: {
       findUnique: mockProjectFindUnique,
-    },
-    collectionForm: {
-      findFirst: mockCollectionFormFindFirst,
-    },
-    collectionFormSubmission: {
-      count: mockSubmissionCount,
-      findFirst: mockSubmissionFindFirst,
-    },
-    formImpression: {
-      count: mockFormImpressionCount,
-      create: mockFormImpressionCreate,
     },
     widgetAnalytics: {
       count: mockWidgetAnalyticsCount,
@@ -140,8 +124,6 @@ describe("AnalyticsService", () => {
         apiRequests: 13,
       },
     ]);
-    mockSubmissionCount.mockResolvedValueOnce(4);
-    mockFormImpressionCount.mockResolvedValue(6);
     mockWidgetAnalyticsCount.mockResolvedValue(8);
 
     const result = await service.getSummary("project_1", {
@@ -158,9 +140,11 @@ describe("AnalyticsService", () => {
         orderBy: { day: "asc" },
       }),
     );
+    // FORMS-REBUILD(Phase 6): formViews/formSubmissions come from FormView/
+    // FormResponse once rebuilt; zero in the interim. Widget + daily rollups stay.
     expect(result.totals).toEqual({
-      formViews: 6,
-      formSubmissions: 4,
+      formViews: 0,
+      formSubmissions: 0,
       widgetLoads: 8,
       testimonialImpressions: 7,
       hostedPageViews: 11,
@@ -175,8 +159,6 @@ describe("AnalyticsService", () => {
 
   it("records public form views and increments the daily rollup", async () => {
     mockProjectFindUnique.mockResolvedValue({ id: "project_1" });
-    mockCollectionFormFindFirst.mockResolvedValue({ id: "form_1" });
-    mockFormImpressionCreate.mockReturnValue({ id: "impression_1" });
     mockAnalyticsUpsert.mockReturnValue({ id: "daily_1" });
 
     await expect(
@@ -190,14 +172,8 @@ describe("AnalyticsService", () => {
       ),
     ).resolves.toEqual({ accepted: true, type: "form_view" });
 
-    expect(mockFormImpressionCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        projectId: "project_1",
-        formId: "form_1",
-        ipAddress: "203.0.113.1",
-        userAgent: "Browser",
-      }),
-    });
+    // FORMS-REBUILD(Phase 6): per-form view impressions land on FormView once the
+    // forms pipeline is rebuilt; for now only the daily rollup increments.
     expect(mockAnalyticsUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -248,36 +224,15 @@ describe("AnalyticsService", () => {
     );
   });
 
-  it("records public submission impressions against approved submissions", async () => {
-    mockSubmissionFindFirst.mockResolvedValue({
-      id: "submission_1",
-      projectId: "project_1",
-    });
-    mockWidgetFindFirst.mockResolvedValue({ id: "widget_1" });
-    mockAnalyticsUpsert.mockReturnValue({ id: "daily_1" });
-
+  it("accepts submission impression events as a no-op pending the forms rebuild", async () => {
+    // FORMS-REBUILD(Phase 6): response impressions are re-pointed onto
+    // FormResponse; until then the event is accepted without attribution.
     await expect(
       service.recordSubmissionImpression(
         { submissionId: "submission_1", widgetId: "widget_1" },
         { now: new Date("2026-05-10T12:00:00.000Z") },
       ),
     ).resolves.toEqual({ accepted: true, type: "submission_impression" });
-
-    expect(mockSubmissionFindFirst).toHaveBeenCalledWith({
-      where: {
-        id: "submission_1",
-        moderationStatus: "APPROVED",
-      },
-      select: {
-        id: true,
-        projectId: true,
-      },
-    });
-    expect(mockAnalyticsUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        update: { submissionImpressions: { increment: 1 } },
-      }),
-    );
   });
 
   it("records hosted page views from active public hostnames", async () => {

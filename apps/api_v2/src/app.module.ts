@@ -14,8 +14,6 @@ import { ClerkAuthGuard } from "./common/guards/clerk-auth.guard.js";
 import { ApiV2ThrottlerGuard } from "./common/guards/api-v2-throttler.guard.js";
 import { ProjectsModule } from "./modules/projects/projects.module.js";
 import { WidgetsModule } from "./modules/widgets/widgets.module.js";
-import { ResponsesModule } from "./modules/responses/responses.module.js";
-import { FormsModule } from "./modules/forms/forms.module.js";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js";
 import { AlertsModule } from "./modules/alerts/alerts.module.js";
 import { OpsAdminModule } from "./modules/ops-admin/ops-admin.module.js";
@@ -34,7 +32,6 @@ import { StorageModule } from "./modules/storage/storage.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
 import { QueueingModule } from "./modules/queueing/queueing.module.js";
 import { EmailModule } from "./modules/email/email.module.js";
-import { SubmissionModerationModule } from "./modules/submission-moderation/submission-moderation.module.js";
 
 @Module({
   imports: [
@@ -94,7 +91,6 @@ import { SubmissionModerationModule } from "./modules/submission-moderation/subm
     RedisModule,
     QueueingModule,
     EmailModule,
-    SubmissionModerationModule,
     ClerkModule,
     HealthModule,
     UsersModule,
@@ -113,8 +109,6 @@ import { SubmissionModerationModule } from "./modules/submission-moderation/subm
     PublicSurfacesModule,
     ProjectsModule,
     WidgetsModule,
-    ResponsesModule,
-    FormsModule,
     WebhooksModule,
     AlertsModule,
     OpsAdminModule,

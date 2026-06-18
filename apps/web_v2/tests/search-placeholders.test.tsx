@@ -2,14 +2,9 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type {
-  V2PaginatedResponse,
-  V2ProjectDTO,
-  V2ResponseDTO,
-} from "@workspace/types";
-import { fetchProjects, fetchResponses } from "@/lib/semblia-api";
+import type { V2PaginatedResponse, V2ProjectDTO } from "@workspace/types";
+import { fetchProjects } from "@/lib/semblia-api";
 import { ProjectsClient } from "@/components/projects/projects-client";
-import { ResponsesClient } from "@/components/responses/responses-client";
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
@@ -25,8 +20,6 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/semblia-api", () => ({
   fetchProjects: vi.fn(),
   fetchMyProjectTransfers: vi.fn().mockResolvedValue([]),
-  fetchResponses: vi.fn(),
-  createCsvExport: vi.fn(),
 }));
 
 function makeApiProject(overrides: Partial<V2ProjectDTO> = {}): V2ProjectDTO {
@@ -113,28 +106,5 @@ describe("search placeholders", () => {
     expect(
       screen.getByLabelText("Search projects").getAttribute("placeholder"),
     ).toBe("Search projects…");
-  });
-
-  it("renders the responses search placeholder with an ellipsis glyph", async () => {
-    const response: V2PaginatedResponse<V2ResponseDTO> = {
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 8,
-      totalPages: 1,
-      hasNext: false,
-      hasPrev: false,
-    };
-    vi.mocked(fetchResponses).mockResolvedValue(response);
-
-    renderWithQuery(<ResponsesClient slug="launchpad" status="ALL" />);
-
-    // Empty-state copy without a collection URL — used here as a sync point
-    // for the async "no items" branch.
-    await screen.findByText("Nothing yet");
-
-    expect(
-      screen.getByLabelText("Search responses").getAttribute("placeholder"),
-    ).toBe("Search responses…");
   });
 });

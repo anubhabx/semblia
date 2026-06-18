@@ -103,27 +103,6 @@ function makeWidget(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeSubmission(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "submission_1",
-    answers: {
-      authorName: "Ada",
-      authorRole: "Founder",
-      authorCompany: "Acme",
-      content: "Loved it",
-      type: "TEXT",
-      source: "manual",
-      isOAuthVerified: true,
-      oauthProvider: "google",
-    },
-    ratingValue: 5,
-    moderationStatus: "APPROVED",
-    mediaAssets: [],
-    createdAt: new Date("2026-04-03T00:00:00.000Z"),
-    ...overrides,
-  };
-}
-
 describe("WidgetsService", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -620,12 +599,12 @@ describe("WidgetsService", () => {
         maxItems: 2,
       }),
     );
-    mockSubmissionFindMany.mockResolvedValue([makeSubmission()]);
-
     const service = makeService();
     const result = await service.getPublicEmbed({ widgetId: "widget_embed" });
 
-    expect(result.testimonials[0]).not.toHaveProperty("authorEmail");
+    // FORMS-REBUILD(Phase 6): live testimonials are re-pointed onto FormResponse;
+    // the embed renders its empty state until then.
+    expect(result.testimonials).toEqual([]);
     expect(result.widget).not.toHaveProperty("projectId");
     expect(result).toMatchObject({
       widget: {
@@ -673,8 +652,6 @@ describe("WidgetsService", () => {
           maxItems: 2,
         }),
       );
-    mockSubmissionFindMany.mockResolvedValue([makeSubmission()]);
-
     const service = makeService();
     const html = await service.getPublicEmbedFragment({
       slug: "acme",
@@ -692,7 +669,6 @@ describe("WidgetsService", () => {
       }),
     );
     expect(html).toContain("sw-grid");
-    expect(html).toContain("Ada");
     expect(html).toContain("--semblia-widget-accent");
     expect(service.getPublicCacheControl()).toContain("max-age=60");
     expect(service.getPublicEtag(html, { weak: false })).toMatch(/^"[^"]+"$/);
@@ -728,12 +704,11 @@ describe("WidgetsService", () => {
         wallTitle: "Proof Wall",
       }),
     );
-    mockSubmissionFindMany.mockResolvedValue([makeSubmission()]);
-
     const service = makeService();
     const result = await service.getPublicWall({ wallSlug: "proof-wall" });
 
-    expect(result.testimonials[0]).not.toHaveProperty("authorEmail");
+    // FORMS-REBUILD(Phase 6): live testimonials are re-pointed onto FormResponse.
+    expect(result.testimonials).toEqual([]);
     expect(result.widget.wall).toEqual({
       slug: "proof-wall",
       title: "Proof Wall",

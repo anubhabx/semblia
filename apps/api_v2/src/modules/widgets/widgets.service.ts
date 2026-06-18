@@ -9,7 +9,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   CardStyle,
   LayoutType,
-  ModerationStatus,
+  type MediaAsset,
   Prisma,
   StudioDraftResourceType,
   ThemeMode,
@@ -89,22 +89,20 @@ const WIDGET_SELECT = {
   updatedAt: true,
 } satisfies Prisma.WidgetSelect;
 
-const PUBLIC_SUBMISSION_SELECT = {
-  id: true,
-  answers: true,
-  ratingValue: true,
-  moderationStatus: true,
-  mediaAssets: true,
-  createdAt: true,
-} satisfies Prisma.CollectionFormSubmissionSelect;
-
 type WidgetRecord = Prisma.WidgetGetPayload<{
   select: typeof WIDGET_SELECT;
 }>;
 
-type PublicTestimonialRecord = Prisma.CollectionFormSubmissionGetPayload<{
-  select: typeof PUBLIC_SUBMISSION_SELECT;
-}>;
+// FORMS-REBUILD(Phase 6): the widget live-feedback source (approved responses)
+// was removed with the collection pipeline and is re-pointed onto FormResponse in
+// Phase 6. This local shape keeps the wall/embed render path typed in the interim.
+type PublicTestimonialRecord = {
+  id: string;
+  answers: Prisma.JsonValue;
+  ratingValue: number | null;
+  mediaAssets: MediaAsset[];
+  createdAt: Date;
+};
 
 type WidgetMetrics = {
   totalLoads: number;
@@ -626,43 +624,11 @@ export class WidgetsService {
   }
 
   private async listPublicTestimonials(widget: WidgetRecord) {
-    const baseWhere = {
-      projectId: widget.projectId,
-      moderationStatus: ModerationStatus.APPROVED,
-    } satisfies Prisma.CollectionFormSubmissionWhereInput;
-
-    if (widget.contentMode === WidgetContentMode.HANDPICKED) {
-      if (widget.pickedIds.length === 0) {
-        return [];
-      }
-
-      const picked = await this.prisma.client.collectionFormSubmission.findMany(
-        {
-          where: {
-            ...baseWhere,
-            id: { in: widget.pickedIds },
-          },
-          select: PUBLIC_SUBMISSION_SELECT,
-        },
-      );
-
-      const byId = new Map(picked.map((item) => [item.id, item]));
-      return widget.pickedIds
-        .map((id) => byId.get(id))
-        .filter((item): item is PublicTestimonialRecord => Boolean(item))
-        .slice(0, widget.maxItems)
-        .map((item) => this.toPublicTestimonial(item));
-    }
-
-    const testimonials =
-      await this.prisma.client.collectionFormSubmission.findMany({
-        where: baseWhere,
-        orderBy: { createdAt: "desc" },
-        take: widget.maxItems,
-        select: PUBLIC_SUBMISSION_SELECT,
-      });
-
-    return testimonials.map((item) => this.toPublicTestimonial(item));
+    // FORMS-REBUILD(Phase 6): walls/embeds render approved FormResponses once the
+    // responses pipeline is rebuilt. Until then there is no live feedback source,
+    // so the wall/embed renders its empty state.
+    void widget;
+    return [] as PublicTestimonialPayload[];
   }
 
   private async assertPublicEmbedBelongsToProjectSlug(

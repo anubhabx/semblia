@@ -30,21 +30,6 @@ export const queryKeys = {
       ["projects", slug, "public-surface-hosts"] as const,
   },
 
-  responses: {
-    list: (slug: string, params?: Record<string, unknown>) =>
-      ["projects", slug, "responses", params ?? {}] as const,
-    detail: (slug: string, id: string) =>
-      ["projects", slug, "responses", id] as const,
-  },
-
-  forms: {
-    list: (slug: string) => ["projects", slug, "forms"] as const,
-    detail: (slug: string, formId: string) =>
-      ["projects", slug, "forms", formId] as const,
-    draft: (slug: string, formId: string) =>
-      ["projects", slug, "forms", formId, "draft"] as const,
-  },
-
   widgets: {
     list: (slug: string) => ["projects", slug, "widgets"] as const,
     detail: (slug: string, widgetId: string) =>

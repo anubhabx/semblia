@@ -73,15 +73,6 @@ const DELIVERY_WITH_DESTINATION_SELECT = {
   },
 } satisfies Prisma.ExportDeliverySelect;
 
-const CSV_SUBMISSION_SELECT = {
-  id: true,
-  answers: true,
-  ratingValue: true,
-  moderationStatus: true,
-  createdAt: true,
-  updatedAt: true,
-} satisfies Prisma.CollectionFormSubmissionSelect;
-
 type DeliveryRecord = Prisma.ExportDeliveryGetPayload<{
   select: typeof DELIVERY_SELECT;
 }>;
@@ -90,9 +81,16 @@ type DeliveryWithDestinationRecord = Prisma.ExportDeliveryGetPayload<{
   select: typeof DELIVERY_WITH_DESTINATION_SELECT;
 }>;
 
-type CsvSubmissionRecord = Prisma.CollectionFormSubmissionGetPayload<{
-  select: typeof CSV_SUBMISSION_SELECT;
-}>;
+// FORMS-REBUILD(Phase 6): response CSV export is re-pointed onto FormResponse in
+// Phase 6. This local shape preserves the CSV builder contract in the interim.
+type CsvSubmissionRecord = {
+  id: string;
+  answers: Prisma.JsonValue;
+  ratingValue: number | null;
+  moderationStatus: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Injectable()
 export class ExportsService {
@@ -231,12 +229,9 @@ export class ExportsService {
     });
 
     try {
-      const submissions =
-        await this.prisma.client.collectionFormSubmission.findMany({
-        where: { projectId: delivery.projectId },
-        orderBy: { createdAt: "desc" },
-        select: CSV_SUBMISSION_SELECT,
-      });
+      // FORMS-REBUILD(Phase 6): export approved FormResponses once the responses
+      // pipeline is rebuilt. Until then exports produce a header-only CSV.
+      const submissions: CsvSubmissionRecord[] = [];
 
       const artifactContent = buildTestimonialsCsv(submissions);
       const completed = await this.prisma.client.$transaction(async (tx) => {

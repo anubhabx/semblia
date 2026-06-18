@@ -112,8 +112,8 @@ describe("OpsAdminController", () => {
         },
         unresolvedAlertCount: 2,
         moderationBudget: {
-          budgetSuppressedCount: 3,
-          lastBudgetSuppressedAt: "2026-05-28T07:55:00.000Z",
+          budgetSuppressedCount: 0,
+          lastBudgetSuppressedAt: null,
         },
       }),
     );

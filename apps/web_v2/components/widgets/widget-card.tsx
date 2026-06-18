@@ -32,7 +32,7 @@ import { fmtNum } from "@/lib/format";
 import { timeAgo } from "@/lib/format";
 import type { WidgetListEntry } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { InlineName } from "@/components/collect/inline-name";
+import { InlineName } from "@/components/studio/inline-name";
 import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { WidgetLayoutPreview } from "./widget-layout-preview";
 

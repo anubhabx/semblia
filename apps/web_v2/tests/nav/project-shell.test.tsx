@@ -9,7 +9,7 @@ import { ProjectSwitcher } from "@/components/nav/project-switcher";
 import { fetchProjects } from "@/lib/semblia-api";
 
 const navigation = vi.hoisted(() => ({
-  pathname: "/projects/launchpad/responses",
+  pathname: "/projects/launchpad/widgets",
   push: vi.fn(),
 }));
 
@@ -82,17 +82,16 @@ function renderWithQuery(ui: React.ReactElement) {
 }
 
 describe("project shell navigation", () => {
-  it("renders sidebar identity and pending count from a typed project dto", () => {
+  it("renders sidebar identity and marks the active section from a typed project dto", () => {
     render(<ProjectSidebarNav slug="launchpad" project={makeProject()} />);
 
     expect(screen.getAllByText("Launchpad").length).toBeGreaterThan(0);
     expect(screen.getByText("Public")).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: /responses/i })
+        .getByRole("link", { name: /widgets/i })
         .getAttribute("aria-current"),
     ).toBe("page");
-    expect(screen.getByText("4")).toBeTruthy();
   });
 
   it("links the developer surface as a single Developers entry", () => {

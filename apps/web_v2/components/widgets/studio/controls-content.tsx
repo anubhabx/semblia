@@ -15,11 +15,7 @@ import {
   Check as CheckIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  type WidgetTestimonial,
-  toWidgetTestimonial,
-} from "@/lib/widgets/widget-testimonial-type";
-import { useResponsesList } from "@/hooks/api";
+import type { WidgetTestimonial } from "@/lib/widgets/widget-testimonial-type";
 import { useWidgetStudioStore } from "@/lib/widgets/widget-studio-store";
 import { Field, Section, Segmented } from "./studio-primitives";
 
@@ -28,7 +24,7 @@ interface ContentSectionProps {
   projectSlug: string;
 }
 
-export function ContentSection({ widgetId, projectSlug }: ContentSectionProps) {
+export function ContentSection({ widgetId }: ContentSectionProps) {
   const draft = useWidgetStudioStore((s) => s.snapshots[widgetId]?.draft);
   const setContentMode = useWidgetStudioStore((s) => s.setContentMode);
   const toggleContentPick = useWidgetStudioStore((s) => s.toggleContentPick);
@@ -36,14 +32,10 @@ export function ContentSection({ widgetId, projectSlug }: ContentSectionProps) {
     (s) => s.reorderContentPicks,
   );
 
-  const approvedQuery = useResponsesList(projectSlug, {
-    moderationStatus: "APPROVED",
-    pageSize: 200,
-  });
-  const approved = React.useMemo<WidgetTestimonial[]>(
-    () => (approvedQuery.data?.items ?? []).map(toWidgetTestimonial),
-    [approvedQuery.data],
-  );
+  // FORMS-REBUILD(Phase 6): re-point to live approved FormResponses. Until the
+  // responses pipeline is rebuilt, the picker has no live data and the preview
+  // falls back to demo content.
+  const approved = React.useMemo<WidgetTestimonial[]>(() => [], []);
 
   if (!draft) return null;
 

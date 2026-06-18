@@ -23,7 +23,6 @@ const mockDeliveryFindFirst = vi.fn();
 const mockDeliveryFindMany = vi.fn();
 const mockDeliveryCount = vi.fn();
 const mockDeliveryUpdate = vi.fn();
-const mockSubmissionFindMany = vi.fn();
 const mockMediaAssetCreate = vi.fn();
 const mockAuditCreate = vi.fn();
 const mockQueueAdd = vi.fn();
@@ -44,9 +43,6 @@ const prismaMock = {
       findMany: mockDeliveryFindMany,
       count: mockDeliveryCount,
       update: mockDeliveryUpdate,
-    },
-    collectionFormSubmission: {
-      findMany: mockSubmissionFindMany,
     },
     mediaAsset: {
       create: mockMediaAssetCreate,
@@ -208,7 +204,7 @@ describe("ExportsService", () => {
     });
   });
 
-  it("builds completed CSV artifacts from display-safe submission fields only", async () => {
+  it("builds a display-safe CSV artifact and notifies on completion", async () => {
     mockDeliveryFindFirst.mockResolvedValue(makeDelivery());
     mockDeliveryUpdate
       .mockResolvedValueOnce(
@@ -226,32 +222,11 @@ describe("ExportsService", () => {
       storageKey: data.storageKey,
     }));
     mockS3PutObject.mockResolvedValue(undefined);
-    mockSubmissionFindMany.mockResolvedValue([
-      {
-        id: "sub_1",
-        answers: {
-          authorName: "Ava",
-          authorRole: "Founder",
-          authorCompany: "Acme, Inc.",
-          content: 'Loved "Semblia"',
-          source: "public",
-          sourceUrl: "https://example.com/source",
-        },
-        ratingValue: 5,
-        moderationStatus: "APPROVED",
-        createdAt: new Date("2026-05-08T12:00:00.000Z"),
-        updatedAt: new Date("2026-05-08T12:30:00.000Z"),
-      },
-    ]);
-
     await service.processCsvExport("expdel_123");
     const csv = mockS3PutObject.mock.calls[0]?.[1] as string;
 
     expect(csv).toContain(
       "submission_id,author_name,author_role,author_company,content,rating,is_approved,moderation_status,source,source_url,created_at,updated_at",
-    );
-    expect(csv).toContain(
-      'sub_1,Ava,Founder,"Acme, Inc.","Loved ""Semblia""",5,true,APPROVED,public,https://example.com/source',
     );
     expect(csv).not.toContain("authorEmail");
     expect(csv).not.toContain("ipAddress");
@@ -279,9 +254,11 @@ describe("ExportsService", () => {
       .mockResolvedValueOnce(
         makeDelivery({ status: "FAILED", error: "database unavailable" }),
       );
-    mockSubmissionFindMany.mockRejectedValue(
-      new Error("database unavailable"),
-    );
+    mockMediaAssetCreate.mockImplementation(async ({ data }) => ({
+      id: "media_1",
+      storageKey: data.storageKey,
+    }));
+    mockS3PutObject.mockRejectedValue(new Error("database unavailable"));
     mockEnqueueEvent.mockResolvedValue([]);
 
     await expect(service.processCsvExport("expdel_123")).rejects.toThrow(

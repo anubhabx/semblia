@@ -12,7 +12,6 @@ import { PrismaModule } from "./modules/prisma/prisma.module.js";
 import { QueueMaintenanceModule } from "./modules/queueing/queue-maintenance.module.js";
 import { QueueingModule } from "./modules/queueing/queueing.module.js";
 import { RedisModule } from "./modules/redis/redis.module.js";
-import { SubmissionModerationWorkerModule } from "./modules/submission-moderation/submission-moderation.worker.module.js";
 
 @Module({
   imports: [
@@ -61,7 +60,6 @@ import { SubmissionModerationWorkerModule } from "./modules/submission-moderatio
     OutboundWebhooksWorkerModule,
     ExportsWorkerModule,
     IntegrationsWorkerModule,
-    SubmissionModerationWorkerModule,
   ],
 })
 export class WorkerModule {}

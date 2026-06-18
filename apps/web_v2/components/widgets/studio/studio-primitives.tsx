@@ -24,4 +24,4 @@ export {
   SwitchRow,
   type SegmentedOption,
   type OptionCard,
-} from "@/components/collect/studio/studio-controls";
+} from "@/components/studio/controls";

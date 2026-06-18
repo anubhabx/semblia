@@ -7,7 +7,6 @@ import {
   publishWidgetDefinition,
 } from "@workspace/widgets-core/schema";
 import {
-  useDuplicateForm,
   useDuplicateWidget,
   useExportDeliveries,
   useCurrentOrganization,
@@ -17,7 +16,6 @@ import {
   usePublicSurfaceResolution,
 } from "@/hooks/api";
 import {
-  duplicateForm,
   duplicateWidget,
   fetchExportDeliveries,
   fetchCurrentOrganization,
@@ -36,7 +34,6 @@ vi.mock("@clerk/nextjs", () => ({
 }));
 
 vi.mock("@/lib/semblia-api", () => ({
-  duplicateForm: vi.fn(),
   duplicateWidget: vi.fn(),
   fetchExportDeliveries: vi.fn(),
   fetchCurrentOrganization: vi.fn(),
@@ -187,46 +184,6 @@ describe("control-plane API hooks", () => {
       "launchpad",
       { status: "FAILED" },
     );
-  });
-
-  it("duplicates forms through the typed project hook and refreshes the form list", async () => {
-    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
-    vi.mocked(duplicateForm).mockResolvedValue({
-      id: "form_copy",
-      projectId: "project_1",
-      entry: {
-        id: "form_copy",
-        name: "Default Form (copy)",
-        description: "Primary form",
-        isActive: false,
-        abWeight: 0,
-        createdAt: "2026-05-16T00:00:00.000Z",
-        updatedAt: "2026-05-16T00:00:00.000Z",
-        submissions: 0,
-        views: 0,
-        responseRate: 0,
-        avgRating: 0,
-        lastSubmissionAt: null,
-      },
-      config: { content: { headerTitle: "Hello" } },
-    });
-
-    const { result } = renderHook(() => useDuplicateForm("launchpad"), {
-      wrapper,
-    });
-
-    result.current.mutate("form_123");
-
-    await waitFor(() => expect(result.current.data?.id).toBe("form_copy"));
-    expect(duplicateForm).toHaveBeenCalledWith(
-      "session-token",
-      "launchpad",
-      "form_123",
-    );
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.forms.list("launchpad"),
-    });
-    invalidateSpy.mockRestore();
   });
 
   it("duplicates widgets through the typed project hook and refreshes the widget list", async () => {

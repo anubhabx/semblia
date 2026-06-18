@@ -4,8 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChatTextIcon as MessageSquareTextIcon,
-  BroadcastIcon as RadioIcon,
   PuzzlePieceIcon as PuzzleIcon,
   ChartBarIcon as BarChart3Icon,
   CodeIcon,
@@ -27,19 +25,8 @@ interface ProjectNavItem {
   description?: string;
 }
 
-function buildNav(slug: string, project: V2ProjectDTO): ProjectNavItem[] {
+function buildNav(slug: string): ProjectNavItem[] {
   return [
-    {
-      label: "Responses",
-      href: `/projects/${slug}/responses`,
-      icon: MessageSquareTextIcon,
-      badge: project._count.pendingModeration || null,
-    },
-    {
-      label: "Collect",
-      href: `/projects/${slug}/collect`,
-      icon: RadioIcon,
-    },
     {
       label: "Widgets",
       href: `/projects/${slug}/widgets`,
@@ -127,7 +114,7 @@ export function ProjectSidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const nav = buildNav(slug, project);
+  const nav = buildNav(slug);
 
   const isActive = (item: ProjectNavItem) => {
     if (item.exact) return pathname === item.href;

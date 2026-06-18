@@ -40,17 +40,6 @@ describe("QueueTelemetryService", () => {
             createdAt: new Date("2026-05-28T07:58:30.000Z"),
           }),
         },
-        submissionModerationRun: {
-          groupBy: vi
-            .fn()
-            .mockResolvedValueOnce([
-              { status: "ENQUEUED", _count: { _all: 4 } },
-              { status: "SUPPRESSED", _count: { _all: 1 } },
-            ])
-            .mockResolvedValueOnce([
-              { status: "FAILED", _count: { _all: 2 } },
-            ]),
-        },
         deadLetterJob: {
           count: vi.fn().mockResolvedValue(7),
         },
@@ -107,8 +96,8 @@ describe("QueueTelemetryService", () => {
         outboundWebhooks: { PENDING: 2, FAILED: 1 },
         exports: { SUCCEEDED: 3 },
         emails: { PENDING: 5 },
-        moderationRuns: { ENQUEUED: 4, SUPPRESSED: 1 },
-        moderationRunsLast24h: { FAILED: 2 },
+        moderationRuns: {},
+        moderationRunsLast24h: {},
         oldestPendingEmailDeliveryAgeSeconds: 90,
         deadLetterJobs: 7,
       },

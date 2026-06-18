@@ -89,7 +89,6 @@ model Project {
   logoAssetId            String?           @unique
   projectType            ProjectType?      @default(OTHER)
   websiteUrl             String?           @db.VarChar(1000)
-  collectionFormUrl      String?           @db.VarChar(1000)
   brandColorPrimary      String?           @db.VarChar(7) // Hex color code
   brandColorSecondary    String?           @db.VarChar(7) // Hex color code
   socialLinks            Json? // { twitter: "...", linkedin: "...", github: "..." }
@@ -106,42 +105,15 @@ model Project {
   profanityFilterLevel String? @default("MODERATE") // STRICT, MODERATE, LENIENT
   moderationSettings   Json? // Custom moderation rules
 
-  // Collection Form Configuration
-  // {
-  //   headerTitle,
-  //   headerDescription,
-  //   thankYouMessage,
-  //   enableRating,
-  //   enableJobTitle,
-  //   enableCompany,
-  //   enableAvatar,
-  //   enableVideoUrl,
-  //   enableGoogleVerification,
-  //   requireRating,
-  //   requireJobTitle,
-  //   requireCompany,
-  //   requireAvatar,
-  //   requireVideoUrl,
-  //   requireGoogleVerification,
-  //   allowAnonymousSubmissions,
-  //   notifyOnSubmission
-  // }
-  formConfig Json?
-
   widgets                   Widget[]
   members                   ProjectMember[]
   memberInvites             ProjectMemberInvite[]
-  publicSubmitIdempotencies PublicSubmitIdempotency[]
-  collectionForms           CollectionForm[]
   apiKeys                   ApiKey[]
-  formImpressions           FormImpression[]
   trustedOrigins            ProjectTrustedOrigin[]
   signingSecrets            ProjectSigningSecret[]
   publicSurfaceHosts        PublicSurfaceHost[]
-  collectionFormSubmissions CollectionFormSubmission[]
   studioDrafts              StudioDraft[]
   analyticsDaily            ProjectAnalyticsDaily[]
-  submissionAnnotations     CollectionFormSubmissionAnnotation[]
   actionAudits              ProjectActionAudit[]
   outboundWebhookEndpoints  OutboundWebhookEndpoint[]
   outboundWebhookDeliveries OutboundWebhookDelivery[]
@@ -149,8 +121,7 @@ model Project {
   exportRules               ExportRule[]
   exportDeliveries          ExportDelivery[]
   integrationConnections    IntegrationConnection[]
-  mediaAssets               MediaAsset[]                         @relation("MediaAssetProject")
-  submissionModerationRuns  SubmissionModerationRun[]
+  mediaAssets               MediaAsset[]               @relation("MediaAssetProject")
   ownershipTransfers        ProjectOwnershipTransfer[]
 
   createdAt DateTime @default(now())
@@ -274,9 +245,8 @@ model ProjectTrustedOrigin {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  project     Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy   User?                      @relation("ProjectTrustedOriginCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  submissions CollectionFormSubmission[]
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("ProjectTrustedOriginCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, origin])
   @@index([projectId, status])
@@ -305,9 +275,8 @@ model ProjectSigningSecret {
   createdAt          DateTime                   @default(now())
   updatedAt          DateTime                   @updatedAt
 
-  project     Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy   User?                      @relation("ProjectSigningSecretCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  submissions CollectionFormSubmission[]
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("ProjectSigningSecretCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, version])
   @@index([projectId, status])
@@ -528,31 +497,6 @@ model IntegrationConnection {
   @@index([connectedByUserId])
 }
 
-model PublicSubmitIdempotency {
-  id                 String              @id @default(cuid())
-  projectId          String
-  surface            PublicSubmitSurface @default(DIRECT_SUBMISSION)
-  idempotencyKey     String              @db.VarChar(255)
-  payloadHash        String              @db.VarChar(64)
-  submissionId       String?
-  responseStatusCode Int
-  responseBody       Json
-  createdAt          DateTime            @default(now())
-  expiresAt          DateTime
-
-  project    Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submission CollectionFormSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
-
-  @@unique([projectId, surface, idempotencyKey])
-  @@index([submissionId])
-  @@index([expiresAt])
-}
-
-enum PublicSubmitSurface {
-  DIRECT_SUBMISSION
-  FORM
-}
-
 enum MediaAssetPurpose {
   PROJECT_LOGO
   ACCOUNT_DEFAULTS_LOGO
@@ -584,30 +528,23 @@ model MediaAsset {
   status             MediaAssetStatus     @default(PENDING)
   projectId          String?
   userId             String?
-  formId             String?
-  submissionId       String?
   createdByActorType String?              @db.VarChar(20)
   createdByActorId   String?              @db.VarChar(64)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   confirmedAt        DateTime?
 
-  project    Project?                  @relation("MediaAssetProject", fields: [projectId], references: [id], onDelete: Cascade)
-  user       User?                     @relation("MediaAssetUser", fields: [userId], references: [id], onDelete: Cascade)
-  form       CollectionForm?           @relation(fields: [formId], references: [id], onDelete: SetNull)
-  submission CollectionFormSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  project Project? @relation("MediaAssetProject", fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?    @relation("MediaAssetUser", fields: [userId], references: [id], onDelete: Cascade)
 
-  projectLogoFor         Project?                  @relation("ProjectLogoAsset")
-  accountDefaultsLogoFor User?                     @relation("UserAccountDefaultsLogoAsset")
-  exportArtifactFor      ExportDelivery?           @relation("ExportArtifactAsset")
-  moderationRuns         SubmissionModerationRun[]
+  projectLogoFor         Project?        @relation("ProjectLogoAsset")
+  accountDefaultsLogoFor User?           @relation("UserAccountDefaultsLogoAsset")
+  exportArtifactFor      ExportDelivery? @relation("ExportArtifactAsset")
 
   @@index([projectId, purpose])
   @@index([userId, purpose])
   @@index([status, createdAt])
   @@index([visibility, status])
-  @@index([formId])
-  @@index([submissionId])
 }
 
 model Plan {
@@ -854,115 +791,6 @@ model ClerkWebhookEvent {
   processedAt     DateTime?
 }
 
-model CollectionForm {
-  id          String  @id @default(cuid())
-  projectId   String
-  slug        String? @db.VarChar(255)
-  name        String  @default("Default Form") @db.VarChar(255)
-  description String  @default("") @db.VarChar(500)
-  isActive    Boolean @default(true)
-  abWeight    Int     @default(100)
-  config      Json
-
-  project     Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  impressions FormImpression[]
-  submissions CollectionFormSubmission[]
-  mediaAssets MediaAsset[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([projectId, slug])
-  @@index([projectId])
-  @@index([projectId, isActive])
-}
-
-enum PublicSubmitTrustMode {
-  ORIGIN
-  HMAC
-}
-
-model CollectionFormSubmission {
-  id                   String                @id @default(cuid())
-  projectId            String
-  formId               String
-  trustedOriginId      String?
-  signingSecretId      String?
-  trustMode            PublicSubmitTrustMode
-  idempotencyKey       String?               @db.VarChar(255)
-  payloadHash          String?               @db.VarChar(64)
-  answers              Json
-  ratingValue          Int?                  @db.SmallInt
-  ratingScale          Int?                  @db.SmallInt
-  moderationStatus     ModerationStatus      @default(PENDING)
-  moderationReason     String?               @db.Text
-  moderatedByActorType String?               @db.VarChar(32)
-  moderatedByActorId   String?               @db.VarChar(255)
-  moderatedAt          DateTime?
-  metadata             Json?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-
-  project         Project                              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  collectionForm  CollectionForm                       @relation(fields: [formId], references: [id], onDelete: Cascade)
-  trustedOrigin   ProjectTrustedOrigin?                @relation(fields: [trustedOriginId], references: [id], onDelete: SetNull)
-  signingSecret   ProjectSigningSecret?                @relation(fields: [signingSecretId], references: [id], onDelete: SetNull)
-  privateMetadata SubmissionPrivateMetadata?
-  idempotencyHits PublicSubmitIdempotency[]
-  annotations     CollectionFormSubmissionAnnotation[]
-  mediaAssets     MediaAsset[]
-  moderationRuns  SubmissionModerationRun[]
-
-  @@index([projectId, createdAt])
-  @@index([formId, createdAt])
-  @@index([projectId, formId, createdAt])
-  @@index([projectId, moderationStatus, createdAt])
-  @@index([trustedOriginId])
-  @@index([signingSecretId])
-}
-
-model CollectionFormSubmissionAnnotation {
-  id           String   @id @default(cuid())
-  projectId    String
-  submissionId String
-  actorType    String   @db.VarChar(32)
-  actorId      String?  @db.VarChar(255)
-  note         String?  @db.Text
-  labels       String[] @default([])
-  sentiment    String?  @db.VarChar(64)
-  metadata     Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  project    Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submission CollectionFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@index([projectId, createdAt])
-  @@index([submissionId, createdAt])
-  @@index([actorType, actorId])
-}
-
-model SubmissionPrivateMetadata {
-  id                   String    @id @default(cuid())
-  submissionId         String    @unique
-  authorEmailEncrypted String?   @db.Text
-  authorEmailHash      String?   @db.VarChar(128)
-  ipAddressEncrypted   String?   @db.Text
-  ipAddressHash        String?   @db.VarChar(128)
-  userAgentEncrypted   String?   @db.Text
-  userAgentHash        String?   @db.VarChar(128)
-  retentionUntil       DateTime?
-  consentSnapshot      Json?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  submission CollectionFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@index([authorEmailHash])
-  @@index([ipAddressHash])
-  @@index([retentionUntil])
-}
-
 enum StudioDraftResourceType {
   FORM
   WIDGET
@@ -987,75 +815,6 @@ model StudioDraft {
   @@index([projectId, resourceType])
   @@index([updatedByUserId])
   @@index([updatedAt])
-}
-
-enum ModerationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FLAGGED
-}
-
-enum SubmissionModerationRunStatus {
-  PENDING
-  ENQUEUED
-  RUNNING
-  SUCCEEDED
-  FAILED
-  SUPPRESSED
-}
-
-enum SubmissionModerationArtifactType {
-  TEXT
-  IMAGE
-  AUDIO
-  VIDEO
-  VIDEO_FRAME
-  TRANSCRIPT
-}
-
-enum SubmissionModerationDecision {
-  APPROVE
-  REVIEW
-  REJECT
-}
-
-model SubmissionModerationRun {
-  id                  String                           @id @default(cuid())
-  projectId           String
-  submissionId        String
-  mediaAssetId        String?
-  artifactType        SubmissionModerationArtifactType
-  artifactHash        String                           @db.VarChar(64)
-  provider            String                           @db.VarChar(64)
-  providerOperation   String                           @db.VarChar(128)
-  providerJobId       String?                          @db.VarChar(255)
-  status              SubmissionModerationRunStatus    @default(PENDING)
-  decision            SubmissionModerationDecision?
-  score               Float?
-  flags               Json?
-  categories          Json?
-  rawResult           Json?
-  estimatedCostMicros Int?
-  attempts            Int                              @default(0)
-  lastAttemptAt       DateTime?
-  nextAttemptAt       DateTime?
-  completedAt         DateTime?
-  errorCode           String?                          @db.VarChar(128)
-  errorMessage        String?                          @db.Text
-  createdAt           DateTime                         @default(now())
-  updatedAt           DateTime                         @updatedAt
-
-  project    Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submission CollectionFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  mediaAsset MediaAsset?              @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
-
-  @@unique([submissionId, artifactType, artifactHash, provider, providerOperation])
-  @@index([projectId, status, createdAt])
-  @@index([submissionId, createdAt])
-  @@index([mediaAssetId])
-  @@index([provider, providerJobId])
-  @@index([nextAttemptAt, status])
 }
 
 enum WidgetType {
@@ -1122,9 +881,9 @@ model Widget {
   rotateInterval Int     @default(5000)
   showBranding   Boolean @default(true)
 
-  contentMode WidgetContentMode @default(ALL)
-  pickedIds   String[]          @default([])
-  config      Json
+  contentMode       WidgetContentMode @default(ALL)
+  pickedIds         String[]          @default([])
+  config            Json
   publishedSnapshot Json?
 
   wallSlug    String? @unique @db.VarChar(64)
@@ -1594,21 +1353,6 @@ model WidgetAnalytics {
   @@index([projectId, timestamp])
   @@index([timestamp])
   @@index([errorCode])
-}
-
-model FormImpression {
-  id        String   @id @default(cuid())
-  projectId String
-  formId    String?
-  ipAddress String?  @db.VarChar(255)
-  userAgent String?  @db.Text
-  timestamp DateTime @default(now())
-
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  collectionForm CollectionForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
-
-  @@index([projectId, timestamp])
-  @@index([formId, timestamp])
 }
 
 model WidgetPerformanceAlert {

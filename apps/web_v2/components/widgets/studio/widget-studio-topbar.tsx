@@ -22,7 +22,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { InlineName } from "@/components/collect/inline-name";
+import { InlineName } from "@/components/studio/inline-name";
 
 interface WidgetStudioTopbarProps {
   name: string;
