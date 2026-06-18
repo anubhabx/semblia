@@ -47,6 +47,7 @@ model User {
   trustedOriginsCreated    ProjectTrustedOrigin[]   @relation("ProjectTrustedOriginCreatedBy")
   signingSecretsCreated    ProjectSigningSecret[]   @relation("ProjectSigningSecretCreatedBy")
   studioDraftsUpdated      StudioDraft[]            @relation("StudioDraftUpdatedBy")
+  formsUpdated             Form[]                   @relation("FormUpdatedBy")
   integrationConnections   IntegrationConnection[]  @relation("IntegrationConnectionConnectedBy")
   mediaAssets              MediaAsset[]             @relation("MediaAssetUser")
   accountDefaultsLogoAsset MediaAsset?              @relation("UserAccountDefaultsLogoAsset", fields: [accountDefaultsLogoAssetId], references: [id], onDelete: SetNull)
@@ -123,6 +124,13 @@ model Project {
   integrationConnections    IntegrationConnection[]
   mediaAssets               MediaAsset[]               @relation("MediaAssetProject")
   ownershipTransfers        ProjectOwnershipTransfer[]
+  forms                     Form[]
+  formVersions              FormVersion[]
+  formResponses             FormResponse[]
+  formViews                 FormView[]
+  formResponseAnnotations   FormResponseAnnotation[]
+  formModerationRuns        FormModerationRun[]
+  formSubmitIdempotencies   FormSubmitIdempotency[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -245,8 +253,9 @@ model ProjectTrustedOrigin {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy User?   @relation("ProjectTrustedOriginCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation("ProjectTrustedOriginCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  formResponses FormResponse[]
 
   @@unique([projectId, origin])
   @@index([projectId, status])
@@ -275,8 +284,9 @@ model ProjectSigningSecret {
   createdAt          DateTime                   @default(now())
   updatedAt          DateTime                   @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy User?   @relation("ProjectSigningSecretCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation("ProjectSigningSecretCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  formResponses FormResponse[]
 
   @@unique([projectId, version])
   @@index([projectId, status])
@@ -528,23 +538,30 @@ model MediaAsset {
   status             MediaAssetStatus     @default(PENDING)
   projectId          String?
   userId             String?
+  formId             String?
+  responseId         String?
   createdByActorType String?              @db.VarChar(20)
   createdByActorId   String?              @db.VarChar(64)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   confirmedAt        DateTime?
 
-  project Project? @relation("MediaAssetProject", fields: [projectId], references: [id], onDelete: Cascade)
-  user    User?    @relation("MediaAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  project      Project?      @relation("MediaAssetProject", fields: [projectId], references: [id], onDelete: Cascade)
+  user         User?         @relation("MediaAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  form         Form?         @relation("MediaAssetForm", fields: [formId], references: [id], onDelete: SetNull)
+  formResponse FormResponse? @relation("MediaAssetFormResponse", fields: [responseId], references: [id], onDelete: SetNull)
 
-  projectLogoFor         Project?        @relation("ProjectLogoAsset")
-  accountDefaultsLogoFor User?           @relation("UserAccountDefaultsLogoAsset")
-  exportArtifactFor      ExportDelivery? @relation("ExportArtifactAsset")
+  projectLogoFor         Project?            @relation("ProjectLogoAsset")
+  accountDefaultsLogoFor User?               @relation("UserAccountDefaultsLogoAsset")
+  exportArtifactFor      ExportDelivery?     @relation("ExportArtifactAsset")
+  moderationRuns         FormModerationRun[] @relation("MediaAssetFormModeration")
 
   @@index([projectId, purpose])
   @@index([userId, purpose])
   @@index([status, createdAt])
   @@index([visibility, status])
+  @@index([formId])
+  @@index([responseId])
 }
 
 model Plan {
@@ -1377,4 +1394,298 @@ model WidgetPerformanceAlert {
 enum WidgetAlertType {
   LOAD_TIME_EXCEEDED
   ERROR_RATE_EXCEEDED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Forms (rebuilt collection surface) — docs/plans/2026-06-18-forms-rebuild.md
+//
+// Form          : editable draft source object (the FormDefinitionDoc lives in `draft`).
+// FormVersion   : immutable, versioned, public-safe published snapshot.
+// FormResponse  : canonical collected feedback record (replaces CollectionFormSubmission).
+// FormView      : public form-view impression event.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum FormIntent {
+  TESTIMONIAL
+  REVIEW
+  PRODUCT_FEEDBACK
+  CUSTOMER_STORY
+  CUSTOM
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum FormVersionStatus {
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FormResponseTrustMode {
+  ORIGIN
+  HMAC
+}
+
+// Review (moderation) status and publish status are intentionally orthogonal:
+// a response can be APPROVED but PRIVATE, PUBLISHABLE but not PUBLISHED, etc.
+enum FormResponseReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+  ARCHIVED
+}
+
+enum FormResponsePublishStatus {
+  PRIVATE
+  PUBLISHABLE
+  PUBLISHED
+  UNPUBLISHED
+}
+
+enum FormModerationRunStatus {
+  PENDING
+  ENQUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SUPPRESSED
+}
+
+enum FormModerationArtifactType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  VIDEO_FRAME
+  TRANSCRIPT
+}
+
+enum FormModerationDecision {
+  APPROVE
+  REVIEW
+  REJECT
+}
+
+model Form {
+  id              String     @id @default(cuid())
+  projectId       String
+  intent          FormIntent @default(CUSTOM)
+  name            String     @default("Untitled form") @db.VarChar(255)
+  slug            String?    @db.VarChar(255)
+  status          FormStatus @default(DRAFT)
+  open            Boolean    @default(true) // accepting submissions when published
+  draft           Json // FormDefinitionDoc: structure/fields/screens/flow/design/content/settings
+  draftVersion    Int        @default(1) // optimistic concurrency token for draft saves
+  currentVersion  Int? // published version pointer (FormVersion.version)
+  updatedByUserId String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedBy   User?          @relation("FormUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  versions    FormVersion[]
+  responses   FormResponse[]
+  views       FormView[]
+  mediaAssets MediaAsset[]   @relation("MediaAssetForm")
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+  @@index([projectId, status])
+}
+
+model FormVersion {
+  id              String            @id @default(cuid()) // snapshotId
+  formId          String
+  projectId       String
+  slug            String?           @db.VarChar(255)
+  version         Int
+  schemaVersion   String            @db.VarChar(32)
+  rendererVersion String            @db.VarChar(32)
+  coreVersion     String            @db.VarChar(32)
+  status          FormVersionStatus @default(PUBLISHED)
+  snapshot        Json // immutable public-safe PublicSnapshot
+  checksum        String            @db.VarChar(128)
+  previewImageUrl String?           @db.VarChar(1000)
+  publishedAt     DateTime          @default(now())
+
+  form      Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responses FormResponse[]
+
+  @@unique([formId, version])
+  @@index([projectId])
+  @@index([formId, status])
+}
+
+model FormResponse {
+  id                   String                    @id @default(cuid())
+  projectId            String
+  formId               String
+  versionId            String // FormVersion.id (snapshotId) the response was validated against
+  version              Int
+  trustMode            FormResponseTrustMode
+  trustedOriginId      String?
+  signingSecretId      String?
+  idempotencyKey       String?                   @db.VarChar(255)
+  payloadHash          String?                   @db.VarChar(64)
+  answers              Json // StoredAnswer[]: { fieldId, type, labelSnapshot, value, private, publishable, usedInWidget }
+  ratingValue          Int?                      @db.SmallInt
+  ratingScale          Int?                      @db.SmallInt
+  // Denormalized display projection (consent-gated at serve time) for fast widget/list reads.
+  authorName           String?                   @db.VarChar(255)
+  authorRole           String?                   @db.VarChar(255)
+  authorCompany        String?                   @db.VarChar(255)
+  authorAvatarAssetId  String?
+  consent              Json? // FormResponseConsent
+  reviewStatus         FormResponseReviewStatus  @default(PENDING)
+  publishStatus        FormResponsePublishStatus @default(PRIVATE)
+  moderationReason     String?                   @db.Text
+  moderatedByActorType String?                   @db.VarChar(32)
+  moderatedByActorId   String?                   @db.VarChar(255)
+  moderatedAt          DateTime?
+  sourceMetadata       Json? // source type, referrer, utm, campaign, externalId, uaHash, ipHash, snapshotId
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  project         Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  form            Form                         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formVersion     FormVersion                  @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  trustedOrigin   ProjectTrustedOrigin?        @relation(fields: [trustedOriginId], references: [id], onDelete: SetNull)
+  signingSecret   ProjectSigningSecret?        @relation(fields: [signingSecretId], references: [id], onDelete: SetNull)
+  privateMetadata FormResponsePrivateMetadata?
+  annotations     FormResponseAnnotation[]
+  moderationRuns  FormModerationRun[]
+  mediaAssets     MediaAsset[]                 @relation("MediaAssetFormResponse")
+  idempotencyHits FormSubmitIdempotency[]
+
+  @@index([projectId, createdAt])
+  @@index([formId, createdAt])
+  @@index([projectId, formId, createdAt])
+  @@index([projectId, reviewStatus, createdAt])
+  @@index([projectId, publishStatus, createdAt])
+  @@index([versionId])
+  @@index([trustedOriginId])
+  @@index([signingSecretId])
+}
+
+model FormResponsePrivateMetadata {
+  id                   String    @id @default(cuid())
+  responseId           String    @unique
+  authorEmailEncrypted String?   @db.Text
+  authorEmailHash      String?   @db.VarChar(128)
+  ipAddressEncrypted   String?   @db.Text
+  ipAddressHash        String?   @db.VarChar(128)
+  userAgentEncrypted   String?   @db.Text
+  userAgentHash        String?   @db.VarChar(128)
+  retentionUntil       DateTime?
+  consentSnapshot      Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([authorEmailHash])
+  @@index([ipAddressHash])
+  @@index([retentionUntil])
+}
+
+model FormResponseAnnotation {
+  id         String   @id @default(cuid())
+  projectId  String
+  responseId String
+  actorType  String   @db.VarChar(32)
+  actorId    String?  @db.VarChar(255)
+  note       String?  @db.Text
+  labels     String[] @default([])
+  sentiment  String?  @db.VarChar(64)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([responseId, createdAt])
+  @@index([actorType, actorId])
+}
+
+model FormModerationRun {
+  id                  String                     @id @default(cuid())
+  projectId           String
+  responseId          String
+  mediaAssetId        String?
+  artifactType        FormModerationArtifactType
+  artifactHash        String                     @db.VarChar(64)
+  provider            String                     @db.VarChar(64)
+  providerOperation   String                     @db.VarChar(128)
+  providerJobId       String?                    @db.VarChar(255)
+  status              FormModerationRunStatus    @default(PENDING)
+  decision            FormModerationDecision?
+  score               Float?
+  flags               Json?
+  categories          Json?
+  rawResult           Json?
+  estimatedCostMicros Int?
+  attempts            Int                        @default(0)
+  lastAttemptAt       DateTime?
+  nextAttemptAt       DateTime?
+  completedAt         DateTime?
+  errorCode           String?                    @db.VarChar(128)
+  errorMessage        String?                    @db.Text
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response   FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset?  @relation("MediaAssetFormModeration", fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([responseId, artifactType, artifactHash, provider, providerOperation])
+  @@index([projectId, status, createdAt])
+  @@index([responseId, createdAt])
+  @@index([mediaAssetId])
+  @@index([provider, providerJobId])
+  @@index([nextAttemptAt, status])
+}
+
+model FormView {
+  id        String   @id @default(cuid())
+  projectId String
+  formId    String?
+  versionId String?
+  surface   String?  @db.VarChar(32) // hosted | embed | native
+  ipAddress String?  @db.VarChar(255)
+  userAgent String?  @db.Text
+  timestamp DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  form    Form?   @relation(fields: [formId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, timestamp])
+  @@index([formId, timestamp])
+}
+
+model FormSubmitIdempotency {
+  id                 String   @id @default(cuid())
+  projectId          String
+  formId             String?
+  idempotencyKey     String   @db.VarChar(255)
+  payloadHash        String   @db.VarChar(64)
+  responseId         String?
+  responseStatusCode Int
+  responseBody       Json
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response FormResponse? @relation(fields: [responseId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, formId, idempotencyKey])
+  @@index([responseId])
+  @@index([expiresAt])
 }
