@@ -4,6 +4,13 @@ Last updated: 2026-06-17 (Widget Studio editor rebuilt into a visual inspector �
 
 ## Current Snapshot
 
+- 2026-06-18 — **FORMS FULL REBUILD FROM SCRATCH** kicked off. The forms ("collection surface") feature
+  is being deleted to the database level and rebuilt end-to-end per `docs/raw/forms_redesign_specs.md`.
+  Canonical execution plan: `docs/plans/2026-06-18-forms-rebuild.md` (13 phases, one checkpoint commit
+  each). The forms-v4 parametric implementation is superseded; `FormResponse` replaces
+  `CollectionFormSubmission` as the canonical feedback record (widgets/exports/analytics/billing/projects
+  re-point). New locked decisions recorded in `decisions.md` (2026-06-18 rows). **Phase 0 (plan +
+  continuity) complete.** Next: Phase 1 demolition. Verification gate per phase per plan §8.
 - Branch at last sync: `revamp/v2`.
 - Git state before the 2026-06-07 integrations OAuth repair: `revamp/v2...origin/revamp/v2` ahead 38 at `f50a826 fix(integrations): real provider brand icons + clearer connect copy`.
 - Current brand checkpoint: `semblia.com` is owned and configured as the launch domain. Active repo-owned strings now use Semblia instead of the retired prelaunch name: app/admin/API copy, env defaults, public domains (`*.semblia.com`), forms runtime signing headers (`x-semblia-*`), embed custom element (`<semblia-form>`), forms v4 stub marker (`data-semblia-forms-v4-stub`), web API helper filenames, brand assets, docs filenames, and the MCP package (`packages/semblia-mcp-server`, `@workspace/semblia-mcp-server`, `SEMBLIA_API_BASE_URL`, `SEMBLIA_AGENT_KEY`). Cloudflare DNS is configured for Zoho workspace mail plus Resend transactional sending; Cloudflare Email Routing remains disabled.
