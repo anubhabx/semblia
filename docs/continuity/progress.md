@@ -1,6 +1,9 @@
 # Progress Ledger
 
-Last updated: 2026-06-17 (Widget Studio editor rebuilt into a visual inspector — WidgetThemeSwatch-derived visual pickers replace all appearance dropdowns + a Layout·Style·Content section-nav replaces the accordion; engine/contract/API/preview untouched. Both studios now have the visual-inspector treatment. The ONLY remaining widget gap is server-side save/publish parity: the draft still persists to the local zustand store)
+Last updated: 2026-06-20 (Forms rebuild **Phase 3** — `packages/forms-core` rebuilt from scratch: schema/
+fields/intents/design-token compiler/snapshot compiler/validation/conditions/normalization/migration +
+33 unit tests; Zod v4 `.prefault` fix, stale-dist + scoped vitest cleanup, lockfile reconcile. Next: Phase 4
+forms-renderer. Earlier: 2026-06-17 Widget Studio editor rebuilt into a visual inspector — WidgetThemeSwatch-derived visual pickers replace all appearance dropdowns + a Layout·Style·Content section-nav replaces the accordion; engine/contract/API/preview untouched. Both studios now have the visual-inspector treatment. The ONLY remaining widget gap is server-side save/publish parity: the draft still persists to the local zustand store)
 
 ## Current Snapshot
 
@@ -43,7 +46,30 @@ Last updated: 2026-06-17 (Widget Studio editor rebuilt into a visual inspector �
     `ProjectTrustedOrigin`/`ProjectSigningSecret`. Migration `20260619001000_forms_rebuild_schema`
     (diff-created from live DB + `db execute` + `migrate resolve`). Review status and publish status are
     orthogonal enums per spec §21. Verified: prisma format+validate+generate+build; api_v2 tsc clean; DB
-    `migrate status` up to date (31 migrations). Next: Phase 3 (forms-core rebuild).
+    `migrate status` up to date (31 migrations).
+  - **Phase 3 (forms-core rebuild) — DONE.** Rebuilt `packages/forms-core` from scratch as the shared,
+    framework-agnostic contracts + compilers (pure TS + zod v4 + `@workspace/brand-theme`): `schema/`
+    (FormDefinitionDoc, 14 field types w/ per-type settings + roles, StoredAnswer, first-class consent,
+    intents/layout/flow/condition/design/content/settings zod schemas, CompiledSnapshot/PublicSnapshot
+    interfaces); 5 **intent templates** (`createFormTemplate` seeds fields/copy/layout/flow/consent —
+    TESTIMONIAL/REVIEW/PRODUCT_FEEDBACK/CUSTOMER_STORY/CUSTOM); **design-token compiler** (`compileDesign`
+    maps the constrained controls onto brand-theme's AA-clamping derive engine → per-scheme `--tf-*`
+    cssVars); deterministic **snapshot compiler** (`compileSnapshot` + content-fingerprint checksum that
+    excludes wall-clock `publishedAt`, `toPublicSnapshot` strips server-only anti-abuse settings per spec
+    §26); authoritative **validation** (visible/non-hidden fields only), bounded **conditions** engine
+    (8 operators, all/any, show/hide), **submission normalization** (private/publishable/widget eligibility
+    + author/rating projection + consent parse), and **doc migration** scaffold (forward-projects, rejects
+    newer major). 6 spec files / 33 unit tests (conditions, validate, snapshot determinism+public-safety,
+    intents, normalize, migrate). **Two fixes from the resumed session:** (1) Zod v4 `.default({})` on the
+    nested object schemas was rejected because v4 `.default` short-circuits parsing and requires the full
+    *output* shape — switched to `.prefault({})` (feeds the value through parsing so inner defaults apply;
+    confirmed via Context7) and keyed `intents.ts` `TemplateSeed` off `z.input<…>` so partial nested seeds
+    typecheck. (2) Removed stale `dist/` (old-package compiled `.spec.js` that survived Phase 1's `git rm`
+    because dist is gitignored) and added a scoped `vitest.config.ts` (`include: ["src/**/*.spec.ts"]`) so
+    specs aren't discovered + double-counted from the build output. Reconciled the lockfile (`pnpm install`
+    added the `packages/forms-core` importer; the corepack-11.5.1 postinstall failed the pinned-pnpm check —
+    direct `pnpm` at 11.1.3 is the working path). Verified: forms-core typecheck + test (6/33) + build;
+    `@workspace/types` build; prisma generate. Next: Phase 4 (forms-renderer React package).
 - Branch at last sync: `revamp/v2`.
 - Git state before the 2026-06-07 integrations OAuth repair: `revamp/v2...origin/revamp/v2` ahead 38 at `f50a826 fix(integrations): real provider brand icons + clearer connect copy`.
 - Current brand checkpoint: `semblia.com` is owned and configured as the launch domain. Active repo-owned strings now use Semblia instead of the retired prelaunch name: app/admin/API copy, env defaults, public domains (`*.semblia.com`), forms runtime signing headers (`x-semblia-*`), embed custom element (`<semblia-form>`), forms v4 stub marker (`data-semblia-forms-v4-stub`), web API helper filenames, brand assets, docs filenames, and the MCP package (`packages/semblia-mcp-server`, `@workspace/semblia-mcp-server`, `SEMBLIA_API_BASE_URL`, `SEMBLIA_AGENT_KEY`). Cloudflare DNS is configured for Zoho workspace mail plus Resend transactional sending; Cloudflare Email Routing remains disabled.
