@@ -1,6 +1,6 @@
 # Progress Ledger
 
-Last updated: 2026-06-21 (Forms rebuild **Phase 6** DONE, commit `4899d5be` — public submission pipeline
+Last updated: 2026-06-21 (Forms rebuild **Phase 7** DONE, commit `129d95af` — `apps/forms_runtime` rebuilt (Hono Lambda): hosted `/f/:slug` + `/embed/:slug` SSR via forms-renderer, `embed.js`/`loader.js` Phase-8 stubs, signed snapshot fetch + cache, submit/presign proxy, embed origin allowlist + CSP/security headers, custom-domain loud-fail, mock mode; gate green incl. `cdk synth`. Earlier **Phase 6** DONE `4899d5be` — public submission pipeline
 (`POST /v2/runtime/forms/:slug/submissions` + uploads/presign: full-snapshot validate, normalize,
 Origin/HMAC trust with HMAC hard-reject, honeypot/min-time/blocked-content, FormSubmitIdempotency replay +
 in-flight 409, FormResponse + encrypted FormResponsePrivateMetadata + sourceMetadata, enqueue
@@ -155,10 +155,7 @@ widget gap is server-side save/publish parity (draft still persists to the local
     contract plus `@workspace/forms-renderer` SSR. Implemented hosted `/f/:slug`, static `/embed/:slug`,
     Phase-8 `/embed.js` + `/loader.js` placeholders, submit and upload-presign proxies, public-safe snapshot
     rendering, edge rate limits, embed-origin enforcement, security headers/CSP, mock mode, and the CDK
-    custom-domain loud-fail guard. Verification is not green yet in this local session: Python is unavailable
-    for `scripts/update-indexes.py`, exact `pnpm@11.1.3` fetch is blocked by registry `EACCES`, `pnpm install`
-    timed out/retried against registry policy checks, and the remaining local `node_modules/.pnpm` package
-    binaries are ACL-denied or unlinked (`tsc`/`eslint`/`vitest`/`cdk` not executable through package scripts).
+    custom-domain loud-fail guard. Orchestrator verified + committed (`129d95af`): Codex was killed in its gate phase by sandbox ACL/offline limits, so the orchestrator ran `pnpm install` + the full gate unsandboxed. Gate GREEN: forms_runtime typecheck + lint + test (4 files / 21) + build (lambda/local/browser bundles) + `cdk synth`; forms-core + forms-renderer build; `update-indexes`. Next: Phase 8 (`packages/forms-embed` — iframe loader + `<semblia-form>` web component).
 - Branch at last sync: `revamp/v2`.
 - Git state before the 2026-06-07 integrations OAuth repair: `revamp/v2...origin/revamp/v2` ahead 38 at `f50a826 fix(integrations): real provider brand icons + clearer connect copy`.
 - Current brand checkpoint: `semblia.com` is owned and configured as the launch domain. Active repo-owned strings now use Semblia instead of the retired prelaunch name: app/admin/API copy, env defaults, public domains (`*.semblia.com`), forms runtime signing headers (`x-semblia-*`), embed custom element (`<semblia-form>`), forms v4 stub marker (`data-semblia-forms-v4-stub`), web API helper filenames, brand assets, docs filenames, and the MCP package (`packages/semblia-mcp-server`, `@workspace/semblia-mcp-server`, `SEMBLIA_API_BASE_URL`, `SEMBLIA_AGENT_KEY`). Cloudflare DNS is configured for Zoho workspace mail plus Resend transactional sending; Cloudflare Email Routing remains disabled.
