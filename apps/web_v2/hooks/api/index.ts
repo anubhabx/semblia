@@ -42,6 +42,18 @@ export {
 } from "./use-widgets-api";
 
 export {
+  useFormsList,
+  useForm,
+  useCreateForm,
+  useUpdateForm,
+  useDeleteForm,
+  useFormDraft,
+  useSaveFormDraft,
+  usePublishForm,
+  useFormVersions,
+} from "./use-forms-api";
+
+export {
   useApiKeysList,
   useCreateApiKey,
   useRotateApiKey,

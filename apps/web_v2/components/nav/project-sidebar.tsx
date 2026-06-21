@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ClipboardTextIcon,
   PuzzlePieceIcon as PuzzleIcon,
   ChartBarIcon as BarChart3Icon,
   CodeIcon,
@@ -27,6 +28,11 @@ interface ProjectNavItem {
 
 function buildNav(slug: string): ProjectNavItem[] {
   return [
+    {
+      label: "Forms",
+      href: `/projects/${slug}/forms`,
+      icon: ClipboardTextIcon,
+    },
     {
       label: "Widgets",
       href: `/projects/${slug}/widgets`,

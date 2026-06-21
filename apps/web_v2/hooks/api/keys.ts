@@ -38,6 +38,16 @@ export const queryKeys = {
       ["projects", slug, "widgets", widgetId, "draft"] as const,
   },
 
+  forms: {
+    list: (slug: string) => ["projects", slug, "forms"] as const,
+    detail: (slug: string, formId: string) =>
+      ["projects", slug, "forms", formId] as const,
+    draft: (slug: string, formId: string) =>
+      ["projects", slug, "forms", formId, "draft"] as const,
+    versions: (slug: string, formId: string) =>
+      ["projects", slug, "forms", formId, "versions"] as const,
+  },
+
   apiKeys: {
     list: (slug: string) => ["projects", slug, "api-keys"] as const,
     events: (slug: string, keyId: string) =>

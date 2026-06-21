@@ -12,6 +12,7 @@ import {
   Sun as SunIcon,
   MoonStars as MoonIcon,
   CircleHalf as AutoIcon,
+  type Icon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
@@ -30,6 +31,24 @@ const LAYOUT_LABEL: Record<WidgetListEntry["layout"], string> = {
   list: "List",
   wall: "Wall",
 };
+
+/**
+ * Theme presentation, keyed defensively by string. Widget data crosses an API
+ * boundary where `theme` can drift out of the expected union (a null column, a
+ * newly added server value). Looking up through this map with a fallback means
+ * an unexpected value renders as "System" instead of crashing the row — e.g.
+ * the old `entry.theme.charAt(0)` threw on `undefined`.
+ */
+const THEME_META: Record<string, { icon: Icon; label: string }> = {
+  light: { icon: SunIcon, label: "Light" },
+  dark: { icon: MoonIcon, label: "Dark" },
+  system: { icon: AutoIcon, label: "System" },
+};
+const THEME_FALLBACK = THEME_META.system;
+
+function layoutLabel(layout: WidgetListEntry["layout"]): string {
+  return LAYOUT_LABEL[layout] ?? "Custom";
+}
 
 interface WidgetRowProps {
   slug: string;
@@ -113,22 +132,15 @@ export const WidgetRow = React.memo(function WidgetRow({
     },
   ];
 
-  const ThemeIcon =
-    entry.theme === "light"
-      ? SunIcon
-      : entry.theme === "dark"
-        ? MoonIcon
-        : AutoIcon;
-  const themeLabel =
-    entry.theme === "system"
-      ? "System"
-      : entry.theme.charAt(0).toUpperCase() + entry.theme.slice(1);
+  const themeMeta = THEME_META[entry.theme] ?? THEME_FALLBACK;
+  const ThemeIcon = themeMeta.icon;
+  const themeLabel = themeMeta.label;
 
   return (
     <>
       <ItemRow
         inactive={!entry.isActive}
-        aria-label={`${entry.name} (${LAYOUT_LABEL[entry.layout]})`}
+        aria-label={`${entry.name} (${layoutLabel(entry.layout)})`}
         padding="default"
         leading={
           /* Mini preview of the widget's layout */
@@ -163,7 +175,7 @@ export const WidgetRow = React.memo(function WidgetRow({
             </span>
             <span className="text-border">·</span>
             <span className="font-mono text-[10px] text-muted-foreground">
-              {LAYOUT_LABEL[entry.layout]}
+              {layoutLabel(entry.layout)}
             </span>
           </div>
         }

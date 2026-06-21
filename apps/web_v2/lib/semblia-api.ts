@@ -26,6 +26,12 @@ import type {
   V2WidgetDTO,
   V2WidgetListEntry,
   V2StudioDraftDTO,
+  V2FormSummaryDTO,
+  V2FormDTO,
+  V2FormDraftDTO,
+  V2FormVersionDTO,
+  V2FormVersionSummaryDTO,
+  V2FormIntent,
   V2ApiKeyDTO,
   V2ApiKeyType,
   V2CreatedApiKeyDTO,
@@ -676,8 +682,116 @@ export function fetchProjectActionAudit(
   );
 }
 
-// Forms + Responses client functions were removed in the forms rebuild
-// (docs/plans/2026-06-18-forms-rebuild.md). New clients land in Phases 5/6.
+// ── Forms ─────────────────────────────────────────────────────────────────
+//
+// The collection surface (spec §"Form Studio"). `Form` is the editable draft
+// source; publishing compiles an immutable `FormVersion` snapshot. Routes are
+// project-scoped + capability-guarded (MANAGE_PUBLISH_SURFACES). Drafts use
+// PATCH with optimistic `expectedVersion` (note: widgets use PUT — they differ).
+
+export function fetchForms(token: string | null, slug: string) {
+  return api<V2FormSummaryDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/forms`,
+    token,
+  );
+}
+
+export function fetchForm(token: string | null, slug: string, formId: string) {
+  return api<V2FormDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
+    token,
+  );
+}
+
+export function createForm(
+  token: string | null,
+  slug: string,
+  body: { intent: V2FormIntent; name?: string },
+) {
+  return post<V2FormDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms`,
+    token,
+    body,
+  );
+}
+
+export function updateForm(
+  token: string | null,
+  slug: string,
+  formId: string,
+  body: { name?: string; slug?: string; open?: boolean },
+) {
+  return patch<V2FormDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
+    token,
+    body,
+  );
+}
+
+export function deleteForm(token: string | null, slug: string, formId: string) {
+  return del(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}`,
+    token,
+  );
+}
+
+export function fetchFormDraft(
+  token: string | null,
+  slug: string,
+  formId: string,
+) {
+  return api<V2FormDraftDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft`,
+    token,
+  );
+}
+
+export function saveFormDraft(
+  token: string | null,
+  slug: string,
+  formId: string,
+  body: { draft: Record<string, unknown>; expectedVersion: number },
+) {
+  return patch<V2FormDraftDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/draft`,
+    token,
+    body,
+  );
+}
+
+export function publishForm(
+  token: string | null,
+  slug: string,
+  formId: string,
+) {
+  return post<V2FormVersionDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/publish`,
+    token,
+  );
+}
+
+export function fetchFormVersions(
+  token: string | null,
+  slug: string,
+  formId: string,
+) {
+  return api<V2FormVersionSummaryDTO[]>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/versions`,
+    token,
+  );
+}
+
+export function fetchFormVersion(
+  token: string | null,
+  slug: string,
+  formId: string,
+  version: number,
+) {
+  return api<V2FormVersionDTO>(
+    `/projects/${encodeURIComponent(slug)}/forms/${encodeURIComponent(formId)}/versions/${version}`,
+    token,
+  );
+}
 
 // ── Widgets ─────────────────────────────────────────────────────────────────
 

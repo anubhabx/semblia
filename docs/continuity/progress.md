@@ -156,6 +156,35 @@ widget gap is server-side save/publish parity (draft still persists to the local
     Phase-8 `/embed.js` + `/loader.js` placeholders, submit and upload-presign proxies, public-safe snapshot
     rendering, edge rate limits, embed-origin enforcement, security headers/CSP, mock mode, and the CDK
     custom-domain loud-fail guard. Orchestrator verified + committed (`129d95af`): Codex was killed in its gate phase by sandbox ACL/offline limits, so the orchestrator ran `pnpm install` + the full gate unsandboxed. Gate GREEN: forms_runtime typecheck + lint + test (4 files / 21) + build (lambda/local/browser bundles) + `cdk synth`; forms-core + forms-renderer build; `update-indexes`. Next: Phase 8 (`packages/forms-embed` — iframe loader + `<semblia-form>` web component).
+  - **Phase 9 (web_v2 Form Studio + Responses) — 9a DONE + 9b studio core DONE; uncommitted in working tree.**
+    The dashboard forms UI did not exist after the demolition (no forms/collect/responses pages; `lib/semblia-api.ts`
+    forms/responses clients were stubbed out). This pass rebuilt the **client/hooks foundation + forms list + intent-led
+    create (9a)** and a **functional editing studio with live preview (9b core)**.
+    - **Foundation:** re-added the forms client fns to `lib/semblia-api.ts` (list/get/create/update/delete/draft get +
+      PATCH save w/ optimistic `expectedVersion`/publish/versions — note drafts use PATCH, widgets use PUT), `forms`
+      query keys, and `hooks/api/use-forms-api.ts` (+ barrel export). Added `@workspace/forms-core` + `@workspace/forms-renderer`
+      to web_v2 deps (`pnpm install` + built both so web_v2 typecheck/bundle resolve their dist).
+    - **List + create (9a):** `app/(app)/projects/[slug]/forms/page.tsx` (server) → `components/forms/form-list.tsx`
+      (status filter pills all/live/drafts/closed, RefreshingDataBadge, live-query state, empty + filtered-empty states),
+      `form-row.tsx` (intent glyph, InlineName rename, status badge, published-version metric, Edit/Copy-link/Open-close/Delete
+      via shared ItemRow+ItemActionRow), `form-intent-picker.tsx` (5 intents → `createForm`), `forms-empty-state.tsx`,
+      `lib/forms/intents.ts` (intent + status presentation). Added a **Forms** nav entry (first) to `project-sidebar.tsx`
+      and repointed the project index redirect `/widgets`→`/forms` (Forms is the start of the collect→review→display funnel).
+    - **Studio (9b core):** `app/(app)/projects/[slug]/forms/[formId]/{page,_studio-client}.tsx` → `components/forms/studio/`:
+      `form-studio.tsx` (full-screen shell: loads form+draft, local working-doc state, debounced autosave 1200ms + Cmd/Ctrl+S
+      w/ optimistic version + 409 re-hydrate, publish [saves-then-publishes], rename metadata, beforeunload + leave guard),
+      `form-studio-topbar.tsx` (back, InlineName, status badge, save state, View hosted link, Save draft, Publish/Republish),
+      `form-inspector.tsx` (section rail Content/Fields/Design/Flow over the shared studio control primitives — Content copy,
+      Fields edit/label/help/placeholder/required + reorder + remove, Design layout-preset cards + brand color + scheme + font
+      + radius/density/button/field/background, Flow mode/progress/auto-advance/consent-placement + require-consent/anonymous/
+      attribution), `form-studio-preview.tsx` (compiles the working draft via `lib/forms/draft.ts` → forms-core `compileSnapshot`
+      → `toPublicSnapshot` → shared `FormRenderer` with light/dark toggle = true WYSIWYG). Gate GREEN: web_v2 tsc --noEmit +
+      eslint + vitest (23 files / 69) + `pnpm build --filter web_v2` (both forms routes emitted) + `update-indexes` (6481/11301).
+    - **Remaining in Phase 9:** 9b polish (add-field type picker + per-type settings: select options editor, rating scale,
+      upload limits, hidden-field source; conditional-rule editor; slug/embed-origins/attribution publish controls;
+      versions history UI); **9c Responses inbox** (list/detail/approve/reject/spam/archive/publish-unpublish/annotations —
+      responses client fns + hooks still stubbed) + a Responses nav entry. Then Phase 8 (forms-embed), 10 (static previews),
+      11 (analytics/spam/uploads), 12 (hardening).
 - Branch at last sync: `revamp/v2`.
 - Git state before the 2026-06-07 integrations OAuth repair: `revamp/v2...origin/revamp/v2` ahead 38 at `f50a826 fix(integrations): real provider brand icons + clearer connect copy`.
 - Current brand checkpoint: `semblia.com` is owned and configured as the launch domain. Active repo-owned strings now use Semblia instead of the retired prelaunch name: app/admin/API copy, env defaults, public domains (`*.semblia.com`), forms runtime signing headers (`x-semblia-*`), embed custom element (`<semblia-form>`), forms v4 stub marker (`data-semblia-forms-v4-stub`), web API helper filenames, brand assets, docs filenames, and the MCP package (`packages/semblia-mcp-server`, `@workspace/semblia-mcp-server`, `SEMBLIA_API_BASE_URL`, `SEMBLIA_AGENT_KEY`). Cloudflare DNS is configured for Zoho workspace mail plus Resend transactional sending; Cloudflare Email Routing remains disabled.

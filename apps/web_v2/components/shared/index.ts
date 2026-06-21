@@ -63,3 +63,6 @@ export type { SettingsFooterProps } from "./settings-footer";
 
 export { ToggleRow } from "./toggle-row";
 export type { ToggleRowProps } from "./toggle-row";
+
+export { RouteError } from "./route-error";
+export type { RouteErrorProps } from "./route-error";

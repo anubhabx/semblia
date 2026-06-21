@@ -33,6 +33,16 @@ const THEME_MAP: Record<V2ThemeMode, WidgetTheme> = {
   AUTO: "system",
 };
 
+// Safe fallbacks for the enum maps above. The API enums and the frontend
+// unions can drift (a newly added server-side value, a null column, a
+// partially-migrated row), and an unmapped lookup returns `undefined`. That
+// `undefined` previously flowed straight into the widget list UI and crashed
+// rendering (e.g. `entry.theme.charAt(0)`). Coercing here keeps a single bad
+// record from taking down the whole list.
+const KIND_FALLBACK: WidgetKind = "embed";
+const LAYOUT_FALLBACK: WidgetLayout = "grid";
+const THEME_FALLBACK: WidgetTheme = "system";
+
 export function dtoToWidgetListEntry(
   dto: V2WidgetListEntry,
   fallbackAccent: string,
@@ -40,9 +50,9 @@ export function dtoToWidgetListEntry(
   return {
     id: dto.id,
     name: dto.name,
-    kind: KIND_MAP[dto.widgetType],
-    layout: LAYOUT_MAP[dto.layoutType],
-    theme: THEME_MAP[dto.themeMode],
+    kind: KIND_MAP[dto.widgetType] ?? KIND_FALLBACK,
+    layout: LAYOUT_MAP[dto.layoutType] ?? LAYOUT_FALLBACK,
+    theme: THEME_MAP[dto.themeMode] ?? THEME_FALLBACK,
     accent: fallbackAccent,
     isActive: dto.isActive,
     createdAt: Date.parse(dto.createdAt),

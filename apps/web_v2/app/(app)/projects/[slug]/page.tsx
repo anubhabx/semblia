@@ -4,7 +4,7 @@ export default async function ProjectHubPage(props: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await props.params;
-  // FORMS-REBUILD: the Responses inbox was removed in the demolition; land on
-  // Widgets until the rebuilt Forms surface becomes the project home (Phase 9).
-  redirect(`/projects/${slug}/widgets`);
+  // Forms is the start of the collect → review → display funnel, so it is the
+  // project home now that the rebuilt Forms surface has landed (Phase 9).
+  redirect(`/projects/${slug}/forms`);
 }
