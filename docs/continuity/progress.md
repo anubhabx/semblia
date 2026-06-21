@@ -1,11 +1,21 @@
 # Progress Ledger
 
-Last updated: 2026-06-20 (Forms rebuild **Phase 5** — new `apps/api_v2/src/modules/forms/`: drafts
-(optimistic save), publish→immutable `FormVersion` snapshot (+ no-churn), versions, public-safe runtime
-snapshot endpoints, plan limits; Codex-delegated, orchestrator-verified; api_v2 58 files/385 tests + build
-green. Earlier today: **Phase 4** `packages/forms-renderer` (React renderer, 16 tests) and **Phase 3**
-`packages/forms-core` rebuilt from scratch (33 tests; Zod v4 `.prefault` fix). Next: Phase 6 responses +
-moderation + consumer re-point. Earlier: 2026-06-17 Widget Studio editor rebuilt into a visual inspector — WidgetThemeSwatch-derived visual pickers replace all appearance dropdowns + a Layout·Style·Content section-nav replaces the accordion; engine/contract/API/preview untouched. Both studios now have the visual-inspector treatment. The ONLY remaining widget gap is server-side save/publish parity: the draft still persists to the local zustand store)
+Last updated: 2026-06-21 (Forms rebuild **Phase 6** DONE, commit `4899d5be` — public submission pipeline
+(`POST /v2/runtime/forms/:slug/submissions` + uploads/presign: full-snapshot validate, normalize,
+Origin/HMAC trust with HMAC hard-reject, honeypot/min-time/blocked-content, FormSubmitIdempotency replay +
+in-flight 409, FormResponse + encrypted FormResponsePrivateMetadata + sourceMetadata, enqueue
+FormModerationRun), authenticated `responses` module (list/get display-safe + no PII, status, consent-gated
+publish, delete, annotations), moderation re-pointed onto FormModerationRun (reviewer state authoritative),
+and ALL consumers restored onto FormResponse/FormView (0 `FORMS-REBUILD(Phase 6)` markers left:
+widgets/analytics/exports/billing/projects + default Form seed). Codex-delegated (codex:codex-rescue),
+orchestrator-reviewed/verified/committed; orchestrator finished the gate after Codex was cut off by a
+ChatGPT usage limit (removed a stale trust pre-compute in the throttler guard, Prisma Json→StoredAnswer[]
+cast, pruned dead imports, stubbed a widget spec mock). Gate green: api_v2 typecheck + lint + test
+(63 files / 401) + build; web_v2 build; @workspace/types build; update-indexes. Next: Phase 7
+(`apps/forms_runtime` rebuild — Hono Lambda hosted pages/embeds/injection + submit/upload proxy). Earlier:
+**Phase 5** api_v2 forms drafts/publish/snapshots/versions; **Phase 4** `packages/forms-renderer`;
+**Phase 3** `packages/forms-core`. 2026-06-17 both studios rebuilt into visual inspectors; only remaining
+widget gap is server-side save/publish parity (draft still persists to the local zustand store))
 
 ## Current Snapshot
 
@@ -117,6 +127,38 @@ moderation + consumer re-point. Earlier: 2026-06-17 Widget Studio editor rebuilt
     (`updateMany` `data` draftVersion union, `delete` destructure guard); removed Codex scratch files.
     Verified: `@workspace/types` build; api_v2 typecheck + lint + test (58 files / 385) + build (6/6).
     Next: Phase 6 (responses, submissions, moderation + consumer re-point onto FormResponse/FormView).
+  - **Phase 6 (responses + submissions + moderation + consumer re-point) — DONE** (`4899d5be`).
+    Codex-delegated (`codex:codex-rescue`), orchestrator reviewed/verified/committed. Resurrected-and-adapted
+    the pre-demolition `responses` + `submission-moderation` modules (git ref `26964f6f^`) onto the new
+    schema. **Public submission runtime** `POST /v2/runtime/forms/:slug/submissions` (+ `uploads/presign`):
+    resolves the PUBLISHED+open form's current `FormVersion`, validates against the FULL stored snapshot
+    (incl. server-only settings), `normalizeSubmission` → answers/rating/author/consent, Origin/HMAC trust
+    via `PublicSubmitTrustService` (HMAC hard-rejects, no Origin fallthrough; trust validated in the service,
+    not the throttler guard), honeypot/min-completion-time/blocked-content rules, `FormSubmitIdempotency`
+    replay + in-flight 409, persists `FormResponse` (PENDING/PRIVATE) + encrypted `FormResponsePrivateMetadata`
+    + `sourceMetadata`, enqueues a `FormModerationRun`. **`responses` module** (project-scoped, capability-
+    guarded `REVIEW_RESPONSES`/`PUBLISH_RESPONSES`): list/get (display-safe, `RESPONSE_SELECT` excludes the
+    encrypted private-metadata relation — no PII), PATCH status (approve/reject/spam/archive), PATCH publish
+    (`assertConsentAllowsPublish` gate per spec §9/§21), delete, annotations; DTOs in `@workspace/types`.
+    **Moderation** re-pointed onto `FormModerationRun` + `FormResponse`; reviewer-set REJECTED/APPROVED stays
+    authoritative over worker reconciliation; raw provider output private. **Consumers restored** onto
+    `FormResponse`/`FormView` (0 `FORMS-REBUILD(Phase 6)` markers remain): widgets wall/embed (APPROVED +
+    PUBLISHED + consent gate), analytics totals/rows/view+submission events, exports CSV, billing count,
+    projects pending-moderation counts + default `Form` seed on create. **Orchestrator fixes after Codex was
+    cut off mid-gate by a ChatGPT usage limit:** removed a stale trust pre-compute block in the public-submit
+    throttler guard, cast Prisma `Json`→`StoredAnswer[]` in `readStoredAnswers`, pruned dead imports/helpers,
+    stubbed `formResponse.findMany` in the widget embed-fragment spec. Gate green: `@workspace/types` build;
+    api_v2 typecheck + lint + test (63 files / **401**) + build (6/6); `web_v2` build (4/4, hard constraint);
+    `update-indexes` (graph 6442 nodes / 11220 edges). Next: Phase 7 (`apps/forms_runtime` rebuild).
+  - **Phase 7 (`apps/forms_runtime` rebuild) — source staged, verification blocked locally**.
+    Resurrected the pre-demolition package from `26964f6f^` and re-pointed it to the new api_v2 runtime
+    contract plus `@workspace/forms-renderer` SSR. Implemented hosted `/f/:slug`, static `/embed/:slug`,
+    Phase-8 `/embed.js` + `/loader.js` placeholders, submit and upload-presign proxies, public-safe snapshot
+    rendering, edge rate limits, embed-origin enforcement, security headers/CSP, mock mode, and the CDK
+    custom-domain loud-fail guard. Verification is not green yet in this local session: Python is unavailable
+    for `scripts/update-indexes.py`, exact `pnpm@11.1.3` fetch is blocked by registry `EACCES`, `pnpm install`
+    timed out/retried against registry policy checks, and the remaining local `node_modules/.pnpm` package
+    binaries are ACL-denied or unlinked (`tsc`/`eslint`/`vitest`/`cdk` not executable through package scripts).
 - Branch at last sync: `revamp/v2`.
 - Git state before the 2026-06-07 integrations OAuth repair: `revamp/v2...origin/revamp/v2` ahead 38 at `f50a826 fix(integrations): real provider brand icons + clearer connect copy`.
 - Current brand checkpoint: `semblia.com` is owned and configured as the launch domain. Active repo-owned strings now use Semblia instead of the retired prelaunch name: app/admin/API copy, env defaults, public domains (`*.semblia.com`), forms runtime signing headers (`x-semblia-*`), embed custom element (`<semblia-form>`), forms v4 stub marker (`data-semblia-forms-v4-stub`), web API helper filenames, brand assets, docs filenames, and the MCP package (`packages/semblia-mcp-server`, `@workspace/semblia-mcp-server`, `SEMBLIA_API_BASE_URL`, `SEMBLIA_AGENT_KEY`). Cloudflare DNS is configured for Zoho workspace mail plus Resend transactional sending; Cloudflare Email Routing remains disabled.
