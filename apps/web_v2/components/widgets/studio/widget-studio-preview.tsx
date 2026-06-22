@@ -28,6 +28,7 @@ import type {
   WidgetStudioConfig,
 } from "@/lib/widgets/widget-types";
 import { BrowserChrome } from "@/components/studio/browser-chrome";
+import { faviconForUrl } from "@/lib/favicon";
 import { HostPageChrome } from "../preview-renderers/host-page-chrome";
 
 interface WidgetStudioPreviewProps {
@@ -309,6 +310,9 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
           ) : (
             <HostPageChrome
               hostName={project.name}
+              projectType={project.projectType}
+              accent={project.brandColorPrimary}
+              favicon={faviconForUrl(project.websiteUrl)}
               contentDark={resolved === "dark"}
             >
               <ShadowWidgetFragment html={fragmentHtml} />
