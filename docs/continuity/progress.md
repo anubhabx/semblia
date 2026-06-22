@@ -19,6 +19,27 @@ widget gap is server-side save/publish parity (draft still persists to the local
 
 ## Current Snapshot
 
+- 2026-06-23 — **Studios/listings finish + two features** (revamp/v2, committed `1381b271` →
+  `887f9343`). Verified live via a Playwright harness (claude-in-chrome was disconnected) at
+  `~/.tresta-visual-verify` (auth.json reuses a Clerk test session; `snap.mjs`/`clicksnap.mjs`).
+  Found `.next` was corrupt after the forms demolition — optional catch-all routes (`/sign-in`) 404'd;
+  wiping `.next` fixed it. Shipped: (1) **real widget listing previews** — `WidgetLayoutPreview` now
+  renders authored mini-testimonials (initials + names + short quotes) instead of skeleton gray bars;
+  (2) **forms list-row thumbnails** — scaled `FormCardPreview` for list/card parity; removed the banned
+  mono-uppercase project-name sidebar footer; (3) **studio webfont CSP fix** — allow
+  `fonts.googleapis.com`/`fonts.gstatic.com` so previews render the theme's webfont-first stacks
+  (runtime/embed still don't load them — follow-up for true production parity); (4) **Feature C —
+  project-type-aware host page**: `HostPageChrome` rebuilt into 5 believable archetypes (saas · commerce
+  · agency · learning · generic) from `V2ProjectType`, using brand accent + site favicon, replacing the
+  generic mono placeholder; (5) **Feature B — website→favicon/metadata**: `Project.websiteUrl` already
+  existed (no DB/API change), so web_v2-only — new SSRF-guarded `GET /api/site-metadata`, shared
+  `ProjectAvatar` (logo→favicon→initials, object-contain) wired into card/row/sidebar/switcher, and the
+  create flow reads the site (`useSiteMetadata`) to prefill brand colour + description + show a detected-
+  site preview. Gate green: `pnpm build --filter web_v2` 6/6, full eslint, tsc, security-headers tests.
+  Studios already had help (`StudioHelp`) + roving-tabindex keyboard nav + proportioned device frames +
+  dark mode — verified, no overflow at narrow widths. Settings-side metadata prefill is a possible
+  follow-up (favicon icon already updates from any websiteUrl source).
+
 - 2026-06-22 — **Studios + listings finished-product polish** (revamp/v2, not yet committed). Forms +
   Widgets studios and their listing pages aligned to the design system; verified live in-browser
   (light/dark, desktop + narrow widths). Highlights: fixed a `fetchWidgets` DTO-shape bug — typed
