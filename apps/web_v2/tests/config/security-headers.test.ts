@@ -13,6 +13,11 @@ describe("web_v2 security headers", () => {
     );
   });
 
+  it("allows Google Fonts for the studio live previews", async () => {
+    expect(contentSecurityPolicy).toContain("https://fonts.googleapis.com");
+    expect(contentSecurityPolicy).toContain("https://fonts.gstatic.com");
+  });
+
   it("registers app-wide security headers", async () => {
     const headers = await nextConfig.headers?.();
 

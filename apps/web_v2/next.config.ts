@@ -55,9 +55,14 @@ const cspDirectives = [
     "https://clerk.com",
     "https://challenges.cloudflare.com",
   ],
-  ["style-src", "'self'", "'unsafe-inline'"],
+  // `fonts.googleapis.com` serves the webfont stylesheet the studios inject for
+  // their live previews; the font files themselves come from `fonts.gstatic.com`.
+  // The theme engine emits webfont-first stacks (e.g. `"Fraunces", Georgia`), so
+  // the studio preview must load them to be a true representation of the user's
+  // typography choice.
+  ["style-src", "'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
   ["img-src", "'self'", "data:", "blob:", "https:"],
-  ["font-src", "'self'", "data:"],
+  ["font-src", "'self'", "data:", "https://fonts.gstatic.com"],
   ["media-src", "'self'", "data:", "blob:", "https:"],
   [
     "connect-src",

@@ -56,6 +56,26 @@ function palette(accent: string, dark: boolean): Palette {
 const STAR_PATH =
   "M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.8 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z";
 
+/**
+ * A tiny, stable cast of real-looking people (mirrors the studio's fallback
+ * testimonials) so each mini-card reads as an authored quote — an initial, a
+ * name, and a short line of actual text — instead of a loading skeleton.
+ */
+const PEOPLE = [
+  { initial: "H", name: "Hana M.", quote: "Saved us hours every single week." },
+  { initial: "O", name: "Olu A.", quote: "Shipped without fighting the tool." },
+  { initial: "M", name: "Margaux R.", quote: "Sits right inside our docs." },
+  { initial: "D", name: "Diego S.", quote: "Setup took one afternoon, tops." },
+  { initial: "P", name: "Priya N.", quote: "Our whole team noticed the lift." },
+  { initial: "T", name: "Theo K.", quote: "Easily the cleanest one we tried." },
+  {
+    initial: "L",
+    name: "Lena V.",
+    quote: "Conversion jumped almost overnight.",
+  },
+  { initial: "S", name: "Sam W.", quote: "Defaults are genuinely sharp." },
+] as const;
+
 function Stars({ color, size = 4 }: { color: string; size?: number }) {
   return (
     <div className="flex gap-[1px]" aria-hidden>
@@ -74,53 +94,82 @@ function Stars({ color, size = 4 }: { color: string; size?: number }) {
   );
 }
 
-function Lines({ p, widths }: { p: Palette; widths: Array<number | string> }) {
+function Quote({ p, text }: { p: Palette; text: string }) {
   return (
-    <div className="mt-1 space-y-[2px]" aria-hidden>
-      {widths.map((w, i) => (
-        <div
-          key={i}
-          className="h-[2px] rounded-full opacity-40"
-          style={{
-            background: p.sub,
-            width: typeof w === "number" ? `${w}%` : w,
-          }}
-        />
-      ))}
-    </div>
+    <p
+      className="mt-1 overflow-hidden font-medium leading-[1.35]"
+      style={{
+        color: p.text,
+        opacity: 0.78,
+        fontSize: "5.5px",
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
+      }}
+      aria-hidden
+    >
+      {text}
+    </p>
+  );
+}
+
+function Avatar({
+  p,
+  person,
+}: {
+  p: Palette;
+  person: (typeof PEOPLE)[number];
+}) {
+  return (
+    <span
+      className="flex size-2.5 shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      style={{ background: p.accent, fontSize: "5px", lineHeight: 1 }}
+      aria-hidden
+    >
+      {person.initial}
+    </span>
   );
 }
 
 function MiniCard({
   p,
-  lines = [100, 78],
+  i = 0,
   pad = "p-1.5",
   stars = true,
+  quote = true,
+  name = true,
 }: {
   p: Palette;
-  lines?: number[];
+  i?: number;
   pad?: string;
   stars?: boolean;
+  quote?: boolean;
+  name?: boolean;
 }) {
+  const person = PEOPLE[i % PEOPLE.length];
   return (
     <div
-      className={cn("rounded-[3px] border", pad)}
+      className={cn("overflow-hidden rounded-[3px] border", pad)}
       style={{ background: p.surface, borderColor: p.line }}
     >
-      <div className="mb-1 flex items-center gap-1">
-        <span
-          className="size-2.5 shrink-0 rounded-full"
-          style={{ background: p.accent, opacity: 0.55 }}
-          aria-hidden
-        />
-        <span
-          className="h-[2px] w-5 rounded-full"
-          style={{ background: p.text, opacity: 0.55 }}
-          aria-hidden
-        />
+      <div className="flex items-center gap-1">
+        <Avatar p={p} person={person} />
+        {name && (
+          <span
+            className="truncate font-semibold leading-none"
+            style={{ color: p.text, opacity: 0.85, fontSize: "5.5px" }}
+            aria-hidden
+          >
+            {person.name}
+          </span>
+        )}
       </div>
-      {stars && <Stars color={p.accent} />}
-      <Lines p={p} widths={lines} />
+      {stars && (
+        <div className="mt-1">
+          <Stars color={p.accent} />
+        </div>
+      )}
+      {quote && <Quote p={p} text={person.quote} />}
     </div>
   );
 }
@@ -135,13 +184,13 @@ function Carousel({ p }: { p: Palette }) {
     >
       <div className="flex gap-1.5">
         <div className="w-[44%] shrink-0">
-          <MiniCard p={p} lines={[100, 85, 60]} />
+          <MiniCard p={p} i={0} />
         </div>
         <div className="w-[44%] shrink-0">
-          <MiniCard p={p} lines={[100, 70]} />
+          <MiniCard p={p} i={1} />
         </div>
         <div className="w-[44%] shrink-0">
-          <MiniCard p={p} lines={[100, 80]} />
+          <MiniCard p={p} i={2} />
         </div>
       </div>
       <div className="flex justify-center gap-1">
@@ -168,7 +217,7 @@ function Grid({ p }: { p: Palette }) {
       style={{ background: p.page }}
     >
       {Array.from({ length: 6 }).map((_, i) => (
-        <MiniCard key={i} p={p} lines={[100, 70]} pad="p-1" />
+        <MiniCard key={i} p={p} i={i} pad="p-1" name={false} quote={false} />
       ))}
     </div>
   );
@@ -181,12 +230,12 @@ function Masonry({ p }: { p: Palette }) {
       style={{ background: p.page }}
     >
       <div className="space-y-1.5">
-        <MiniCard p={p} lines={[100, 85, 60]} />
-        <MiniCard p={p} lines={[100]} stars={false} />
+        <MiniCard p={p} i={0} />
+        <MiniCard p={p} i={1} stars={false} />
       </div>
       <div className="space-y-1.5">
-        <MiniCard p={p} lines={[100, 70]} />
-        <MiniCard p={p} lines={[100, 85, 70]} />
+        <MiniCard p={p} i={2} quote={false} />
+        <MiniCard p={p} i={3} />
       </div>
     </div>
   );
@@ -198,23 +247,37 @@ function ListLayout({ p }: { p: Palette }) {
       className="flex h-full w-full flex-col justify-center gap-1.5 px-4"
       style={{ background: p.page }}
     >
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-1.5 rounded-[3px] border p-1.5"
-          style={{ background: p.surface, borderColor: p.line }}
-        >
-          <span
-            className="size-3 shrink-0 rounded-full"
-            style={{ background: p.accent, opacity: 0.55 }}
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
-            <Stars color={p.accent} />
-            <Lines p={p} widths={[88, 60]} />
+      {Array.from({ length: 3 }).map((_, i) => {
+        const person = PEOPLE[i % PEOPLE.length];
+        return (
+          <div
+            key={i}
+            className="flex items-center gap-1.5 rounded-[3px] border p-1.5"
+            style={{ background: p.surface, borderColor: p.line }}
+          >
+            <span
+              className="flex size-3 shrink-0 items-center justify-center rounded-full font-semibold text-white"
+              style={{ background: p.accent, fontSize: "6px", lineHeight: 1 }}
+              aria-hidden
+            >
+              {person.initial}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span
+                  className="truncate font-semibold leading-none"
+                  style={{ color: p.text, opacity: 0.85, fontSize: "5.5px" }}
+                  aria-hidden
+                >
+                  {person.name}
+                </span>
+                <Stars color={p.accent} size={3.5} />
+              </div>
+              <Quote p={p} text={person.quote} />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -236,7 +299,15 @@ function Wall({ p }: { p: Palette }) {
       </div>
       <div className="grid flex-1 grid-cols-4 content-center gap-1 px-2.5">
         {Array.from({ length: 8 }).map((_, i) => (
-          <MiniCard key={i} p={p} lines={[100]} pad="p-1" stars={i % 2 === 0} />
+          <MiniCard
+            key={i}
+            p={p}
+            i={i}
+            pad="p-1"
+            stars={i % 2 === 0}
+            name={false}
+            quote={false}
+          />
         ))}
       </div>
     </div>
