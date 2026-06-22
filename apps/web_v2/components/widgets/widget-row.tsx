@@ -180,18 +180,16 @@ export const WidgetRow = React.memo(function WidgetRow({
           </div>
         }
         metrics={
-          <div className="flex items-baseline gap-1 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground/80">
-            <span className="font-semibold text-foreground">
-              {fmtNum(entry.metrics.totalLoads)}
-            </span>
-            <span>loads</span>
-            {entry.metrics.avgLoadMs > 0 && (
+          <div className="font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
+            {entry.metrics.totalLoads > 0 ? (
               <>
-                <span className="px-0.5 text-border">·</span>
                 <span className="font-semibold text-foreground">
-                  {entry.metrics.avgLoadMs}ms
-                </span>
+                  {fmtNum(entry.metrics.totalLoads)}
+                </span>{" "}
+                {entry.metrics.totalLoads === 1 ? "load" : "loads"}
               </>
+            ) : (
+              "No loads yet"
             )}
           </div>
         }

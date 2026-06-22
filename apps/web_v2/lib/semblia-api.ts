@@ -24,7 +24,6 @@ import type {
   V2PublicSurfaceHostDTO,
   V2PublicCreateUploadIntentBody,
   V2WidgetDTO,
-  V2WidgetListEntry,
   V2StudioDraftDTO,
   V2FormSummaryDTO,
   V2FormDTO,
@@ -796,7 +795,9 @@ export function fetchFormVersion(
 // ── Widgets ─────────────────────────────────────────────────────────────────
 
 export function fetchWidgets(token: string | null, slug: string) {
-  return api<V2WidgetListEntry[]>(
+  // The list endpoint returns full `V2WidgetDTO`s (id + projectId + entry + config),
+  // not bare list entries. Consumers read `dto.entry` for the summary fields.
+  return api<V2WidgetDTO[]>(
     `/projects/${encodeURIComponent(slug)}/widgets`,
     token,
   );

@@ -20,33 +20,12 @@ import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/format";
 import type { V2FormSummaryDTO } from "@workspace/types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Badge } from "@/components/ui/badge";
 import { InlineName } from "@/components/studio/inline-name";
 import { ItemRow, ItemActionRow, type ItemAction } from "@/components/shared";
-import {
-  intentMeta,
-  formStatusMeta,
-  type FormStatusTone,
-} from "@/lib/forms/intents";
+import { intentMeta } from "@/lib/forms/intents";
+import { FormStatusBadge } from "./form-status-badge";
 
 const HOSTED_BASE = "forms.semblia.com/f";
-
-const TONE_BADGE: Record<
-  FormStatusTone,
-  { variant: "secondary" | "outline"; className: string }
-> = {
-  live: {
-    variant: "secondary",
-    className:
-      "bg-success/10 text-success border-transparent dark:bg-success/15",
-  },
-  draft: { variant: "outline", className: "text-muted-foreground" },
-  closed: {
-    variant: "outline",
-    className: "text-warning border-warning/30 bg-warning/5",
-  },
-  archived: { variant: "outline", className: "text-muted-foreground/70" },
-};
 
 interface FormRowProps {
   slug: string;
@@ -66,7 +45,6 @@ export const FormRow = React.memo(function FormRow({
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const meta = intentMeta(form.intent);
   const Icon = meta.icon;
-  const status = formStatusMeta(form.status, form.open);
   const isPublished =
     form.status === "PUBLISHED" && form.currentVersion != null;
   const hostedUrl = form.slug ? `${HOSTED_BASE}/${form.slug}` : null;
@@ -118,8 +96,6 @@ export const FormRow = React.memo(function FormRow({
       onSelect: () => setDeleteOpen(true),
     },
   ];
-
-  const badge = TONE_BADGE[status.tone];
 
   return (
     <>
@@ -177,12 +153,7 @@ export const FormRow = React.memo(function FormRow({
         }
         trailing={
           <div className="flex items-baseline gap-2">
-            <Badge
-              variant={badge.variant}
-              className={cn("text-[10px] font-medium", badge.className)}
-            >
-              {status.label}
-            </Badge>
+            <FormStatusBadge status={form.status} open={form.open} />
             <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">
               {timeAgo(new Date(form.updatedAt))}
             </span>

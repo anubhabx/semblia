@@ -29,7 +29,6 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "@/lib/format";
-import { timeAgo } from "@/lib/format";
 import type { WidgetListEntry } from "@/lib/widgets/widget-types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { InlineName } from "@/components/studio/inline-name";
@@ -160,36 +159,6 @@ export const WidgetCard = React.memo(function WidgetCard({
           className="absolute inset-0"
         />
 
-        {/* Type ribbon — top-left */}
-        <div
-          className={cn(
-            "absolute left-2 top-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5",
-            "font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]",
-            "border backdrop-blur-md",
-            isWall
-              ? "border-emerald-400/30 bg-emerald-50/85 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-950/40 dark:text-emerald-300"
-              : "border-foreground/15 bg-background/85 text-foreground/80",
-          )}
-        >
-          {isWall ? (
-            <GlobeIcon className="size-2.5" weight="bold" aria-hidden />
-          ) : (
-            <CodeIcon className="size-2.5" weight="bold" aria-hidden />
-          )}
-          <span>{isWall ? "Wall of Love" : "Embed"}</span>
-        </div>
-
-        {/* Layout chip — top-right */}
-        <div
-          className={cn(
-            "absolute right-2 top-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5",
-            "font-mono text-[8.5px] font-medium uppercase tracking-[0.14em]",
-            "border border-foreground/10 bg-background/85 text-foreground/70 backdrop-blur-md",
-          )}
-        >
-          {LAYOUT_LABEL[entry.layout]}
-        </div>
-
         {/* Theme strip — bottom edge */}
         <div className="absolute inset-x-0 bottom-0 flex h-[3px]" aria-hidden>
           <span
@@ -226,11 +195,11 @@ export const WidgetCard = React.memo(function WidgetCard({
         >
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-md border border-foreground/20",
-              "bg-background/95 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-foreground shadow-sm",
+              "inline-flex items-center gap-1.5 rounded-md border border-foreground/15",
+              "bg-background/95 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm",
             )}
           >
-            <PencilIcon className="size-2.5" weight="bold" aria-hidden />
+            <PencilIcon className="size-3" weight="bold" aria-hidden />
             Open
           </span>
         </div>
@@ -266,28 +235,48 @@ export const WidgetCard = React.memo(function WidgetCard({
               </button>
             )}
           </div>
-          <ThemeIcon
-            theme={entry.theme}
-            className="size-3 shrink-0 text-muted-foreground"
-          />
+          {!entry.isActive && (
+            <span className="mt-0.5 shrink-0 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+              Paused
+            </span>
+          )}
         </div>
 
-        {/* Metrics */}
-        <div className="mt-1.5 flex items-baseline gap-1.5 font-mono text-[10.5px] tabular-nums tracking-tight text-muted-foreground/80">
-          <span className="font-semibold text-foreground">
-            {fmtNum(entry.metrics.totalLoads)}
-          </span>
-          <span>loads</span>
-          <span className="text-border">·</span>
-          <span className="font-semibold text-foreground">
-            {entry.metrics.avgLoadMs > 0 ? `${entry.metrics.avgLoadMs}ms` : "—"}
-          </span>
-          <span className="text-border">·</span>
-          <span>
-            {entry.metrics.lastLoadAt
-              ? timeAgo(new Date(entry.metrics.lastLoadAt))
-              : "no loads yet"}
-          </span>
+        {/* Meta — kind · layout · theme */}
+        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          {isWall ? (
+            <GlobeIcon
+              className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+              weight="bold"
+              aria-hidden
+            />
+          ) : (
+            <CodeIcon className="size-3 shrink-0" weight="bold" aria-hidden />
+          )}
+          <span>{isWall ? "Wall" : "Embed"}</span>
+          {!isWall && (
+            <>
+              <span className="text-border" aria-hidden>
+                ·
+              </span>
+              <span>{LAYOUT_LABEL[entry.layout]}</span>
+            </>
+          )}
+          <ThemeIcon theme={entry.theme} className="ml-auto size-3 shrink-0" />
+        </div>
+
+        {/* KPI — loads (single key metric) */}
+        <div className="mt-1.5 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
+          {entry.metrics.totalLoads > 0 ? (
+            <>
+              <span className="font-semibold text-foreground">
+                {fmtNum(entry.metrics.totalLoads)}
+              </span>{" "}
+              {entry.metrics.totalLoads === 1 ? "load" : "loads"}
+            </>
+          ) : (
+            "No loads yet"
+          )}
         </div>
 
         {/* Action row pinned to bottom of card */}

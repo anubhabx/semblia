@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InlineName } from "@/components/studio/inline-name";
+import { StudioHelp } from "@/components/studio/studio-help";
 
 interface WidgetStudioTopbarProps {
   name: string;
@@ -130,6 +131,13 @@ export function WidgetStudioTopbar({
 
       {/* Right: reset / save / share */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <StudioHelp
+          shortcuts={[
+            { keys: ["⌘", "S"], label: "Save changes" },
+            { keys: ["←", "→"], label: "Switch section" },
+          ]}
+          tip="Saved changes auto-deploy to your embedded widgets — no re-embed needed."
+        />
         <Button
           variant="ghost"
           size="xs"

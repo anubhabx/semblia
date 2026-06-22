@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageHeader,
-  HeaderCaption,
   FilterPills as SharedFilterPills,
   RefreshingDataBadge,
   ViewToggle,
@@ -142,7 +141,7 @@ export function WidgetList({ project }: WidgetListProps) {
 
   const list = React.useMemo(() => {
     const rows = listQuery.data ?? [];
-    return rows.map((dto) => dtoToWidgetListEntry(dto, brandAccent));
+    return rows.map((dto) => dtoToWidgetListEntry(dto.entry, brandAccent));
   }, [listQuery.data, brandAccent]);
 
   const counts: Record<Filter, number> = {
@@ -236,9 +235,6 @@ export function WidgetList({ project }: WidgetListProps) {
                 value={filter}
                 onChange={(v) => setQuery({ type: v === "all" ? null : v })}
               />
-              <HeaderCaption>
-                Edits auto-deploy. No re-embed needed.
-              </HeaderCaption>
               <div className="ml-auto">
                 <ViewToggle value={viewMode} onChange={setViewMode} />
               </div>

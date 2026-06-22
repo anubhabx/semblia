@@ -19,6 +19,20 @@ widget gap is server-side save/publish parity (draft still persists to the local
 
 ## Current Snapshot
 
+- 2026-06-22 — **Studios + listings finished-product polish** (revamp/v2, not yet committed). Forms +
+  Widgets studios and their listing pages aligned to the design system; verified live in-browser
+  (light/dark, desktop + narrow widths). Highlights: fixed a `fetchWidgets` DTO-shape bug — typed
+  `V2WidgetListEntry[]` but the API returns `V2WidgetDTO[]` (`{entry,config}`); the list + studio-rail
+  passed the whole DTO to `dtoToWidgetListEntry` so name/layout/theme/isActive/metrics fell back to
+  defaults (blank names, "Grid/System/Paused", "undefined loads"). Now reads `dto.entry`. Forms listing
+  gained a NEW card/grid view + ViewToggle with an intent-themed `FormCardPreview` + shared
+  `FormStatusBadge` + minimal publish/updated KPI. Forms studio preview rebuilt into a real responsive
+  frame (shared `BrowserChrome` on desktop + phone frame on mobile) replacing the card-in-a-void; both
+  studios got a `StudioHelp` popover + roving-tabindex/arrow-key section nav; mono-uppercase decoration
+  (card ribbons/chips, `HeaderCaption` taglines, stage labels, device pills, `StudioMark` caption) removed.
+  Gate green: `pnpm build --filter web_v2` (6/6) + tsc + eslint + update-indexes. Artifacts:
+  `docs/ui-rework/2026-06-22-studios/` (principles + after).
+
 - 2026-06-18 — **FORMS FULL REBUILD FROM SCRATCH** kicked off. The forms ("collection surface") feature
   is being deleted to the database level and rebuilt end-to-end per `docs/raw/forms_redesign_specs.md`.
   Canonical execution plan: `docs/plans/2026-06-18-forms-rebuild.md` (13 phases, one checkpoint commit

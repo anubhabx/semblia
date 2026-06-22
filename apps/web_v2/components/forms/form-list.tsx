@@ -10,16 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageHeader,
-  HeaderCaption,
   FilterPills as SharedFilterPills,
   RefreshingDataBadge,
+  ViewToggle,
   PageBody,
 } from "@/components/shared";
+import { useViewMode } from "@/hooks/use-view-mode";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
 import { useFormsList, useCreateForm, useDeleteForm } from "@/hooks/api";
 import { queryKeys } from "@/hooks/api/keys";
 import { updateForm } from "@/lib/semblia-api";
 import { FormRow } from "./form-row";
+import { FormCard } from "./form-card";
 import { FormIntentPicker } from "./form-intent-picker";
 import { FormsEmptyState } from "./forms-empty-state";
 
@@ -44,6 +46,28 @@ function ListSkeleton() {
           <Skeleton className="h-5 w-14 rounded-full animate-shimmer" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function GridSkeleton() {
+  return (
+    <div className="px-4 py-5 sm:px-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="overflow-hidden rounded-xl border border-border bg-card"
+          >
+            <Skeleton className="aspect-[16/10] w-full animate-shimmer" />
+            <div className="space-y-2 px-3.5 pb-3 pt-3">
+              <Skeleton className="h-3.5 w-32 animate-shimmer" />
+              <Skeleton className="h-2.5 w-44 animate-shimmer" />
+              <Skeleton className="mt-2 h-7 w-full animate-shimmer" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -99,6 +123,8 @@ export function FormList({ project }: FormListProps) {
   const createMutation = useCreateForm(project.slug);
   const deleteMutation = useDeleteForm(project.slug);
   const updateMutation = useUpdateFormById(project.slug);
+
+  const [viewMode, setViewMode] = useViewMode("forms:view", "grid");
 
   const list = React.useMemo(() => listQuery.data ?? [], [listQuery.data]);
 
@@ -189,9 +215,9 @@ export function FormList({ project }: FormListProps) {
                 value={filter}
                 onChange={(v) => setQuery({ status: v === "all" ? null : v })}
               />
-              <HeaderCaption>
-                Collect testimonials, reviews, and feedback.
-              </HeaderCaption>
+              <div className="ml-auto">
+                <ViewToggle value={viewMode} onChange={setViewMode} />
+              </div>
             </>
           ) : undefined
         }
@@ -199,7 +225,11 @@ export function FormList({ project }: FormListProps) {
 
       <PageBody padding="bare" className="overflow-y-auto">
         {loading ? (
-          <ListSkeleton />
+          viewMode === "grid" ? (
+            <GridSkeleton />
+          ) : (
+            <ListSkeleton />
+          )
         ) : list.length === 0 ? (
           <FormsEmptyState onCreate={() => setQuery({ new: "1" })} />
         ) : filtered.length === 0 ? (
@@ -207,7 +237,7 @@ export function FormList({ project }: FormListProps) {
             filter={filter}
             onReset={() => setQuery({ status: null })}
           />
-        ) : (
+        ) : viewMode === "list" ? (
           <div
             className="divide-y divide-border"
             role="list"
@@ -223,6 +253,26 @@ export function FormList({ project }: FormListProps) {
                 onRename={(name) => handleRename(form.id, name)}
               />
             ))}
+          </div>
+        ) : (
+          <div className="px-4 py-5 sm:px-6">
+            <div
+              className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              role="list"
+              aria-label="Forms"
+            >
+              {filtered.map((form) => (
+                <div key={form.id} role="listitem" className="h-full">
+                  <FormCard
+                    slug={project.slug}
+                    form={form}
+                    onDelete={() => handleDelete(form.id)}
+                    onToggleOpen={() => handleToggleOpen(form.id, form.open)}
+                    onRename={(name) => handleRename(form.id, name)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </PageBody>

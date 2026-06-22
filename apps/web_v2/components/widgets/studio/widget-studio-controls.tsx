@@ -115,23 +115,39 @@ function SectionNav({
   active: StudioSection;
   onChange: (s: StudioSection) => void;
 }) {
+  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  const onKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const nextIdx = (idx + dir + SECTIONS.length) % SECTIONS.length;
+    onChange(SECTIONS[nextIdx].id);
+    tabRefs.current[nextIdx]?.focus();
+  };
+
   return (
     <div
       role="tablist"
       aria-label="Studio sections"
       className="flex shrink-0 items-stretch gap-1 border-b border-border/60 px-2"
     >
-      {SECTIONS.map(({ id, label, Icon }) => {
+      {SECTIONS.map(({ id, label, Icon }, idx) => {
         const on = active === id;
         return (
           <button
             key={id}
+            ref={(el) => {
+              tabRefs.current[idx] = el;
+            }}
             type="button"
             role="tab"
             id={`widget-section-tab-${id}`}
             aria-selected={on}
             aria-controls="widget-section-panel"
+            tabIndex={on ? 0 : -1}
             onClick={() => onChange(id)}
+            onKeyDown={(e) => onKeyDown(e, idx)}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-[12px] font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-inset",

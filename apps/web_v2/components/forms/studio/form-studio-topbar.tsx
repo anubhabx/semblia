@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InlineName } from "@/components/studio/inline-name";
+import { StudioHelp } from "@/components/studio/studio-help";
 import type { StatusMeta } from "@/lib/forms/intents";
 
 interface FormStudioTopbarProps {
@@ -79,6 +80,13 @@ export function FormStudioTopbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <StudioHelp
+          shortcuts={[
+            { keys: ["⌘", "S"], label: "Save draft" },
+            { keys: ["←", "→"], label: "Switch section" },
+          ]}
+          tip="Edits autosave as you type — the preview updates live."
+        />
         {hostedUrl && (
           <Button
             asChild

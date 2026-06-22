@@ -27,7 +27,7 @@ import type {
   WidgetDevice,
   WidgetStudioConfig,
 } from "@/lib/widgets/widget-types";
-import { BrowserChrome } from "../preview-renderers/browser-chrome";
+import { BrowserChrome } from "@/components/studio/browser-chrome";
 import { HostPageChrome } from "../preview-renderers/host-page-chrome";
 
 interface WidgetStudioPreviewProps {
@@ -266,22 +266,26 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
   return (
     <div className="widget-stage flex h-full min-h-0 flex-col bg-muted">
       {/* Stage chrome — top */}
-      <div className="flex shrink-0 items-center justify-between px-5 py-2.5 font-mono text-[10px] tracking-tight text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-2.5 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="size-1.5 rounded-full bg-brand" aria-hidden />
-          LIVE PREVIEW
+          <span className="font-medium text-foreground/80">Live preview</span>
           {autoActive && (
             <>
-              <span aria-hidden>·</span>
-              <span>{preferDark ? "DARK MODE" : "LIGHT MODE"}</span>
+              <span className="text-border" aria-hidden>
+                ·
+              </span>
+              <span>{preferDark ? "Dark" : "Light"}</span>
             </>
           )}
           {draft.behavior.autoRotate && draft.layout === "carousel" && (
             <>
-              <span aria-hidden>·</span>
+              <span className="text-border" aria-hidden>
+                ·
+              </span>
               <span className="inline-flex items-center gap-1">
                 <LightningIcon className="size-3" weight="fill" aria-hidden />
-                ROTATING
+                Rotating
               </span>
             </>
           )}
@@ -289,7 +293,7 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
 
         <div className="flex items-center gap-2">
           <DevicePills device={device} onChange={setDevice} />
-          <span className="hidden font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground/70 lg:inline">
+          <span className="hidden font-mono text-[10px] tabular-nums text-muted-foreground/60 lg:inline">
             {DEVICE_DIMS[device].w}×{DEVICE_DIMS[device].h}
           </span>
         </div>
@@ -314,7 +318,7 @@ export const WidgetStudioPreview = React.memo(function WidgetStudioPreview({
       </div>
 
       {/* Stage tip */}
-      <div className="px-5 pb-2.5 pt-1 text-center font-mono text-[9.5px] tracking-tight text-muted-foreground/65">
+      <div className="px-5 pb-2.5 pt-1 text-center text-[11px] text-muted-foreground/65">
         {isWall ? "Wall preview" : "Shown on a sample page"} · ⌘S to save ·
         changes auto-deploy
       </div>
@@ -345,7 +349,7 @@ function DevicePills({
             onClick={() => onChange(o.id)}
             aria-pressed={on}
             className={cn(
-              "inline-flex h-6 items-center justify-center rounded px-2 font-mono text-[9.5px] uppercase tracking-[0.14em]",
+              "inline-flex h-6 items-center justify-center rounded px-2.5 text-[11px] font-medium",
               "transition-[background,color] duration-150",
               on
                 ? "bg-foreground/90 text-background"

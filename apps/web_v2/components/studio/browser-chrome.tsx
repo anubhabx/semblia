@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Browser chrome — wraps the wall preview to give the user the visceral sense
- * that this is a standalone page hosted at `semblia.com/wall/[slug]`.
+ * BrowserChrome — frames preview content in a faux browser window so the user
+ * gets the visceral sense that this is a standalone hosted page. Shared by the
+ * widget studio (wall previews) and the form studio (hosted form previews).
  *
- * Renders entirely with the host UI tokens (Tailwind/zinc) so it never
- * inherits widget design tokens — the chrome is "outside" the widget.
+ * Renders entirely with host UI tokens (zinc) so it never inherits the
+ * widget/form design tokens — the chrome is "outside" the rendered surface.
  */
 
 import * as React from "react";
@@ -14,7 +15,7 @@ import { Lock as LockIcon } from "@phosphor-icons/react";
 
 interface BrowserChromeProps {
   url: string;
-  /** Resolved theme of the wall content (light | dark) — drives chrome inversion. */
+  /** Resolved theme of the framed content (light | dark) — drives chrome inversion. */
   contentDark?: boolean;
   children: React.ReactNode;
   className?: string;
@@ -67,16 +68,6 @@ export function BrowserChrome({
             {url}
           </span>
         </div>
-
-        <span
-          className={cn(
-            "hidden font-mono text-[9px] uppercase tracking-[0.14em] sm:inline",
-            "text-zinc-400/80",
-            contentDark && "text-zinc-500",
-          )}
-        >
-          Live preview
-        </span>
       </div>
 
       {/* Page content */}

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export interface StudioMarkProps {
   /** Studio display name, e.g. "Widget Studio". */
   name: string;
-  /** Version label, e.g. "0.1". Renders as "v0.1 · preview" in mono caps. */
+  /** Version label, e.g. "0.1". Renders as "v0.1 · preview" in a quiet caption. */
   version?: string;
   /** Status caption next to the version. Defaults to "preview". */
   status?: string;
@@ -40,7 +40,7 @@ export function StudioMark({
           {name}
         </div>
         {(version || status) && (
-          <div className="mt-px font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="mt-px text-[11px] tracking-tight text-muted-foreground">
             {version ? `v${version}` : null}
             {version && status ? " · " : null}
             {status}

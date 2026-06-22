@@ -127,7 +127,7 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     if (!listQuery.data) return;
     setWidgets(
       slug,
-      listQuery.data.map((dto) => dtoToWidgetListEntry(dto, accent)),
+      listQuery.data.map((dto) => dtoToWidgetListEntry(dto.entry, accent)),
     );
   }, [listQuery.data, slug, accent, setWidgets]);
 

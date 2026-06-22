@@ -91,6 +91,16 @@ export function FormInspector({
   onChange: (next: FormDefinitionDoc) => void;
 }) {
   const [section, setSection] = React.useState<SectionId>("content");
+  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  const onTabKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const nextIdx = (idx + dir + SECTIONS.length) % SECTIONS.length;
+    setSection(SECTIONS[nextIdx].id);
+    tabRefs.current[nextIdx]?.focus();
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -100,16 +110,23 @@ export function FormInspector({
         role="tablist"
         aria-label="Inspector sections"
       >
-        {SECTIONS.map((s) => {
+        {SECTIONS.map((s, idx) => {
           const Icon = s.icon;
           const active = section === s.id;
           return (
             <button
               key={s.id}
+              ref={(el) => {
+                tabRefs.current[idx] = el;
+              }}
               type="button"
               role="tab"
+              id={`form-tab-${s.id}`}
               aria-selected={active}
+              aria-controls={`form-tabpanel-${s.id}`}
+              tabIndex={active ? 0 : -1}
               onClick={() => setSection(s.id)}
+              onKeyDown={(e) => onTabKeyDown(e, idx)}
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11.5px] font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -125,7 +142,12 @@ export function FormInspector({
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div
+        role="tabpanel"
+        id={`form-tabpanel-${section}`}
+        aria-labelledby={`form-tab-${section}`}
+        className="min-h-0 flex-1 overflow-y-auto p-4"
+      >
         {section === "content" && (
           <ContentPanel doc={doc} onChange={onChange} />
         )}
