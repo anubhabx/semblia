@@ -18,17 +18,5 @@ export default async function WidgetsPage(props: {
   const project = await serverFetchProjectBySlug(slug);
   if (!project) notFound();
 
-  // WidgetList currently expects MockProject — pass a compatible shim.
-  // Full studio refactor is deferred to Phase 2.
-  return (
-    <WidgetList
-      project={
-        {
-          ...project,
-          // MockProject compat fields the widget list actually reads:
-          // slug, name, brandColorPrimary — all present on V2ProjectDTO.
-        } as unknown as Parameters<typeof WidgetList>[0]["project"]
-      }
-    />
-  );
+  return <WidgetList project={project} />;
 }

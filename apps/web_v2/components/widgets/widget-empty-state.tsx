@@ -44,7 +44,7 @@ export function WidgetEmptyState({ onPick }: WidgetEmptyStateProps) {
     <EmptyKindPicker<WidgetKind>
       heading="New widget"
       subheading="Showcase your social proof."
-      footnote="You can have as many widgets as you want. Both kinds live in the same project."
+      footnote="Widgets display the testimonials you collect with Forms — both live in this project."
       kinds={KINDS}
       onPick={onPick}
     />
