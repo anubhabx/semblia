@@ -19,6 +19,42 @@ widget gap is server-side save/publish parity (draft still persists to the local
 
 ## Current Snapshot
 
+- 2026-06-23 (late) — **STUDIOS UNIFICATION** (revamp/v2, committed `7c7c4099` → `6e49e664`,
+  8 clean per-phase commits). User goal: the forms + widgets studios still felt like "two
+  passion projects," not one serious product. Approved a full unification + pipeline framing,
+  benchmarked against Senja/Testimonial.to, Typeform/Tally/Fillout, Framer/Webflow (NOT
+  Linear/Stripe — wanted a *visual editor* feel, not a settings panel). Plan:
+  `docs/plans/2026-06-23-studios-unification.md`. **Diagnosis (from code):** the two studios
+  shared a vocabulary but not their bones — different skeletons (forms 2-pane vs widgets
+  3-pane+sibling-rail), incompatible save models (forms server-autosave+publish vs widgets
+  *local-only* zustand, no publish), different inspector chrome + section taxonomies, forms
+  Style was still text-dropdowns while widgets Style was visual pickers, and the widget preview
+  showed fake demo data + a `MockProject` shim with a "deferred to Phase 2" comment in prod.
+  **Key unblock:** the widget backend already existed (`PUT :widgetId/draft` + `…/draft/publish`
+  in `widgets.controller`/`studio-drafts.service`), so this was ALL frontend (web_v2) — no Codex.
+  **Shipped:** (1) shared `components/studio/{studio-shell,studio-rail,studio-topbar}.tsx` — one
+  full-screen frame (desktop Topbar+Rail+Inspector+Preview-hero; mobile bottom-tabs), a vertical
+  editor-grade section rail (replaces forms' tab strip + widgets' nav + the sibling rail), one
+  topbar (back·name·status·autosave·help·Publish·Share). (2) Forms migrated onto the shell;
+  `FormInspector`→`FormInspectorPanel`; new `form-style-panel.tsx` rebuilds the Design→**Style**
+  panel as a real visual editor (layout cards, scheme cards, corner/density glyphs, mini buttons
+  + fields in the live brand colour, background swatches, real type specimens — zero dropdowns).
+  (3) Widget studio onto the shell + the SAME server lifecycle as forms: debounce-autosave to the
+  StudioDraft (optimistic `version`; draft stored as the `WidgetDefinitionDoc` that the server's
+  `migrateWidgetDoc` publish path expects; hydrate round-trips via `syncStudioConfig({name,
+  definition})`), a real Publish moment (`publishWidgetDraft` client + `usePublishWidgetDraft`),
+  status reads Draft/Published/Unpublished-changes from `version` vs `publishedVersion`, name
+  persists via `useUpdateWidget`. (4) Widget preview now renders REAL approved+published responses
+  (`fetchResponses` + `useApprovedResponses` + defensive `response-to-testimonial` projection
+  using the `usedInWidget` answer flag; curated fallback tops up). (5) Removed the `MockProject`
+  shim; widget empty state frames the collect→display journey. (6) `/polish` pass aligned the two
+  inspectors' inset + rhythm. Gate per phase: tsc + eslint + `update-indexes`; **`pnpm build
+  --filter web_v2` GREEN (6/6)**. **NOT yet done (flagged to user):** live in-browser visual
+  verification (didn't risk a full stack/Playwright bringup autonomously); and the **Responses
+  (Manage) moderation surface does not exist in web_v2** — the API is ready but the inbox was
+  demolished in the forms rebuild and never rebuilt, so the full Collect→Manage→Display pipeline
+  is gated on building it (next dedicated effort).
+
 - 2026-06-23 — **Studios/listings finish + two features** (revamp/v2, committed `1381b271` →
   `887f9343`). Verified live via a Playwright harness (claude-in-chrome was disconnected) at
   `~/.tresta-visual-verify` (auth.json reuses a Clerk test session; `snap.mjs`/`clicksnap.mjs`).
