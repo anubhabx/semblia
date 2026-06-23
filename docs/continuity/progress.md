@@ -50,10 +50,16 @@ widget gap is server-side save/publish parity (draft still persists to the local
   shim; widget empty state frames the collect→display journey. (6) `/polish` pass aligned the two
   inspectors' inset + rhythm. Gate per phase: tsc + eslint + `update-indexes`; **`pnpm build
   --filter web_v2` GREEN (6/6)**. **NOT yet done (flagged to user):** live in-browser visual
-  verification (didn't risk a full stack/Playwright bringup autonomously); and the **Responses
-  (Manage) moderation surface does not exist in web_v2** — the API is ready but the inbox was
-  demolished in the forms rebuild and never rebuilt, so the full Collect→Manage→Display pipeline
-  is gated on building it (next dedicated effort).
+  verification (didn't risk a full stack/Playwright bringup autonomously).
+  - **FOLLOW-ON (same session, committed `b6e1ae2f`+`ce5609d6`): built the missing Responses
+    (Manage) inbox** — the pipeline's middle now exists. New `/projects/:slug/responses` route +
+    `ResponsesList` (PageHeader + All/Pending/Approved/Featured filter over `ResponseRow`, composed
+    from the verified `ItemRow`/`ItemActionRow` primitives) + moderation actions (Approve/Reject,
+    Feature/Unpublish, Delete) wired to new clients (`updateResponseStatus`/`updateResponsePublish`/
+    `deleteResponse`) + hooks (`useResponses`/`useUpdateResponseStatus`/`useUpdateResponsePublish`/
+    `useDeleteResponse`). Nav now reads **Forms · Responses · Widgets · Analytics · …** so
+    Collect→Manage→Display is legible. Build green (6/6); route registered. The ONE remaining gap is
+    live in-browser visual verification of the whole thing (studios + inbox).
 
 - 2026-06-23 — **Studios/listings finish + two features** (revamp/v2, committed `1381b271` →
   `887f9343`). Verified live via a Playwright harness (claude-in-chrome was disconnected) at
