@@ -22,14 +22,6 @@ import { type StudioSection } from "@/components/studio/studio-rail";
 import type {
   FormDefinitionDoc,
   FormField,
-  LayoutPreset,
-  DisplayMode,
-  RadiusToken,
-  DensityToken,
-  ButtonStyleToken,
-  FieldStyle,
-  BackgroundStyle,
-  FontPairing,
   FlowMode,
   ConsentPlacement,
 } from "@workspace/forms-core";
@@ -40,10 +32,10 @@ import {
   Section,
   Field,
   Segmented,
-  OptionCardGroup,
   SwitchRow,
   SelectField,
 } from "@/components/studio/controls";
+import { FormStylePanel } from "./form-style-panel";
 
 export type FormSectionId = "content" | "fields" | "design" | "flow";
 
@@ -99,7 +91,7 @@ export function FormInspectorPanel({
     <div className="p-4">
       {section === "content" && <ContentPanel doc={doc} onChange={onChange} />}
       {section === "fields" && <FieldsPanel doc={doc} onChange={onChange} />}
-      {section === "design" && <DesignPanel doc={doc} onChange={onChange} />}
+      {section === "design" && <FormStylePanel doc={doc} onChange={onChange} />}
       {section === "flow" && <FlowPanel doc={doc} onChange={onChange} />}
     </div>
   );
@@ -380,237 +372,6 @@ function IconBtn({
     >
       {children}
     </button>
-  );
-}
-
-// ── Design ──────────────────────────────────────────────────────────────────
-
-function layoutGlyph(preset: LayoutPreset): React.ReactNode {
-  const bar = "rounded-sm bg-foreground/15";
-  const accent = "rounded-sm bg-brand/60";
-  const wrap =
-    "flex h-full w-full items-center justify-center gap-1 bg-muted/40 p-2";
-  switch (preset) {
-    case "fullPage":
-      return (
-        <div className={cn(wrap, "flex-col")}>
-          <div className={cn(bar, "h-1.5 w-2/3")} />
-          <div className={cn(bar, "h-1 w-full")} />
-          <div className={cn(accent, "h-1.5 w-1/3 self-start")} />
-        </div>
-      );
-    case "splitHero":
-      return (
-        <div className={cn(wrap)}>
-          <div className="h-full w-1/2 rounded-sm bg-brand/40" />
-          <div className="flex h-full w-1/2 flex-col justify-center gap-1">
-            <div className={cn(bar, "h-1 w-full")} />
-            <div className={cn(accent, "h-1.5 w-1/2")} />
-          </div>
-        </div>
-      );
-    case "oneQuestion":
-      return (
-        <div className={cn(wrap, "flex-col justify-center")}>
-          <div className={cn(bar, "h-1.5 w-3/4")} />
-          <div className={cn(accent, "h-2 w-1/4")} />
-        </div>
-      );
-    case "centeredCard":
-    default:
-      return (
-        <div className={cn(wrap)}>
-          <div className="flex h-full w-2/3 flex-col justify-center gap-1 rounded-md bg-background p-1.5 shadow-sm">
-            <div className={cn(bar, "h-1 w-full")} />
-            <div className={cn(accent, "h-1.5 w-1/2")} />
-          </div>
-        </div>
-      );
-  }
-}
-
-function DesignPanel({
-  doc,
-  onChange,
-}: {
-  doc: FormDefinitionDoc;
-  onChange: (next: FormDefinitionDoc) => void;
-}) {
-  const setDesign = (patch: Partial<FormDefinitionDoc["design"]>) =>
-    onChange({ ...doc, design: { ...doc.design, ...patch } });
-  const setLayout = (layoutPreset: LayoutPreset) =>
-    onChange({ ...doc, layoutPreset });
-
-  return (
-    <div className="flex flex-col gap-6">
-      <Section title="Layout" description="The overall shape of the page.">
-        <OptionCardGroup<LayoutPreset>
-          ariaLabel="Layout preset"
-          columns={2}
-          previewClassName="aspect-[16/10]"
-          value={doc.layoutPreset}
-          onChange={setLayout}
-          options={[
-            {
-              value: "centeredCard",
-              label: "Centered card",
-              preview: layoutGlyph("centeredCard"),
-            },
-            {
-              value: "fullPage",
-              label: "Full page",
-              preview: layoutGlyph("fullPage"),
-            },
-            {
-              value: "splitHero",
-              label: "Split hero",
-              preview: layoutGlyph("splitHero"),
-            },
-            {
-              value: "oneQuestion",
-              label: "One question",
-              preview: layoutGlyph("oneQuestion"),
-            },
-          ]}
-        />
-      </Section>
-
-      <Section
-        title="Brand"
-        description="Color drives the whole theme — we derive and AA-clamp the rest."
-      >
-        <Field label="Brand color">
-          <ColorControl
-            value={doc.design.brandColor}
-            onChange={(brandColor) => setDesign({ brandColor })}
-          />
-        </Field>
-        <Field label="Color scheme">
-          <Segmented<DisplayMode>
-            ariaLabel="Color scheme"
-            value={doc.design.mode}
-            onChange={(mode) => setDesign({ mode })}
-            options={[
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
-              { value: "system", label: "System" },
-            ]}
-          />
-        </Field>
-        <Field label="Typography">
-          <SelectField<FontPairing>
-            ariaLabel="Font pairing"
-            value={doc.design.fontPairing}
-            onChange={(fontPairing) => setDesign({ fontPairing })}
-            options={[
-              { value: "inter", label: "Inter (modern)" },
-              { value: "geist", label: "Geist (clean)" },
-              { value: "system", label: "System" },
-              { value: "serifEditorial", label: "Serif editorial" },
-            ]}
-          />
-        </Field>
-      </Section>
-
-      <Section
-        title="Surface"
-        description="Fine-tune the feel of the form chrome."
-      >
-        <Field label="Corners">
-          <Segmented<RadiusToken>
-            ariaLabel="Corner radius"
-            value={doc.design.radius}
-            onChange={(radius) => setDesign({ radius })}
-            options={[
-              { value: "sharp", label: "Sharp" },
-              { value: "soft", label: "Soft" },
-              { value: "rounded", label: "Rounded" },
-            ]}
-          />
-        </Field>
-        <Field label="Density">
-          <Segmented<DensityToken>
-            ariaLabel="Density"
-            value={doc.design.density}
-            onChange={(density) => setDesign({ density })}
-            options={[
-              { value: "compact", label: "Compact" },
-              { value: "comfortable", label: "Comfort" },
-              { value: "spacious", label: "Spacious" },
-            ]}
-          />
-        </Field>
-        <Field label="Buttons">
-          <Segmented<ButtonStyleToken>
-            ariaLabel="Button style"
-            value={doc.design.buttonStyle}
-            onChange={(buttonStyle) => setDesign({ buttonStyle })}
-            options={[
-              { value: "filled", label: "Filled" },
-              { value: "outline", label: "Outline" },
-              { value: "soft", label: "Soft" },
-            ]}
-          />
-        </Field>
-        <Field label="Fields">
-          <Segmented<FieldStyle>
-            ariaLabel="Field style"
-            value={doc.design.fieldStyle}
-            onChange={(fieldStyle) => setDesign({ fieldStyle })}
-            options={[
-              { value: "outlined", label: "Outlined" },
-              { value: "filled", label: "Filled" },
-              { value: "underline", label: "Underline" },
-            ]}
-          />
-        </Field>
-        <Field label="Background">
-          <Segmented<BackgroundStyle>
-            ariaLabel="Background style"
-            value={doc.design.backgroundStyle}
-            onChange={(backgroundStyle) => setDesign({ backgroundStyle })}
-            options={[
-              { value: "plain", label: "Plain" },
-              { value: "gradient", label: "Gradient" },
-              { value: "softPattern", label: "Pattern" },
-            ]}
-          />
-        </Field>
-      </Section>
-    </div>
-  );
-}
-
-function ColorControl({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-border">
-        <span
-          className="absolute inset-0"
-          style={{ backgroundColor: value }}
-          aria-hidden
-        />
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 cursor-pointer opacity-0"
-          aria-label="Brand color"
-        />
-      </label>
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 font-mono text-xs uppercase"
-        aria-label="Brand color hex"
-      />
-    </div>
   );
 }
 
