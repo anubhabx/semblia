@@ -11,6 +11,7 @@ import {
   deleteWidget,
   fetchWidgetDraft,
   saveWidgetDraft,
+  publishWidgetDraft,
 } from "@/lib/semblia-api";
 import { queryKeys } from "./keys";
 import { liveQueryOptions, type ApiQueryOptions } from "./query-options";
@@ -143,6 +144,23 @@ export function useSaveWidgetDraft(slug: string, widgetId: string) {
     },
     onSuccess: (data) => {
       qc.setQueryData(queryKeys.widgets.draft(slug, widgetId), data);
+    },
+  });
+}
+
+export function usePublishWidgetDraft(slug: string, widgetId: string) {
+  const { getToken } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: { expectedVersion: number }) => {
+      const token = await getToken();
+      return publishWidgetDraft(token, slug, widgetId, body);
+    },
+    onSuccess: (data) => {
+      // Publish stamps Widget.config from the draft — refresh detail + list.
+      qc.setQueryData(queryKeys.widgets.detail(slug, widgetId), data);
+      qc.invalidateQueries({ queryKey: queryKeys.widgets.list(slug) });
     },
   });
 }

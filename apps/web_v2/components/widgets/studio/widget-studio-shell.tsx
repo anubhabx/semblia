@@ -1,34 +1,36 @@
 "use client";
 
 /**
- * WidgetStudioShell — full-screen overlay editor.
+ * WidgetStudioShell — the Widget Studio, now wearing the shared StudioShell and
+ * driven by the same server lifecycle as the Form Studio.
  *
- * Layout (≥ 1024px): Topbar + (Rail | Controls | Preview)
- * Layout (< 1024px):  Topbar + four-tab body (Layout | Style | Content | Preview)
+ * What changed from the local-only prototype:
+ *   - Edits debounce-autosave to the server (StudioDraft, optimistic version),
+ *     exactly like forms — no more localStorage-only persistence.
+ *   - A real Publish moment stamps the live Widget.config from the draft.
+ *   - Status reads Draft / Published / Unpublished changes from the server.
+ *   - The bespoke 3-pane layout (sibling rail + custom topbar + section nav) is
+ *     gone; the studio renders through StudioShell + StudioTopbar + StudioRail.
  *
- * Hard constraints:
- *   - URL params drive panel & share & device & firstRun.
- *   - Unsaved-changes guard intercepts close + rail navigation.
- *   - Cmd/Ctrl+S = save when dirty.
+ * The zustand store still holds the working draft (the controls read it), so the
+ * shell commits the local baseline only after a successful server save.
  */
 
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Eye as EyeIcon,
-  PaintBrushBroad as PaintIcon,
-  ListBullets as ListIcon,
-  Rows as RowsIcon,
-} from "@phosphor-icons/react";
+import { Copy as CopyIcon, ArrowSquareOut as OpenIcon } from "@phosphor-icons/react";
+import type { WidgetDefinitionDoc } from "@workspace/widgets-core/schema";
 import { cn } from "@/lib/utils";
-import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   useProject,
   useWidget,
   useWidgetDraft,
   useWidgetsList,
+  useSaveWidgetDraft,
+  usePublishWidgetDraft,
+  useUpdateWidget,
 } from "@/hooks/api";
 import { selectPreviewTestimonials } from "@/lib/widgets/widget-fallback-testimonials";
 import {
@@ -45,13 +47,29 @@ import {
   isWidgetDirty,
 } from "@/lib/widgets/widget-studio-store";
 
-import { WidgetStudioTopbar } from "./widget-studio-topbar";
-import { WidgetStudioRail } from "./widget-studio-rail";
-import { WidgetStudioControls } from "./widget-studio-controls";
+import { StudioShell } from "@/components/studio/studio-shell";
+import {
+  StudioTopbar,
+  type SaveState,
+  type StudioStatus,
+} from "@/components/studio/studio-topbar";
+import {
+  WIDGET_SECTIONS,
+  WidgetInspectorPanel,
+  type WidgetSectionId,
+} from "./widget-studio-controls";
 import { WidgetStudioPreview } from "./widget-studio-preview";
 import { WidgetShareDrawer } from "./widget-share-drawer";
 
-type MobileTab = "layout" | "style" | "content" | "preview";
+const AUTOSAVE_MS = 1200;
+
+function isConflict(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err != null &&
+    (err as { status?: number }).status === 409
+  );
+}
 
 interface WidgetStudioShellProps {
   slug: string;
@@ -62,10 +80,9 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isDesktop = useIsDesktop();
   const dialogRef = React.useRef<HTMLDivElement>(null);
 
-  // ── Granular store selectors ────────────────────────────────
+  // ── Store ───────────────────────────────────────────────────
   const snapshot = useWidgetStudioStore((s) => s.snapshots[widgetId]);
   const draft = snapshot?.draft;
   const dirty = useWidgetStudioStore((s) =>
@@ -73,22 +90,15 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
   );
   const isFirstRun = snapshot?.isFirstRun ?? false;
 
-  const widgetsByProject = useWidgetStudioStore(
-    (s) => s.widgetsByProject[slug],
-  );
-  const allSnapshots = useWidgetStudioStore((s) => s.snapshots);
-
   const setWidgets = useWidgetStudioStore((s) => s.setWidgets);
   const hydrateWidget = useWidgetStudioStore((s) => s.hydrateWidget);
-  const save = useWidgetStudioStore((s) => s.save);
-  const reset = useWidgetStudioStore((s) => s.reset);
+  const commitSaved = useWidgetStudioStore((s) => s.save);
   const setName = useWidgetStudioStore((s) => s.setName);
   const clearFirstRun = useWidgetStudioStore((s) => s.clearFirstRun);
 
-  // ── URL search params ───────────────────────────────────────
+  // ── URL state ───────────────────────────────────────────────
   const shareOpen = searchParams.get("share") === "1";
   const firstRunFlag = searchParams.get("firstRun") === "1";
-
   const setQuery = React.useCallback(
     (patch: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams.toString());
@@ -102,27 +112,32 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     [router, pathname, searchParams],
   );
 
-  // ── Mobile tab state ────────────────────────────────────────
-  const [mobileTab, setMobileTab] = React.useState<MobileTab>("preview");
+  // ── Section nav ─────────────────────────────────────────────
+  const [section, setSection] = React.useState<WidgetSectionId>("style");
 
-  // ── Confirm-leave dialog ────────────────────────────────────
+  // ── Leave guard ─────────────────────────────────────────────
   const [leaveOpen, setLeaveOpen] = React.useState(false);
   const pendingNavRef = React.useRef<string | null>(null);
 
-  // ── Project hydration / preview testimonials ────────────────
+  // ── Data ────────────────────────────────────────────────────
   const projectQuery = useProject(slug);
   const project = projectQuery.data ?? null;
   const accent = project?.brandColorPrimary ?? "#6366f1";
 
-  // ── API-backed studio data ──────────────────────────────────
-  // The studio is keyed by the API widget id in the route. Feed the rail from
-  // the real list and seed an editable snapshot from the server (saved draft
-  // preferred, else the published config) so reload / direct-nav survive
-  // instead of bailing to "this widget no longer exists".
   const listQuery = useWidgetsList(slug);
   const widgetQuery = useWidget(slug, widgetId);
   const draftQuery = useWidgetDraft(slug, widgetId);
 
+  const saveMutation = useSaveWidgetDraft(slug, widgetId);
+  const publishMutation = usePublishWidgetDraft(slug, widgetId);
+  const renameMutation = useUpdateWidget(slug, widgetId);
+
+  // Optimistic draft version (StudioDraft.version) + publish state.
+  const versionRef = React.useRef<number>(0);
+  const [hasUnpublished, setHasUnpublished] = React.useState(false);
+  const seededRef = React.useRef(false);
+
+  // Feed the rail's slug map so findSlugForWidget works for content controls.
   React.useEffect(() => {
     if (!listQuery.data) return;
     setWidgets(
@@ -131,21 +146,23 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     );
   }, [listQuery.data, slug, accent, setWidgets]);
 
+  // Seed an editable snapshot (saved draft preferred, else published config).
   React.useEffect(() => {
-    if (snapshot) return; // already seeded / live edits in progress
+    if (snapshot) return;
     const detail = widgetQuery.data;
     if (!detail) return;
-    if (draftQuery.isLoading) return; // let a saved draft resolve first
+    if (draftQuery.isLoading) return;
 
     let config: WidgetStudioConfig;
     try {
       const draftDoc = draftQuery.data?.draft;
       config = draftDoc
-        ? syncStudioConfig(draftDoc as Partial<WidgetStudioConfig>)
+        ? syncStudioConfig({
+            name: detail.config.name,
+            definition: draftDoc as unknown as WidgetDefinitionDoc,
+          })
         : dtoToWidgetStudioConfig(detail.config);
     } catch {
-      // Never crash the studio on a malformed doc — fall back to a valid
-      // default seeded from the widget's kind/layout.
       const listEntry = dtoToWidgetListEntry(detail.entry, accent);
       config = buildDefaultWidgetConfig({
         kind: listEntry.kind,
@@ -183,12 +200,105 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     hydrateWidget,
   ]);
 
-  const previewItems = React.useMemo(() => {
-    // FORMS-REBUILD(Phase 6): re-point widget preview to live approved
-    // FormResponses. Until the responses pipeline is rebuilt, the studio preview
-    // uses demo content only.
-    const { items } = selectPreviewTestimonials([], 12);
-    return items;
+  // Seed version + unpublished state once the server draft resolves.
+  React.useEffect(() => {
+    if (seededRef.current) return;
+    if (draftQuery.isLoading || !draftQuery.data) return;
+    seededRef.current = true;
+    const v = draftQuery.data.version ?? 0;
+    versionRef.current = v;
+    setHasUnpublished(v > 0 && v !== draftQuery.data.publishedVersion);
+  }, [draftQuery.isLoading, draftQuery.data]);
+
+  // FORMS-REBUILD(Phase 3b): real approved responses are wired in next slice.
+  const previewItems = React.useMemo(
+    () => selectPreviewTestimonials([], 12).items,
+    [],
+  );
+
+  // ── Save (autosave + manual) ────────────────────────────────
+  const dirtyRef = React.useRef(dirty);
+  const draftRef = React.useRef(draft);
+  React.useEffect(() => {
+    dirtyRef.current = dirty;
+    draftRef.current = draft;
+  });
+
+  const doSave = React.useCallback(async () => {
+    const current = draftRef.current;
+    if (!current || !dirtyRef.current || saveMutation.isPending) return;
+    try {
+      const result = await saveMutation.mutateAsync({
+        draft: current.definition as unknown as Record<string, unknown>,
+        expectedVersion: versionRef.current,
+      });
+      versionRef.current = result.version;
+      setHasUnpublished(true);
+      commitSaved(widgetId); // local baseline → clears dirty
+    } catch (err) {
+      if (isConflict(err)) {
+        toast.error("This widget changed elsewhere — reloading the latest.");
+        seededRef.current = false;
+        draftQuery.refetch();
+      } else {
+        toast.error("Couldn't save. Retrying shortly.");
+      }
+    }
+  }, [saveMutation, commitSaved, widgetId, draftQuery]);
+
+  // Debounced autosave on every edit.
+  React.useEffect(() => {
+    if (!dirty) return;
+    const t = window.setTimeout(() => void doSave(), AUTOSAVE_MS);
+    return () => window.clearTimeout(t);
+  }, [dirty, draft, doSave]);
+
+  // ── Publish ─────────────────────────────────────────────────
+  const doPublish = React.useCallback(async () => {
+    if (dirtyRef.current) await doSave();
+    if (versionRef.current === 0) {
+      toast("Nothing to publish yet — make a change first.");
+      return;
+    }
+    try {
+      await publishMutation.mutateAsync({ expectedVersion: versionRef.current });
+      setHasUnpublished(false);
+      toast.success("Published — your widget is live.");
+      if (snapshot?.isFirstRun) {
+        setQuery({ share: "1" });
+        clearFirstRun(widgetId);
+      }
+    } catch (err) {
+      if (isConflict(err)) {
+        toast.error("This widget changed elsewhere — reloading the latest.");
+        seededRef.current = false;
+        draftQuery.refetch();
+      } else {
+        toast.error("Couldn't publish. Check your widget and try again.");
+      }
+    }
+  }, [doSave, publishMutation, snapshot, setQuery, clearFirstRun, widgetId, draftQuery]);
+
+  // ── Cmd/Ctrl+S ──────────────────────────────────────────────
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (dirtyRef.current) void doSave();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [doSave]);
+
+  // ── beforeunload guard ──────────────────────────────────────
+  React.useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
   // ── Initial focus ───────────────────────────────────────────
@@ -196,59 +306,30 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     dialogRef.current?.focus();
   }, []);
 
-  // ── Unsaved changes / beforeunload ──────────────────────────
+  // Drop the firstRun param from the URL once consumed.
   React.useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      const snap = useWidgetStudioStore.getState().snapshots[widgetId];
-      if (snap && isWidgetDirty(snap)) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [widgetId]);
+    if (firstRunFlag) {
+      const t = window.setTimeout(() => setQuery({ firstRun: null }), 600);
+      return () => window.clearTimeout(t);
+    }
+  }, [firstRunFlag, setQuery]);
 
-  // ── Cmd+S to save ───────────────────────────────────────────
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
-      if (e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        const snap = useWidgetStudioStore.getState().snapshots[widgetId];
-        if (snap && isWidgetDirty(snap)) {
-          save(widgetId);
-          toast.success("Saved");
-          // First save → open share drawer (celebrate moment).
-          if (snap.isFirstRun) {
-            setQuery({ share: "1" });
-            clearFirstRun(widgetId);
-          }
-        }
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [widgetId, save, clearFirstRun, setQuery]);
-
-  // ── Navigation handlers (with unsaved guard) ────────────────
+  // ── Navigation ──────────────────────────────────────────────
   const navigateGuarded = React.useCallback(
     (href: string) => {
-      const snap = useWidgetStudioStore.getState().snapshots[widgetId];
-      if (snap && isWidgetDirty(snap)) {
+      if (dirtyRef.current) {
         pendingNavRef.current = href;
         setLeaveOpen(true);
         return;
       }
       router.push(href);
     },
-    [widgetId, router],
+    [router],
   );
-
-  const handleClose = React.useCallback(() => {
-    navigateGuarded(`/projects/${slug}/widgets`);
-  }, [slug, navigateGuarded]);
-
+  const handleClose = React.useCallback(
+    () => navigateGuarded(`/projects/${slug}/widgets`),
+    [slug, navigateGuarded],
+  );
   const handleConfirmLeave = React.useCallback(() => {
     setLeaveOpen(false);
     if (pendingNavRef.current) {
@@ -257,33 +338,15 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     }
   }, [router]);
 
-  const handleSave = React.useCallback(() => {
-    save(widgetId);
-    toast.success("Saved");
-    if (isFirstRun) {
-      setQuery({ share: "1" });
-      clearFirstRun(widgetId);
-    }
-  }, [save, widgetId, isFirstRun, setQuery, clearFirstRun]);
+  const handleRename = React.useCallback(
+    (name: string) => {
+      setName(widgetId, name);
+      renameMutation.mutate({ name });
+    },
+    [setName, widgetId, renameMutation],
+  );
 
-  const handleReset = React.useCallback(() => {
-    reset(widgetId);
-    toast("Changes reset");
-  }, [reset, widgetId]);
-
-  const handleToggleShare = React.useCallback(() => {
-    setQuery({ share: shareOpen ? null : "1" });
-  }, [shareOpen, setQuery]);
-
-  // Drop the firstRun param from the URL once consumed (purely cosmetic).
-  React.useEffect(() => {
-    if (firstRunFlag) {
-      const t = window.setTimeout(() => setQuery({ firstRun: null }), 600);
-      return () => window.clearTimeout(t);
-    }
-  }, [firstRunFlag, setQuery]);
-
-  // ── Loading: resolving the widget / project, or seeding its snapshot ─
+  // ── Loading / error ─────────────────────────────────────────
   if (
     widgetQuery.isLoading ||
     (!widgetQuery.isError && !snapshot) ||
@@ -300,13 +363,9 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     );
   }
 
-  // ── Bail only when the widget is genuinely gone (404 / deleted) ─
   if (widgetQuery.isError || !draft || !project) {
     return (
-      <div
-        ref={dialogRef}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
-      >
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">
           This widget no longer exists.
         </p>
@@ -321,22 +380,22 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
     );
   }
 
-  const entries = widgetsByProject ?? [];
-  const siblingConfigs: Record<string, typeof draft> = {};
-  for (const e of entries) {
-    const s = allSnapshots[e.id];
-    if (s) siblingConfigs[e.id] = s.draft;
-  }
+  const isActive = widgetQuery.data?.entry.isActive ?? false;
+  const status: StudioStatus = hasUnpublished
+    ? { tone: "changes", label: "Unpublished changes" }
+    : isActive
+      ? { tone: "live", label: "Published" }
+      : { tone: "draft", label: "Paused" };
+  const saveState: SaveState = saveMutation.isPending
+    ? "saving"
+    : dirty
+      ? "unsaved"
+      : "saved";
+
+  const isWall = draft.kind === "wall";
 
   return (
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Widget Studio Editor"
-      tabIndex={-1}
-      className="fixed inset-0 z-50 flex flex-col bg-background outline-none"
-    >
+    <>
       <ConfirmationDialog
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
@@ -349,199 +408,110 @@ export function WidgetStudioShell({ slug, widgetId }: WidgetStudioShellProps) {
         onConfirm={handleConfirmLeave}
       />
 
-      {/* Google Fonts for studio preview */}
+      {/* Google Fonts for the studio preview's webfont options. */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,300..900;1,300..900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
       />
 
-      <WidgetStudioTopbar
-        name={draft.name}
-        onRename={(name) => setName(widgetId, name)}
-        dirty={dirty}
-        isFirstRun={isFirstRun}
-        isWall={draft.kind === "wall"}
-        wallSlug={draft.wall.slug}
-        shareOpen={shareOpen}
-        onClose={handleClose}
-        onReset={handleReset}
-        onSave={handleSave}
-        onToggleShare={handleToggleShare}
+      <StudioShell
+        ariaLabel="Widget Studio"
+        rootRef={dialogRef}
+        sections={WIDGET_SECTIONS}
+        activeSection={section}
+        onSectionChange={setSection}
+        renderInspector={(id) => (
+          <WidgetInspectorPanel widgetId={widgetId} section={id} />
+        )}
+        preview={
+          <WidgetStudioPreview
+            widgetId={widgetId}
+            items={previewItems}
+            project={project}
+          />
+        }
+        topbar={
+          <StudioTopbar
+            backLabel="Widgets"
+            onBack={handleClose}
+            name={draft.name}
+            onRename={handleRename}
+            dirty={dirty}
+            status={status}
+            saveState={saveState}
+            help={{
+              shortcuts: [
+                { keys: ["⌘", "S"], label: "Save draft" },
+                { keys: ["↑", "↓"], label: "Switch section" },
+              ],
+              tip: "Edits autosave as you type. Publish pushes them live to every embed.",
+            }}
+            center={
+              isWall ? <WallUrlPill slug={draft.wall.slug} /> : undefined
+            }
+            publish={{
+              onPublish: () => void doPublish(),
+              publishing: publishMutation.isPending,
+              label: "Publish",
+            }}
+            share={{
+              onShare: () => setQuery({ share: shareOpen ? null : "1" }),
+              active: shareOpen,
+              pulse: isFirstRun,
+            }}
+          />
+        }
       />
 
-      <div className="flex min-h-0 flex-1">
-        {isDesktop ? (
-          <>
-            <WidgetStudioRail
-              slug={slug}
-              activeId={widgetId}
-              entries={entries}
-              configs={siblingConfigs}
-              items={previewItems}
-              onNavigate={(id) =>
-                navigateGuarded(`/projects/${slug}/widgets/${id}`)
-              }
-              onCreate={() =>
-                navigateGuarded(`/projects/${slug}/widgets?new=1`)
-              }
-            />
-
-            <aside
-              className="flex h-full w-[380px] shrink-0 flex-col border-r border-border/60 bg-sidebar"
-              aria-label="Widget controls"
-            >
-              <WidgetStudioControls widgetId={widgetId} />
-            </aside>
-
-            <main
-              className="flex min-h-0 flex-1 flex-col"
-              aria-label="Widget preview"
-            >
-              <WidgetStudioPreview
-                widgetId={widgetId}
-                items={previewItems}
-                project={project}
-              />
-            </main>
-          </>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            {/* Mobile body — tab views */}
-            <div className="relative min-h-0 flex-1">
-              <MobileTabPanel tab="layout" active={mobileTab === "layout"}>
-                <WidgetStudioControls
-                  widgetId={widgetId}
-                  mobileSection="layout"
-                />
-              </MobileTabPanel>
-              <MobileTabPanel tab="style" active={mobileTab === "style"}>
-                <WidgetStudioControls
-                  widgetId={widgetId}
-                  mobileSection="style"
-                />
-              </MobileTabPanel>
-              <MobileTabPanel tab="content" active={mobileTab === "content"}>
-                <WidgetStudioControls
-                  widgetId={widgetId}
-                  mobileSection="content"
-                />
-              </MobileTabPanel>
-              <MobileTabPanel tab="preview" active={mobileTab === "preview"}>
-                <WidgetStudioPreview
-                  widgetId={widgetId}
-                  items={previewItems}
-                  project={project}
-                />
-              </MobileTabPanel>
-            </div>
-
-            {/* Bottom tab bar */}
-            <div
-              className="flex h-12 shrink-0 border-t border-border/60 bg-background"
-              role="tablist"
-              aria-label="Studio panels"
-            >
-              <MobileTabButton
-                tab="layout"
-                Icon={RowsIcon}
-                label="Layout"
-                active={mobileTab === "layout"}
-                onClick={() => setMobileTab("layout")}
-              />
-              <MobileTabButton
-                tab="style"
-                Icon={PaintIcon}
-                label="Style"
-                active={mobileTab === "style"}
-                onClick={() => setMobileTab("style")}
-              />
-              <MobileTabButton
-                tab="content"
-                Icon={ListIcon}
-                label="Content"
-                active={mobileTab === "content"}
-                onClick={() => setMobileTab("content")}
-              />
-              <MobileTabButton
-                tab="preview"
-                Icon={EyeIcon}
-                label="Preview"
-                active={mobileTab === "preview"}
-                onClick={() => setMobileTab("preview")}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Right-side share drawer (overlays preview) */}
       <WidgetShareDrawer
         widgetId={widgetId}
         open={shareOpen}
         onOpenChange={(open: boolean) => setQuery({ share: open ? "1" : null })}
       />
-    </div>
+    </>
   );
 }
 
-function MobileTabPanel({
-  tab,
-  active,
-  children,
-}: {
-  tab: MobileTab;
-  active: boolean;
-  children: React.ReactNode;
-}) {
+function WallUrlPill({ slug }: { slug: string }) {
+  const wallUrl = `semblia.com/wall/${slug}`;
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`https://${wallUrl}`);
+      toast.success("Wall URL copied");
+    } catch {
+      toast.error("Couldn't copy. Try again.");
+    }
+  };
   return (
-    <div
-      role="tabpanel"
-      id={`studio-tabpanel-${tab}`}
-      aria-labelledby={`studio-tab-${tab}`}
-      className={cn(
-        "absolute inset-0 overflow-hidden",
-        active ? "visible" : "invisible",
-      )}
-      aria-hidden={!active}
-    >
-      {children}
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={cn(
+          "group inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1",
+          "font-mono text-[10.5px] tracking-tight text-foreground",
+          "transition-[border-color,background] duration-150 hover:border-foreground/30 hover:bg-muted/60",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-brand ring-2 ring-brand/20" aria-hidden />
+        <span className="text-muted-foreground">semblia.com/wall/</span>
+        <span className="font-semibold">{slug}</span>
+        <CopyIcon
+          className="size-3 text-muted-foreground/70 transition-colors group-hover:text-foreground"
+          weight="bold"
+          aria-hidden
+        />
+      </button>
+      <a
+        href={`https://${wallUrl}`}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+        aria-label="Open wall in new tab"
+      >
+        <OpenIcon className="size-3" weight="bold" aria-hidden />
+      </a>
     </div>
-  );
-}
-
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
-
-function MobileTabButton({
-  tab,
-  Icon,
-  label,
-  active,
-  onClick,
-}: {
-  tab: MobileTab;
-  Icon: PhosphorIcon;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      role="tab"
-      id={`studio-tab-${tab}`}
-      aria-controls={`studio-tabpanel-${tab}`}
-      aria-selected={active}
-      className={cn(
-        "flex flex-1 items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-        active
-          ? "bg-muted/40 text-foreground"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <Icon className="size-3.5" weight="bold" aria-hidden />
-      <span>{label}</span>
-    </button>
   );
 }

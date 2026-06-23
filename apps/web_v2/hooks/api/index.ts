@@ -39,6 +39,7 @@ export {
   useDeleteWidget,
   useWidgetDraft,
   useSaveWidgetDraft,
+  usePublishWidgetDraft,
 } from "./use-widgets-api";
 
 export {

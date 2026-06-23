@@ -885,6 +885,19 @@ export function saveWidgetDraft(
   );
 }
 
+export function publishWidgetDraft(
+  token: string | null,
+  slug: string,
+  widgetId: string,
+  body: { expectedVersion: number },
+) {
+  return put<V2WidgetDTO>(
+    `/projects/${encodeURIComponent(slug)}/widgets/${encodeURIComponent(widgetId)}/draft/publish`,
+    token,
+    body,
+  );
+}
+
 // ── Outbound webhooks ───────────────────────────────────────────────────────
 
 export type OutboundWebhookDeliveriesParams = {
