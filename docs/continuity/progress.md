@@ -58,8 +58,18 @@ widget gap is server-side save/publish parity (draft still persists to the local
     Feature/Unpublish, Delete) wired to new clients (`updateResponseStatus`/`updateResponsePublish`/
     `deleteResponse`) + hooks (`useResponses`/`useUpdateResponseStatus`/`useUpdateResponsePublish`/
     `useDeleteResponse`). Nav now reads **Forms · Responses · Widgets · Analytics · …** so
-    Collect→Manage→Display is legible. Build green (6/6); route registered. The ONE remaining gap is
-    live in-browser visual verification of the whole thing (studios + inbox).
+    Collect→Manage→Display is legible. Build green (6/6); route registered.
+  - **VISUALLY VERIFIED LIVE (2026-06-24).** Brought up the full stack (docker pg/redis + api_v2:8100 +
+    web_v2:3002), provisioned a fresh DB (the api `.env` points at an empty `:5432/appdb`; `:5433` has
+    no `appdb`): `prisma migrate deploy` + a provision script (billing plans + User
+    `user_3F5aDohTUTmz8yBb5lzQdgjGFvX`=test+clerk_test, Project `northwind-studio`, OWNER membership) +
+    the harness `seed.mjs` (5 forms + 5 widgets). **Gotcha:** SSR `[slug]` routes 404'd until I wiped
+    `apps/web_v2/.next` (stale PROD build artifacts from my `pnpm build` runs conflicting with `next dev`
+    — the documented `.next`-corruption gotcha; client API calls were 200 the whole time). After that,
+    forms list, widgets list, responses inbox, **and both unified studios all render 200, zero console
+    errors, light + dark.** Confirmed: the two studios read as ONE instrument (vertical rail · inspector ·
+    hero preview · Publish topbar), forms Style is visual, widget preview shows testimonials on a real
+    host page, nav reads Forms·Responses·Widgets. Screenshots sent to the user. STUDIOS GOAL: CLOSED.
 
 - 2026-06-23 — **Studios/listings finish + two features** (revamp/v2, committed `1381b271` →
   `887f9343`). Verified live via a Playwright harness (claude-in-chrome was disconnected) at
