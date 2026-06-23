@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardTextIcon,
+  ChatCircleTextIcon,
   PuzzlePieceIcon as PuzzleIcon,
   ChartBarIcon as BarChart3Icon,
   CodeIcon,
@@ -32,6 +33,11 @@ function buildNav(slug: string): ProjectNavItem[] {
       label: "Forms",
       href: `/projects/${slug}/forms`,
       icon: ClipboardTextIcon,
+    },
+    {
+      label: "Responses",
+      href: `/projects/${slug}/responses`,
+      icon: ChatCircleTextIcon,
     },
     {
       label: "Widgets",
