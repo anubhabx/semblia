@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * FormInspector — the studio's editing surface. A section rail (Content / Fields
- * / Design / Flow) over panels built from the shared studio control primitives,
+ * FormInspectorPanel — the studio's editing surface. Renders one section's
+ * controls (Content / Fields / Style / Flow) from the shared studio control
+ * primitives; section navigation is owned by the shared StudioRail in the shell,
  * so the Form Studio reads as the same instrument as the Widget Studio. Every
  * edit mutates the working draft immutably; the parent owns persistence.
  */
@@ -17,6 +18,7 @@ import {
   ArrowDownIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
+import { type StudioSection } from "@/components/studio/studio-rail";
 import type {
   FormDefinitionDoc,
   FormField,
@@ -43,16 +45,13 @@ import {
   SelectField,
 } from "@/components/studio/controls";
 
-type SectionId = "content" | "fields" | "design" | "flow";
+export type FormSectionId = "content" | "fields" | "design" | "flow";
 
-const SECTIONS: ReadonlyArray<{
-  id: SectionId;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
+/** Section model consumed by the shared StudioRail. */
+export const FORM_SECTIONS: ReadonlyArray<StudioSection<FormSectionId>> = [
   { id: "content", label: "Content", icon: TextAlignLeftIcon },
   { id: "fields", label: "Fields", icon: ListBulletsIcon },
-  { id: "design", label: "Design", icon: PaintBrushBroadIcon },
+  { id: "design", label: "Style", icon: PaintBrushBroadIcon },
   { id: "flow", label: "Flow", icon: FlowArrowIcon },
 ];
 
@@ -83,78 +82,25 @@ const PLACEHOLDER_TYPES: ReadonlySet<FormField["type"]> = new Set([
   "website",
 ]);
 
-export function FormInspector({
+/**
+ * FormInspectorPanel — renders the active section's controls. Section navigation
+ * is owned by the shared StudioRail in the shell, so this is panel content only.
+ */
+export function FormInspectorPanel({
+  section,
   doc,
   onChange,
 }: {
+  section: FormSectionId;
   doc: FormDefinitionDoc;
   onChange: (next: FormDefinitionDoc) => void;
 }) {
-  const [section, setSection] = React.useState<SectionId>("content");
-  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
-
-  const onTabKeyDown = (e: React.KeyboardEvent, idx: number) => {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-    e.preventDefault();
-    const dir = e.key === "ArrowRight" ? 1 : -1;
-    const nextIdx = (idx + dir + SECTIONS.length) % SECTIONS.length;
-    setSection(SECTIONS[nextIdx].id);
-    tabRefs.current[nextIdx]?.focus();
-  };
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {/* Section rail */}
-      <div
-        className="flex shrink-0 items-center gap-1 border-b border-border/60 px-3 py-2"
-        role="tablist"
-        aria-label="Inspector sections"
-      >
-        {SECTIONS.map((s, idx) => {
-          const Icon = s.icon;
-          const active = section === s.id;
-          return (
-            <button
-              key={s.id}
-              ref={(el) => {
-                tabRefs.current[idx] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`form-tab-${s.id}`}
-              aria-selected={active}
-              aria-controls={`form-tabpanel-${s.id}`}
-              tabIndex={active ? 0 : -1}
-              onClick={() => setSection(s.id)}
-              onKeyDown={(e) => onTabKeyDown(e, idx)}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11.5px] font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                active
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="size-3.5" />
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        role="tabpanel"
-        id={`form-tabpanel-${section}`}
-        aria-labelledby={`form-tab-${section}`}
-        className="min-h-0 flex-1 overflow-y-auto p-4"
-      >
-        {section === "content" && (
-          <ContentPanel doc={doc} onChange={onChange} />
-        )}
-        {section === "fields" && <FieldsPanel doc={doc} onChange={onChange} />}
-        {section === "design" && <DesignPanel doc={doc} onChange={onChange} />}
-        {section === "flow" && <FlowPanel doc={doc} onChange={onChange} />}
-      </div>
+    <div className="p-4">
+      {section === "content" && <ContentPanel doc={doc} onChange={onChange} />}
+      {section === "fields" && <FieldsPanel doc={doc} onChange={onChange} />}
+      {section === "design" && <DesignPanel doc={doc} onChange={onChange} />}
+      {section === "flow" && <FlowPanel doc={doc} onChange={onChange} />}
     </div>
   );
 }

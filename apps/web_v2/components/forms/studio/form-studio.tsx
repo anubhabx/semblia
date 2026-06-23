@@ -21,8 +21,15 @@ import {
 } from "@/hooks/api";
 import { parseDraftDoc, type PreviewMeta } from "@/lib/forms/draft";
 import { formStatusMeta } from "@/lib/forms/intents";
-import { FormStudioTopbar } from "./form-studio-topbar";
-import { FormInspector } from "./form-inspector";
+import { StudioShell } from "@/components/studio/studio-shell";
+import { StudioTopbar, type SaveState } from "@/components/studio/studio-topbar";
+import { Button } from "@/components/ui/button";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import {
+  FORM_SECTIONS,
+  FormInspectorPanel,
+  type FormSectionId,
+} from "./form-inspector";
 import { FormStudioPreview } from "./form-studio-preview";
 
 const AUTOSAVE_MS = 1200;
@@ -51,6 +58,7 @@ export function FormStudio({ slug, formId }: { slug: string; formId: string }) {
   const [doc, setDoc] = React.useState<FormDefinitionDoc | null>(null);
   const [baseline, setBaseline] = React.useState<string>("");
   const versionRef = React.useRef<number>(1);
+  const [section, setSection] = React.useState<FormSectionId>("content");
 
   // Seed once from the server draft (saved draft preferred). Falls back to a
   // template for the form's intent if the stored doc is malformed.
@@ -191,8 +199,14 @@ export function FormStudio({ slug, formId }: { slug: string; formId: string }) {
     slug: form.slug,
   };
 
+  const saveState: SaveState = saveMutation.isPending
+    ? "saving"
+    : dirty
+      ? "unsaved"
+      : "saved";
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <>
       <ConfirmationDialog
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
@@ -215,36 +229,59 @@ export function FormStudio({ slug, formId }: { slug: string; formId: string }) {
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Fraunces:ital,wght@0,300..900;1,300..900&display=swap"
       />
 
-      <FormStudioTopbar
-        name={form.name}
-        onRename={handleRename}
-        status={status}
-        dirty={dirty}
-        saving={saveMutation.isPending}
-        publishing={publishMutation.isPending}
-        hostedUrl={hostedUrl}
-        onClose={handleClose}
-        onSave={() => void doSave()}
-        onPublish={() => void handlePublish()}
-        hasPublished={form.currentVersion != null}
+      <StudioShell
+        ariaLabel="Form Studio"
+        sections={FORM_SECTIONS}
+        activeSection={section}
+        onSectionChange={setSection}
+        renderInspector={(id) => (
+          <FormInspectorPanel section={id} doc={doc} onChange={setDoc} />
+        )}
+        preview={<FormStudioPreview doc={doc} meta={previewMeta} />}
+        topbar={
+          <StudioTopbar
+            backLabel="Forms"
+            onBack={handleClose}
+            name={form.name}
+            onRename={handleRename}
+            dirty={dirty}
+            status={status}
+            saveState={saveState}
+            help={{
+              shortcuts: [
+                { keys: ["⌘", "S"], label: "Save draft" },
+                { keys: ["↑", "↓"], label: "Switch section" },
+              ],
+              tip: "Edits autosave as you type — the preview updates live.",
+            }}
+            secondaryActions={
+              hostedUrl ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs text-muted-foreground"
+                >
+                  <a
+                    href={`https://${hostedUrl}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ArrowSquareOutIcon className="size-3.5" aria-hidden />
+                    View
+                  </a>
+                </Button>
+              ) : null
+            }
+            publish={{
+              onPublish: () => void handlePublish(),
+              publishing: publishMutation.isPending,
+              label: form.currentVersion != null ? "Republish" : "Publish",
+            }}
+          />
+        }
       />
-
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside
-          className="flex max-h-[55%] min-h-0 w-full flex-col border-b border-border bg-sidebar lg:max-h-none lg:w-[400px] lg:shrink-0 lg:border-b-0 lg:border-r"
-          aria-label="Form controls"
-        >
-          <FormInspector doc={doc} onChange={setDoc} />
-        </aside>
-
-        <main
-          className="flex min-h-0 flex-1 flex-col"
-          aria-label="Form preview"
-        >
-          <FormStudioPreview doc={doc} meta={previewMeta} />
-        </main>
-      </div>
-    </div>
+    </>
   );
 }
 
