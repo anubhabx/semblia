@@ -25,6 +25,25 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * EmptyPreview — a faint, decorative ghost of the populated surface, rendered
+ * above the header so the empty state shows what's missing, not just that it's
+ * missing. Pair with <GhostList /> from @/components/shared.
+ */
+function EmptyPreview({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="empty-preview"
+      aria-hidden
+      className={cn(
+        "mb-2 flex w-full justify-center opacity-[0.6] select-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 const emptyMediaVariants = cva(
   "mb-2 flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
@@ -97,6 +116,7 @@ function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
 export {
   Empty,
   EmptyHeader,
+  EmptyPreview,
   EmptyTitle,
   EmptyDescription,
   EmptyContent,

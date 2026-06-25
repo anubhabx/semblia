@@ -1,6 +1,8 @@
 "use client";
 
+import { GlobeHemisphereWest } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { CardEmpty } from "./card-empty";
 import type { CountryEntry } from "@/lib/analytics/types";
 
 interface TopCountriesBarProps {
@@ -21,7 +23,11 @@ export function TopCountriesBar({ countries }: TopCountriesBarProps) {
       </div>
 
       {countries.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No impression data yet.</p>
+        <CardEmpty
+          icon={GlobeHemisphereWest}
+          title="No impression data yet"
+          hint="Once your widgets are live, the countries viewing them will rank here."
+        />
       ) : (
         <div className="space-y-2">
           {countries.slice(0, 8).map((c, i) => {

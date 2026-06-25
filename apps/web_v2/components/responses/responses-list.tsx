@@ -10,11 +10,15 @@
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { ChatCircleText } from "@phosphor-icons/react";
 import {
   PageHeader,
   PageBody,
   RefreshingDataBadge,
   FilterPills,
+  EmptyState,
+  NoResults,
+  GhostList,
 } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -190,39 +194,23 @@ function ListSkeleton() {
 function ResponsesEmpty({ filter, slug }: { filter: Filter; slug: string }) {
   if (filter !== "all") {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 px-6 py-20 text-center">
-        <p className="text-sm font-medium text-foreground">
-          No {filter} responses
-        </p>
-        <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
-          Nothing matches this filter yet.
-        </p>
-      </div>
+      <NoResults
+        title={`No ${filter} responses`}
+        description="Nothing matches this filter yet — try another tab above."
+      />
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-brand/12 text-brand">
-        <svg viewBox="0 0 20 20" className="size-5" fill="none" aria-hidden>
-          <path
-            d="M3 5.5A1.5 1.5 0 0 1 4.5 4h11A1.5 1.5 0 0 1 17 5.5v6A1.5 1.5 0 0 1 15.5 13H8l-3.5 3v-3H4.5A1.5 1.5 0 0 1 3 11.5z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <h2 className="text-base font-semibold tracking-tight text-foreground">
-        No responses yet
-      </h2>
-      <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
-        Responses are testimonials people submit through your Forms. Review them
-        here, approve the good ones, and feature them to show up in your
-        Widgets.
-      </p>
-      <Button asChild size="sm" className="mt-1 text-xs">
-        <a href={`/projects/${slug}/forms`}>Share a form to collect</a>
-      </Button>
-    </div>
+    <EmptyState
+      icon={ChatCircleText}
+      title="No responses yet"
+      description="Responses are the testimonials people submit through your Forms. Review them here, approve the good ones, and feature them to show up in your Widgets."
+      preview={<GhostList rows={3} leading="circle" trailingPill />}
+      action={
+        <Button asChild size="sm" className="text-xs">
+          <a href={`/projects/${slug}/forms`}>Share a form to collect</a>
+        </Button>
+      }
+    />
   );
 }

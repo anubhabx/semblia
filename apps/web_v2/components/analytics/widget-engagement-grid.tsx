@@ -9,6 +9,7 @@ import {
   Gauge,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { CardEmpty } from "./card-empty";
 import type { WidgetEngagementData } from "@/lib/analytics/types";
 import { timeAgo } from "@/lib/format";
 
@@ -41,15 +42,11 @@ export function WidgetEngagementGrid({
   if (widgets.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-5">
-        <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
-          <div className="size-8 rounded-full bg-muted flex items-center justify-center mb-1">
-            <Gauge weight="regular" className="size-4 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-foreground">No widgets yet</p>
-          <p className="text-xs text-muted-foreground max-w-[200px]">
-            Create a widget to start tracking load time and impressions.
-          </p>
-        </div>
+        <CardEmpty
+          icon={Gauge}
+          title="No widgets yet"
+          hint="Create a widget to start tracking load time and impressions."
+        />
       </div>
     );
   }

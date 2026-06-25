@@ -2,6 +2,7 @@
 
 import { Star } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { CardEmpty } from "./card-empty";
 import type { RatingsData } from "@/lib/analytics/types";
 
 interface RatingsDistributionProps {
@@ -36,7 +37,11 @@ export function RatingsDistribution({ data }: RatingsDistributionProps) {
       </div>
 
       {data.total === 0 ? (
-        <p className="text-xs text-muted-foreground">No ratings yet.</p>
+        <CardEmpty
+          icon={Star}
+          title="No ratings yet"
+          hint="Star ratings from your responses will break down across the scale here."
+        />
       ) : (
         <div className="space-y-2">
           {[5, 4, 3, 2, 1].map((rating) => {

@@ -5,17 +5,15 @@ import Link from "next/link";
 import { Bell as BellIcon } from "@phosphor-icons/react";
 import type { V2NotificationDTO } from "@workspace/types";
 import { toast } from "sonner";
-import { PageBody, RefreshingDataBadge } from "@/components/shared";
+import {
+  PageBody,
+  RefreshingDataBadge,
+  EmptyState,
+  GhostList,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -111,21 +109,14 @@ export function NotificationsClient() {
       {isInitialLoading ? (
         <NotificationListSkeleton />
       ) : notifications.length === 0 ? (
-        <Empty
-          className="settings-section-enter min-h-[320px] border-dashed"
+        <EmptyState
+          icon={BellIcon}
+          title="No notifications yet"
+          description="New feedback, export issues, security events, and agent actions will land here as they happen."
+          preview={<GhostList rows={3} leading="square" trailingPill={false} />}
+          className="settings-section-enter min-h-[320px]"
           style={{ animationDelay: "60ms" }}
-        >
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <BellIcon />
-            </EmptyMedia>
-            <EmptyTitle>No notifications yet</EmptyTitle>
-            <EmptyDescription>
-              New feedback, export issues, security events, and agent actions
-              will appear here.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        />
       ) : (
         <div
           className="settings-section-enter space-y-3"

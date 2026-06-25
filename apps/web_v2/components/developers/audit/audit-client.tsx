@@ -10,6 +10,7 @@ import type { V2ActorType } from "@workspace/types";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -19,6 +20,7 @@ import {
   PageBody,
   PageToolbar,
   FilterPills,
+  GhostList,
   type FilterPillOption,
 } from "@/components/shared";
 import { useProjectActionAudit, useProjectMembers } from "@/hooks/api";
@@ -102,6 +104,11 @@ export function AuditClient({ slug }: { slug: string }) {
         ) : events.length === 0 ? (
           <div className="px-4 py-10 sm:px-6">
             <Empty className="border border-dashed py-10">
+              {filter === "all" && (
+                <EmptyPreview>
+                  <GhostList rows={3} leading="circle" trailingPill={false} />
+                </EmptyPreview>
+              )}
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <ClockCounterClockwiseIcon weight="bold" />

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -36,6 +37,7 @@ import {
   PageToolbar,
   PageTabs,
   FilterPills,
+  GhostList,
   type FilterPillOption,
 } from "@/components/shared";
 import {
@@ -256,6 +258,9 @@ function EndpointsPanel({
     return (
       <div className="px-4 py-10 sm:px-6">
         <Empty className="border border-dashed py-10">
+          <EmptyPreview>
+            <GhostList rows={3} leading="square" />
+          </EmptyPreview>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <WebhooksLogoIcon weight="bold" />

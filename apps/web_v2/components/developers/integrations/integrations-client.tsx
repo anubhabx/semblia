@@ -5,13 +5,14 @@ import { toast } from "sonner";
 import { PlugsConnectedIcon, PlusIcon } from "@phosphor-icons/react";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
-import { PageBody } from "@/components/shared";
+import { PageBody, GhostList } from "@/components/shared";
 import {
   useIntegrationConnections,
   useEnableIntegrationConnection,
@@ -167,6 +168,9 @@ export function IntegrationsClient({ slug }: { slug: string }) {
             </div>
           ) : connections.length === 0 ? (
             <Empty className="border border-dashed py-10">
+              <EmptyPreview>
+                <GhostList rows={3} leading="square" />
+              </EmptyPreview>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <PlugsConnectedIcon weight="bold" />

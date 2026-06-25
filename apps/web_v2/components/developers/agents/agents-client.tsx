@@ -7,6 +7,7 @@ import { PlusIcon, RobotIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -19,6 +20,7 @@ import {
   ViewToggle,
   FilterPills,
   SearchField,
+  GhostList,
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { useAgentAccessOverview, useRevokeAgentKey } from "@/hooks/api";
@@ -149,6 +151,9 @@ export function AgentsClient({ slug }: { slug: string }) {
         ) : keys.length === 0 ? (
           <div className="px-4 py-12 sm:px-6">
             <Empty>
+              <EmptyPreview>
+                <GhostList rows={3} leading="square" />
+              </EmptyPreview>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <RobotIcon weight="bold" />

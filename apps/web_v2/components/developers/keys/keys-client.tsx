@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -25,6 +26,7 @@ import {
   ViewToggle,
   FilterPills,
   SearchField,
+  GhostList,
   type ViewMode,
 } from "@/components/shared";
 import { useViewMode } from "@/hooks/use-view-mode";
@@ -75,6 +77,9 @@ function SectionEmpty({ type, slug }: { type: ApiKeyType; slug: string }) {
   const isPublishable = type === "PUBLISHABLE";
   return (
     <Empty className="border border-dashed py-10">
+      <EmptyPreview>
+        <GhostList rows={3} leading="square" />
+      </EmptyPreview>
       <EmptyHeader>
         <EmptyMedia variant="icon">
           {isPublishable ? (
@@ -309,6 +314,9 @@ export function KeysClient({ slug }: { slug: string }) {
         {!loading && allKeys.length === 0 ? (
           <div className="px-4 py-12 sm:px-6">
             <Empty>
+              <EmptyPreview>
+                <GhostList rows={3} leading="square" />
+              </EmptyPreview>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <KeyIcon weight="bold" />

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ShieldCheck, ArrowRight, Globe } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { CardEmpty } from "./card-empty";
 import type { SourceEntry } from "@/lib/analytics/types";
 
 interface TopSourcesListProps {
@@ -22,16 +23,11 @@ export function TopSourcesList({
   if (sources.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-5">
-        <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
-          <div className="size-8 rounded-full bg-muted flex items-center justify-center mb-1">
-            <Globe weight="regular" className="size-4 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-medium text-foreground">No source data</p>
-          <p className="text-xs text-muted-foreground max-w-[200px]">
-            Share your collection link to start tracking where submissions come
-            from.
-          </p>
-        </div>
+        <CardEmpty
+          icon={Globe}
+          title="No source data"
+          hint="Share your collection link to start tracking where submissions come from."
+        />
       </div>
     );
   }

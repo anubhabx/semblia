@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Star, ArrowUpRight, Eye } from "@phosphor-icons/react";
+import { Star, ArrowUpRight, Eye, ChatCircleText } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { CardEmpty } from "./card-empty";
 import type { ContentPerformanceRow } from "@/lib/analytics/types";
 interface ContentPerformanceTableProps {
   rows: ContentPerformanceRow[];
@@ -37,7 +38,11 @@ export function ContentPerformanceTable({
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No responses yet.</p>
+        <CardEmpty
+          icon={ChatCircleText}
+          title="No responses yet"
+          hint="Your best-performing testimonials will rank here once responses start coming in."
+        />
       ) : (
         <div className="space-y-0">
           {displayed.map((row, i) => {

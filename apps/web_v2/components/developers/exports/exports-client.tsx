@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Empty,
+  EmptyPreview,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -22,6 +23,7 @@ import {
   PageBody,
   PageToolbar,
   FilterPills,
+  GhostList,
   type FilterPillOption,
 } from "@/components/shared";
 import {
@@ -153,6 +155,11 @@ export function ExportsClient({ slug }: { slug: string }) {
         ) : deliveries.length === 0 ? (
           <div className="px-4 py-10 sm:px-6">
             <Empty className="border border-dashed py-10">
+              {filter === "all" && (
+                <EmptyPreview>
+                  <GhostList rows={3} leading="square" />
+                </EmptyPreview>
+              )}
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <ExportIcon weight="bold" />
