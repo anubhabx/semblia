@@ -17,7 +17,7 @@ export interface EmptyKindOption<T extends string = string> {
 }
 
 export interface EmptyKindPickerProps<T extends string = string> {
-  /** Short overline label above the heading (e.g. "New widget"). */
+  /** Short label above the heading (e.g. "New widget"). */
   heading: string;
   /** Main h2 prompt text. */
   subheading: string;
@@ -99,10 +99,8 @@ export function EmptyKindPicker<T extends string = string>({
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-14">
       <div className="mb-7 space-y-1.5 text-center">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {heading}
-        </p>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[22px]">
+        <p className="text-xs font-medium text-muted-foreground">{heading}</p>
+        <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-[22px]">
           {subheading}
         </h2>
       </div>
