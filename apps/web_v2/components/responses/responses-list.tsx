@@ -10,8 +10,12 @@
 import * as React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { PageHeader, PageBody, RefreshingDataBadge } from "@/components/shared";
+import {
+  PageHeader,
+  PageBody,
+  RefreshingDataBadge,
+  FilterPills,
+} from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useLiveQueryState } from "@/hooks/use-live-query-state";
@@ -126,33 +130,13 @@ export function ResponsesList({ project }: { project: V2ProjectDTO }) {
         }
         toolbar={
           showToolbar ? (
-            <div
-              role="tablist"
+            <FilterPills
+              options={FILTERS}
+              value={filter}
+              onChange={setFilter}
+              size="sm"
               aria-label="Filter responses"
-              className="flex items-center gap-1"
-            >
-              {FILTERS.map((f) => {
-                const on = filter === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={on}
-                    onClick={() => setFilter(f.id)}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                      on
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })}
-            </div>
+            />
           ) : undefined
         }
       />
