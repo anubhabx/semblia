@@ -26,6 +26,8 @@ coverage
 out/
 build
 dist
+cdk.out
+*.tsbuildinfo
 
 
 # Debug
@@ -55,9 +57,6 @@ test-widget-layouts.ps1
 **/start-*.ps1
 **/test-*.ps1
 
-# Widget build outputs
-packages/widget/dist
-
 # Test and demo files - keep locally for development
 **/test*.html
 **/test*.js
@@ -66,12 +65,25 @@ packages/widget/dist
 **/demo*.js
 **/demo*.css
 **/index.html
-packages/widget/.env
-
-# pnpm
-pnpm-lock.yaml
 
 packages/database/supabase/
-packages/database/prisma/migrations/
 
 .secrets/
+.agents/
+.agent/
+.claude/
+.codex/
+.cursor/
+.vscode/
+.windsurf/
+.obsidian/
+graphify-out/
+vector-store/
+__pycache__
+.opencode
+.github/prompts/
+docs/raw/
+.tmp
+.playwright-mcp/
+
+.preview

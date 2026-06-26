@@ -1,0 +1,27 @@
+# Dependencies — never index these
+node_modules/
+**/node_modules/**
+
+# Prisma generated client (compiled WASM, edge runtimes, query engine binaries)
+**/generated/prisma/**
+**/generated/client/**
+
+# Build outputs
+dist/
+build/
+.next/
+graphify-out/
+
+# Test snapshots and fixtures
+**/__snapshots__/**
+
+# Public assets (SVGs, icons — not code)
+**/public/*.svg
+**/public/*.png
+**/public/*.jpg
+**/public/*.ico
+
+# Lock files and package manager artifacts
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

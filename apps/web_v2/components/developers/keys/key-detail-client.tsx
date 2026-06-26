@@ -1,0 +1,637 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { fmtNum, fmtRelative } from "@/lib/format";
+import type { V2ApiKeyDTO, V2ApiKeyEventDTO } from "@workspace/types";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  ArrowsClockwiseIcon,
+  ProhibitIcon,
+  ClockIcon,
+  KeyIcon,
+} from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
+import {
+  PageHeader,
+  PageBody,
+  PageToolbar,
+  FilterPills,
+  PageTabs,
+} from "@/components/shared";
+import {
+  useApiKeysList,
+  useApiKeyEvents,
+  useRevokeApiKey,
+  useRotateApiKey,
+  useUpdateApiKey,
+} from "@/hooks/api";
+import { toast } from "sonner";
+import {
+  RevealStep,
+  ConfirmCloseDialog,
+} from "@/components/developers/shared/reveal-step";
+
+/* ─── Tab type ────────────────────────────────────────────────────────────── */
+
+type Tab = "overview" | "activity" | "settings";
+
+/* ─── KPI card ────────────────────────────────────────────────────────────── */
+
+function KpiCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
+        {value}
+      </p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/* ─── Usage chart ─────────────────────────────────────────────────────────── */
+
+function UsageChart({ data }: { data: V2ApiKeyEventDTO[] }) {
+  const daily = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const event of data) {
+      map.set(event.date, (map.get(event.date) ?? 0) + event.requestCount);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, count]) => ({ date, count }));
+  }, [data]);
+
+  if (daily.length === 0) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border">
+        <p className="text-xs text-muted-foreground">No usage data yet</p>
+      </div>
+    );
+  }
+
+  const total = daily.reduce((s, d) => s + d.count, 0);
+  const peak = Math.max(...daily.map((d) => d.count));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Calls (30d)" value={fmtNum(total)} />
+        <KpiCard label="Peak day" value={fmtNum(peak)} />
+        <KpiCard
+          label="Daily avg"
+          value={fmtNum(Math.round(total / Math.max(daily.length, 1)))}
+        />
+        <KpiCard
+          label="Trend"
+          value={
+            daily.length >= 2
+              ? daily[daily.length - 1].count >= daily[daily.length - 2].count
+                ? "↑"
+                : "↓"
+              : "—"
+          }
+        />
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-4">
+        <p className="mb-3 text-xs font-medium text-muted-foreground">
+          Daily requests — last 30 days
+        </p>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart
+            data={daily}
+            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+          >
+            <defs>
+              <linearGradient id="keyUsageGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(d: string) => {
+                const dt = new Date(d);
+                return `${dt.getMonth() + 1}/${dt.getDate()}`;
+              }}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v: number) => fmtNum(v)}
+            />
+            <Tooltip
+              contentStyle={{
+                fontSize: 11,
+                background: "var(--popover)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+              }}
+              labelFormatter={(l) =>
+                typeof l === "string"
+                  ? new Date(l).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : String(l)
+              }
+            />
+            <Area
+              type="monotone"
+              dataKey="count"
+              name="Requests"
+              stroke="var(--brand)"
+              strokeWidth={2}
+              fill="url(#keyUsageGrad)"
+              dot={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Activity tab ────────────────────────────────────────────────────────── */
+
+type EventFilter = "all" | "usage";
+
+function ActivityTab({ slug, keyId }: { slug: string; keyId: string }) {
+  const { data: events = [], isLoading: loading } = useApiKeyEvents(
+    slug,
+    keyId,
+  );
+  const [filter, setFilter] = React.useState<EventFilter>("all");
+
+  const filtered = React.useMemo(() => {
+    if (filter === "all") return events;
+    return events.filter((e) => e.type === "usage.daily");
+  }, [events, filter]);
+
+  if (loading) {
+    return (
+      <div className="space-y-2 py-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-8 w-full animate-shimmer" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <FilterPills<EventFilter>
+        options={[
+          { id: "all", label: "All", count: events.length },
+          {
+            id: "usage",
+            label: "Usage",
+            count: events.filter((e) => e.type === "usage.daily").length,
+          },
+        ]}
+        value={filter}
+        onChange={setFilter}
+        aria-label="Filter events"
+      />
+
+      {filtered.length === 0 ? (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ClockIcon weight="bold" />
+            </EmptyMedia>
+            <EmptyTitle>No activity yet</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Date</TableHead>
+              <TableHead className="text-xs">Event</TableHead>
+              <TableHead className="text-xs">Requests</TableHead>
+              <TableHead className="text-xs hidden sm:table-cell">
+                Key
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((ev) => (
+              <TableRow key={ev.id}>
+                <TableCell className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                  {fmtRelative(new Date(ev.occurredAt))}
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs font-medium text-foreground">
+                    {ev.type}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono text-[11px] tabular-nums">
+                  {fmtNum(ev.requestCount)}
+                </TableCell>
+                <TableCell className="font-mono text-[11px] text-muted-foreground hidden sm:table-cell truncate max-w-[200px]">
+                  {ev.keyPrefix}…
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
+}
+
+/* ─── Settings tab ────────────────────────────────────────────────────────── */
+
+const RATE_PRESETS = [10, 60, 600, 3000];
+
+function SettingsTab({
+  entry,
+  slug,
+  onRevoke,
+}: {
+  entry: V2ApiKeyDTO;
+  slug: string;
+  onRevoke: () => void;
+}) {
+  const [name, setName] = React.useState(entry.name);
+  const [rateLimit, setRateLimit] = React.useState(entry.rateLimit);
+  const [revokeOpen, setRevokeOpen] = React.useState(false);
+  const updateKey = useUpdateApiKey(slug);
+
+  const trimmedName = name.trim();
+  const isDirty = trimmedName !== entry.name || rateLimit !== entry.rateLimit;
+  const canSave = isDirty && trimmedName.length > 0 && !updateKey.isPending;
+
+  async function handleSave() {
+    if (!canSave) return;
+    try {
+      await updateKey.mutateAsync({
+        keyId: entry.id,
+        body: { name: trimmedName, rateLimit },
+        keyType:
+          entry.keyType === "AGENT" || entry.keyType === "SECRET"
+            ? entry.keyType
+            : "SECRET",
+      });
+      toast.success("Key updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update key");
+    }
+  }
+
+  const rateLabelIdx = RATE_PRESETS.indexOf(rateLimit);
+  const sliderValue =
+    rateLabelIdx >= 0
+      ? rateLabelIdx
+      : RATE_PRESETS.findIndex((v) => v >= rateLimit);
+
+  return (
+    <div className="space-y-6 pb-16">
+      <div className="space-y-1.5">
+        <Label htmlFor="settings-name">Key name</Label>
+        <Input
+          id="settings-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={50}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Rate limit</Label>
+          <span className="font-mono text-xs text-muted-foreground">
+            {rateLimit} req/min
+          </span>
+        </div>
+        <Slider
+          min={0}
+          max={RATE_PRESETS.length - 1}
+          step={1}
+          value={[Math.max(0, sliderValue >= 0 ? sliderValue : 0)]}
+          onValueChange={([i]) => setRateLimit(RATE_PRESETS[i]!)}
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          {RATE_PRESETS.map((v) => (
+            <span key={v}>{v}/m</span>
+          ))}
+        </div>
+      </div>
+
+      {isDirty && (
+        <div className="sticky bottom-0 flex items-center justify-end gap-2 rounded-lg border border-border bg-background/95 px-4 py-2.5 shadow-sm backdrop-blur">
+          <span className="mr-auto text-xs text-muted-foreground">
+            Unsaved changes
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={updateKey.isPending}
+            onClick={() => {
+              setName(entry.name);
+              setRateLimit(entry.rateLimit);
+            }}
+          >
+            Discard
+          </Button>
+          <Button size="sm" disabled={!canSave} onClick={handleSave}>
+            {updateKey.isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-destructive/40 p-4 space-y-3">
+        <p className="text-xs font-semibold text-destructive">Danger zone</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Revoke this key</p>
+            <p className="text-xs text-muted-foreground">
+              This key stops working immediately. You can&apos;t undo it.
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={!entry.isActive}
+            onClick={() => setRevokeOpen(true)}
+          >
+            Revoke
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmationDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        intent="danger"
+        title={<>Revoke &ldquo;{entry.name}&rdquo;?</>}
+        description="This key stops working immediately. You can't undo it."
+        cancelLabel="Keep key"
+        confirmLabel="Revoke key"
+        onConfirm={onRevoke}
+      />
+    </div>
+  );
+}
+
+/* ─── Main detail client ──────────────────────────────────────────────────── */
+
+export function KeyDetailClient({
+  slug,
+  keyId,
+}: {
+  slug: string;
+  keyId: string;
+}) {
+  const { data: allKeys = [], isLoading: keysLoading } = useApiKeysList(slug);
+  const revokeMutation = useRevokeApiKey(slug);
+  const rotateMutation = useRotateApiKey(slug);
+
+  const key = React.useMemo(
+    () => allKeys.find((k) => k.id === keyId) ?? null,
+    [allKeys, keyId],
+  );
+  const { data: events = [] } = useApiKeyEvents(slug, keyId);
+
+  const [tab, setTab] = React.useState<Tab>("overview");
+  const [rotateOpen, setRotateOpen] = React.useState(false);
+  const [revokeOpen, setRevokeOpen] = React.useState(false);
+  const [rotatePlaintext, setRotatePlaintext] = React.useState<string | null>(
+    null,
+  );
+  const [rotateConfirmClose, setRotateConfirmClose] = React.useState(false);
+
+  async function handleRevoke() {
+    await revokeMutation.mutateAsync(keyId);
+  }
+
+  async function handleRotate() {
+    const result = await rotateMutation.mutateAsync(keyId);
+    if (result && typeof result === "object" && "secret" in result) {
+      setRotatePlaintext((result as { secret: string }).secret);
+    }
+  }
+
+  if (keysLoading) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <PageHeader
+          title={<Skeleton className="h-5 w-40 animate-shimmer" />}
+          description={<Skeleton className="h-3.5 w-56 animate-shimmer" />}
+        />
+        <PageBody padding="default" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton
+                key={i}
+                className="h-20 w-full animate-shimmer rounded-lg"
+              />
+            ))}
+          </div>
+          <Skeleton className="h-48 w-full animate-shimmer rounded-lg" />
+        </PageBody>
+      </div>
+    );
+  }
+
+  if (!key) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <PageHeader eyebrow="Developers · Keys" title="Key not found" />
+        <PageBody padding="default">
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <KeyIcon weight="bold" />
+              </EmptyMedia>
+              <EmptyTitle>Not in this project</EmptyTitle>
+              <EmptyDescription>
+                Revoked, deleted, or in a different project.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button asChild variant="outline" size="sm" className="text-xs">
+                <Link href={`/projects/${slug}/developers/keys`}>
+                  Back to keys
+                </Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        </PageBody>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <PageHeader
+        eyebrow="Developers · Keys"
+        title={key.name}
+        description={
+          <span className="font-mono text-[11px]">
+            {key.keyPrefix}••••{key.lastFour ?? "****"}
+          </span>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setRotateOpen(true)}
+            >
+              <ArrowsClockwiseIcon className="size-3.5" aria-hidden />
+              Rotate
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5 text-xs"
+              disabled={!key.isActive}
+              onClick={() => setRevokeOpen(true)}
+            >
+              <ProhibitIcon className="size-3.5" aria-hidden />
+              Revoke
+            </Button>
+          </div>
+        }
+      />
+
+      <PageToolbar
+        leading={
+          <PageTabs<Tab>
+            options={[
+              { id: "overview", label: "Overview" },
+              { id: "activity", label: "Activity" },
+              { id: "settings", label: "Settings" },
+            ]}
+            value={tab}
+            onChange={setTab}
+            aria-label="Key detail tabs"
+          />
+        }
+      />
+
+      <PageBody padding="default" className="overflow-y-auto">
+        {tab === "overview" && <UsageChart data={events} />}
+        {tab === "activity" && <ActivityTab slug={slug} keyId={keyId} />}
+        {tab === "settings" && (
+          <SettingsTab
+            entry={key}
+            slug={slug}
+            onRevoke={() => setRevokeOpen(true)}
+          />
+        )}
+      </PageBody>
+
+      <ConfirmationDialog
+        open={rotateOpen}
+        onOpenChange={setRotateOpen}
+        intent="warning"
+        title={<>Rotate &ldquo;{key.name}&rdquo;?</>}
+        description="The old secret stops working immediately. Update your servers before continuing."
+        cancelLabel="Cancel"
+        confirmLabel="Rotate key"
+        onConfirm={handleRotate}
+      />
+
+      <ConfirmationDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        intent="danger"
+        title={<>Revoke &ldquo;{key.name}&rdquo;?</>}
+        description="This key stops working immediately. You can't undo it."
+        cancelLabel="Keep key"
+        confirmLabel="Revoke key"
+        onConfirm={handleRevoke}
+      />
+
+      {/* Show rotated secret — copy-once reveal, guarded close. */}
+      <Dialog
+        open={rotatePlaintext != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRotateConfirmClose(true);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Key rotated</DialogTitle>
+          </DialogHeader>
+          {rotatePlaintext != null && (
+            <RevealStep
+              plaintext={rotatePlaintext}
+              onClose={() => setRotatePlaintext(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmCloseDialog
+        open={rotateConfirmClose}
+        onOpenChange={setRotateConfirmClose}
+        onConfirm={() => {
+          setRotateConfirmClose(false);
+          setRotatePlaintext(null);
+        }}
+      />
+    </div>
+  );
+}

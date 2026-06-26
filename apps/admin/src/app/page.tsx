@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
-export default function AdminPage() {
-  // Redirect to dashboard
-  redirect('/dashboard');
+export default function RootPage() {
+  redirect("/plans");
 }

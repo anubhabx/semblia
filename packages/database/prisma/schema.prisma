@@ -5,59 +5,104 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider      = "prisma-client-js"
-  output        = "../src/generated/prisma"
-  engineType    = "binary"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  engineType      = "binary"
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String  @id @default(cuid()) // Clerk user Id
-  email     String  @unique
-  firstName String?
-  lastName  String?
-  avatar    String? @db.VarChar(1000) // Avatar URL from Azure Blob Storage
+  id                         String  @id // Clerk user Id
+  email                      String  @unique
+  firstName                  String?
+  lastName                   String?
+  avatar                     String? @db.VarChar(1000) // Avatar URL from Azure Blob Storage
+  accountDefaultsLogoAssetId String? @unique
+  lastUsedProjectId          String?
 
-  plan                 UserPlan              @default(FREE)
-  projects             Project[]
-  testimonials         Testimonial[]
-  apiKeys              ApiKey[]
-  subscription         Subscription? // null for free tier users
-  subscriptionPayments SubscriptionPayment[]
+  plan                               UserPlan                   @default(FREE)
+  projects                           Project[]
+  lastUsedProject                    Project?                   @relation("UserLastUsedProject", fields: [lastUsedProjectId], references: [id], onDelete: SetNull)
+  projectMemberships                 ProjectMember[]
+  projectInvitesSent                 ProjectMemberInvite[]      @relation("ProjectMemberInviteInvitedBy")
+  projectInvitesAccepted             ProjectMemberInvite[]      @relation("ProjectMemberInviteAcceptedBy")
+  projectOwnershipTransfersFrom      ProjectOwnershipTransfer[] @relation("ProjectOwnershipTransferFrom")
+  projectOwnershipTransfersTo        ProjectOwnershipTransfer[] @relation("ProjectOwnershipTransferTo")
+  projectOwnershipTransfersInitiated ProjectOwnershipTransfer[] @relation("ProjectOwnershipTransferInitiatedBy")
+  projectOwnershipTransfersResponded ProjectOwnershipTransfer[] @relation("ProjectOwnershipTransferRespondedBy")
+  apiKeys                            ApiKey[]
+  subscription                       Subscription? // null for free tier users
+  subscriptionPayments               SubscriptionPayment[]
+  paymentMethods                     PaymentMethod[]
+  invoices                           Invoice[]
+  billingProfile                     BillingProfile?
 
   // Notification system relations
-  notifications           Notification[]
-  notificationPreferences NotificationPreferences?
+  notifications            Notification[]
+  notificationPreferences  NotificationPreferences?
+  organizationsCreated     Organization[]           @relation("OrganizationCreatedBy")
+  trustedOriginsCreated    ProjectTrustedOrigin[]   @relation("ProjectTrustedOriginCreatedBy")
+  signingSecretsCreated    ProjectSigningSecret[]   @relation("ProjectSigningSecretCreatedBy")
+  studioDraftsUpdated      StudioDraft[]            @relation("StudioDraftUpdatedBy")
+  formsUpdated             Form[]                   @relation("FormUpdatedBy")
+  integrationConnections   IntegrationConnection[]  @relation("IntegrationConnectionConnectedBy")
+  mediaAssets              MediaAsset[]             @relation("MediaAssetUser")
+  accountDefaultsLogoAsset MediaAsset?              @relation("UserAccountDefaultsLogoAsset", fields: [accountDefaultsLogoAssetId], references: [id], onDelete: SetNull)
 
   // Admin tracking
-  lastLogin DateTime?
+  lastLogin             DateTime?
+  onboardingStep        UserOnboardingStep @default(PROFILE)
+  onboardingData        Json?
+  defaults              Json?
+  onboardingCompletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([lastUsedProjectId])
+}
+
+model Organization {
+  id              String   @id @default(cuid())
+  clerkOrgId      String   @unique @db.VarChar(255)
+  name            String   @db.VarChar(255)
+  slug            String?  @db.VarChar(255)
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy User?     @relation("OrganizationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  projects  Project[]
+
+  @@index([slug])
+  @@index([createdByUserId])
 }
 
 model Project {
-  id                  String            @id @default(cuid())
-  userId              String
-  name                String            @db.VarChar(255)
-  shortDescription    String?           @db.VarChar(500)
-  description         String?           @db.Text
-  slug                String            @unique @db.VarChar(255)
-  logoUrl             String?           @db.VarChar(1000)
-  projectType         ProjectType?      @default(OTHER)
-  websiteUrl          String?           @db.VarChar(1000)
-  collectionFormUrl   String?           @db.VarChar(1000)
-  brandColorPrimary   String?           @db.VarChar(7) // Hex color code
-  brandColorSecondary String?           @db.VarChar(7) // Hex color code
-  socialLinks         Json? // { twitter: "...", linkedin: "...", github: "..." }
-  tags                String[] // Array of tags for internal categorization
-  visibility          ProjectVisibility @default(PRIVATE)
-  isActive            Boolean           @default(true)
+  id                     String            @id @default(cuid())
+  userId                 String
+  organizationId         String?
+  name                   String            @db.VarChar(255)
+  shortDescription       String?           @db.VarChar(500)
+  description            String?           @db.Text
+  slug                   String            @unique @db.VarChar(255)
+  logoAssetId            String?           @unique
+  projectType            ProjectType?      @default(OTHER)
+  websiteUrl             String?           @db.VarChar(1000)
+  brandColorPrimary      String?           @db.VarChar(7) // Hex color code
+  brandColorSecondary    String?           @db.VarChar(7) // Hex color code
+  socialLinks            Json? // { twitter: "...", linkedin: "...", github: "..." }
+  tags                   String[] // Array of tags for internal categorization
+  allowedOrigins         String[]          @default([])
+  visibility             ProjectVisibility @default(PRIVATE)
+  isActive               Boolean           @default(true)
+  signingSecretEncrypted String?
+  signingSecretRotatedAt DateTime?
 
   // Auto-Moderation Settings
   autoModeration       Boolean @default(true) // Enable auto-moderation
@@ -65,41 +110,463 @@ model Project {
   profanityFilterLevel String? @default("MODERATE") // STRICT, MODERATE, LENIENT
   moderationSettings   Json? // Custom moderation rules
 
-  // Collection Form Configuration
-  // {
-  //   headerTitle,
-  //   headerDescription,
-  //   thankYouMessage,
-  //   enableRating,
-  //   enableJobTitle,
-  //   enableCompany,
-  //   enableAvatar,
-  //   enableVideoUrl,
-  //   enableGoogleVerification,
-  //   requireRating,
-  //   requireJobTitle,
-  //   requireCompany,
-  //   requireAvatar,
-  //   requireVideoUrl,
-  //   requireGoogleVerification,
-  //   allowAnonymousSubmissions,
-  //   notifyOnSubmission
-  // }
-  formConfig Json?
-
-  testimonials Testimonial[]
-  widgets      Widget[]
-  apiKeys      ApiKey[]
+  widgets                   Widget[]
+  members                   ProjectMember[]
+  memberInvites             ProjectMemberInvite[]
+  apiKeys                   ApiKey[]
+  trustedOrigins            ProjectTrustedOrigin[]
+  signingSecrets            ProjectSigningSecret[]
+  publicSurfaceHosts        PublicSurfaceHost[]
+  studioDrafts              StudioDraft[]
+  analyticsDaily            ProjectAnalyticsDaily[]
+  actionAudits              ProjectActionAudit[]
+  outboundWebhookEndpoints  OutboundWebhookEndpoint[]
+  outboundWebhookDeliveries OutboundWebhookDelivery[]
+  exportDestinations        ExportDestination[]
+  exportRules               ExportRule[]
+  exportDeliveries          ExportDelivery[]
+  integrationConnections    IntegrationConnection[]
+  mediaAssets               MediaAsset[]               @relation("MediaAssetProject")
+  ownershipTransfers        ProjectOwnershipTransfer[]
+  forms                     Form[]
+  formVersions              FormVersion[]
+  formResponses             FormResponse[]
+  formViews                 FormView[]
+  formResponseAnnotations   FormResponseAnnotation[]
+  formModerationRuns        FormModerationRun[]
+  formSubmitIdempotencies   FormSubmitIdempotency[]
+  lastUsedByUsers           User[]                    @relation("UserLastUsedProject")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  logoAsset    MediaAsset?   @relation("ProjectLogoAsset", fields: [logoAssetId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([organizationId])
   @@index([visibility])
   @@index([projectType])
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  userId    String
+  role      MemberRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectMemberInvite {
+  id               String                    @id @default(cuid())
+  projectId        String
+  email            String                    @db.VarChar(320)
+  role             MemberRole
+  status           ProjectMemberInviteStatus @default(PENDING)
+  invitedByUserId  String?
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  expiresAt        DateTime                  @default(dbgenerated("(now() + interval '14 days')"))
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy  User?   @relation("ProjectMemberInviteInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  acceptedBy User?   @relation("ProjectMemberInviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, email], map: "ProjectMemberInvite_pending_project_email_key", where: raw("\"status\" = 'PENDING'::\"ProjectMemberInviteStatus\""))
+  @@index([email, status])
+  @@index([projectId])
+  @@index([invitedByUserId])
+  @@index([acceptedByUserId])
+}
+
+enum ProjectMemberInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum ProjectOwnershipTransferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+model ProjectOwnershipTransfer {
+  id                String                         @id @default(cuid())
+  projectId         String
+  fromUserId        String
+  toUserId          String
+  status            ProjectOwnershipTransferStatus @default(PENDING)
+  initiatedByUserId String?
+  respondedByUserId String?
+  respondedAt       DateTime?
+  expiresAt         DateTime                       @default(dbgenerated("(now() + interval '72 hours')"))
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromUser    User    @relation("ProjectOwnershipTransferFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User    @relation("ProjectOwnershipTransferTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  initiatedBy User?   @relation("ProjectOwnershipTransferInitiatedBy", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
+  respondedBy User?   @relation("ProjectOwnershipTransferRespondedBy", fields: [respondedByUserId], references: [id], onDelete: SetNull)
+
+  // At most one pending transfer per project.
+  @@unique([projectId], map: "ProjectOwnershipTransfer_pending_project_key", where: raw("\"status\" = 'PENDING'::\"ProjectOwnershipTransferStatus\""))
+  @@index([projectId])
+  @@index([toUserId, status])
+  @@index([fromUserId])
+  @@index([initiatedByUserId])
+  @@index([respondedByUserId])
+}
+
+enum TrustedOriginKind {
+  COLLECTION
+  WALL
+  CUSTOM
+}
+
+enum PublicTrustStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
+model ProjectTrustedOrigin {
+  id              String            @id @default(cuid())
+  projectId       String
+  origin          String            @db.VarChar(1000)
+  kind            TrustedOriginKind @default(CUSTOM)
+  status          PublicTrustStatus @default(ACTIVE)
+  verifiedAt      DateTime?
+  createdByUserId String?
+  notes           String?           @db.Text
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation("ProjectTrustedOriginCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  formResponses FormResponse[]
+
+  @@unique([projectId, origin])
+  @@index([projectId, status])
+  @@index([projectId, kind, status])
+  @@index([createdByUserId])
+}
+
+enum ProjectSigningSecretStatus {
+  ACTIVE
+  REVOKED
+}
+
+model ProjectSigningSecret {
+  id                 String                     @id @default(cuid())
+  projectId          String
+  version            Int
+  label              String?                    @db.VarChar(120)
+  secretEncrypted    String                     @db.Text
+  secretHash         String?                    @db.VarChar(128)
+  status             ProjectSigningSecretStatus @default(ACTIVE)
+  createdByUserId    String?
+  rotatedAt          DateTime                   @default(now())
+  revokedAt          DateTime?
+  lastUsedAt         DateTime?
+  lastUsedFromIpHash String?                    @db.VarChar(128)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation("ProjectSigningSecretCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  formResponses FormResponse[]
+
+  @@unique([projectId, version])
+  @@index([projectId, status])
+  @@index([createdByUserId])
+  @@index([lastUsedAt])
+}
+
+enum PublicSurfaceFeature {
+  COLLECTION
+  WALL
+}
+
+enum PublicSurfaceResourceType {
+  PROJECT
+  FORM
+  WIDGET
+}
+
+enum PublicSurfaceHostStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  DISABLED
+}
+
+enum OutboundWebhookStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERING
+  SUCCEEDED
+  FAILED
+  EXHAUSTED
+}
+
+enum ExportDestinationProvider {
+  CSV
+  WEBHOOK
+  SLACK
+  NOTION
+  LINEAR
+  GITHUB
+}
+
+enum ExportDestinationStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
+enum IntegrationProvider {
+  SLACK
+  NOTION
+  LINEAR
+  GITHUB
+}
+
+enum IntegrationAuthStrategy {
+  CLERK_OAUTH
+  NATIVE_OAUTH
+  MANUAL_SECRET
+}
+
+model PublicSurfaceHost {
+  id                    String                    @id @default(cuid())
+  projectId             String
+  feature               PublicSurfaceFeature
+  resourceType          PublicSurfaceResourceType @default(PROJECT)
+  resourceId            String?
+  hostname              String                    @unique @db.VarChar(255)
+  isDefault             Boolean                   @default(false)
+  status                PublicSurfaceHostStatus   @default(ACTIVE)
+  verificationTokenHash String?                   @db.VarChar(128)
+  verifiedAt            DateTime?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, feature, status])
+  @@index([resourceType, resourceId])
+  @@index([hostname, status])
+}
+
+model OutboundWebhookEndpoint {
+  id                     String                @id @default(cuid())
+  projectId              String
+  name                   String                @db.VarChar(255)
+  url                    String                @db.VarChar(2000)
+  signingSecretEncrypted String                @db.Text
+  signingSecretHash      String?               @db.VarChar(128)
+  subscribedEvents       String[]              @default([])
+  status                 OutboundWebhookStatus @default(ACTIVE)
+  lastSuccessAt          DateTime?
+  lastFailureAt          DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  project    Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliveries OutboundWebhookDelivery[]
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+}
+
+model OutboundWebhookDelivery {
+  id                  String         @id
+  endpointId          String
+  projectId           String
+  eventType           String         @db.VarChar(120)
+  payload             Json
+  status              DeliveryStatus @default(PENDING)
+  attempts            Int            @default(0)
+  nextAttemptAt       DateTime?
+  responseStatus      Int?
+  responseBodySnippet String?        @db.Text
+  error               String?        @db.Text
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  endpoint OutboundWebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  project  Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, status])
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([eventType, createdAt])
+}
+
+model ExportDestination {
+  id        String                    @id @default(cuid())
+  projectId String
+  provider  ExportDestinationProvider
+  name      String                    @db.VarChar(255)
+  config    Json
+  status    ExportDestinationStatus   @default(ACTIVE)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rules      ExportRule[]
+  deliveries ExportDelivery[]
+
+  @@index([projectId, provider])
+  @@index([projectId, status])
+}
+
+model ExportRule {
+  id            String   @id @default(cuid())
+  projectId     String
+  destinationId String
+  name          String   @db.VarChar(255)
+  eventTypes    String[] @default([])
+  filter        Json?
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  destination ExportDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  deliveries  ExportDelivery[]
+
+  @@index([projectId, enabled])
+  @@index([destinationId])
+}
+
+model ExportDelivery {
+  id              String         @id
+  projectId       String
+  destinationId   String
+  ruleId          String?
+  eventType       String         @db.VarChar(120)
+  payload         Json
+  status          DeliveryStatus @default(PENDING)
+  attempts        Int            @default(0)
+  nextAttemptAt   DateTime?
+  error           String?        @db.Text
+  artifactAssetId String?        @unique
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  destination   ExportDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  rule          ExportRule?       @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  artifactAsset MediaAsset?       @relation("ExportArtifactAsset", fields: [artifactAssetId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([destinationId, status])
+  @@index([ruleId])
+  @@index([eventType, createdAt])
+}
+
+model IntegrationConnection {
+  id                String                  @id @default(cuid())
+  projectId         String
+  provider          IntegrationProvider
+  authStrategy      IntegrationAuthStrategy
+  connectedByUserId String?
+  clerkProvider     String?                 @db.VarChar(120)
+  externalAccountId String?                 @db.VarChar(255)
+  status            String                  @default("ACTIVE") @db.VarChar(32)
+  scopes            String[]                @default([])
+  config            Json?
+  lastCheckedAt     DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  connectedBy User?   @relation("IntegrationConnectionConnectedBy", fields: [connectedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, provider])
+  @@index([projectId, status])
+  @@index([connectedByUserId])
+}
+
+enum MediaAssetPurpose {
+  PROJECT_LOGO
+  ACCOUNT_DEFAULTS_LOGO
+  FORM_BRANDING_LOGO
+  SUBMISSION_ATTACHMENT
+  EXPORT_ARTIFACT
+}
+
+enum MediaAssetVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum MediaAssetStatus {
+  PENDING
+  ACTIVE
+  DELETED
+}
+
+model MediaAsset {
+  id                 String               @id @default(cuid())
+  storageKey         String               @unique @db.VarChar(512)
+  bucket             String               @db.VarChar(255)
+  contentType        String               @db.VarChar(120)
+  byteSize           Int?
+  checksumSha256     String?              @db.VarChar(128)
+  purpose            MediaAssetPurpose
+  visibility         MediaAssetVisibility
+  status             MediaAssetStatus     @default(PENDING)
+  projectId          String?
+  userId             String?
+  formId             String?
+  responseId         String?
+  createdByActorType String?              @db.VarChar(20)
+  createdByActorId   String?              @db.VarChar(64)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  confirmedAt        DateTime?
+
+  project      Project?      @relation("MediaAssetProject", fields: [projectId], references: [id], onDelete: Cascade)
+  user         User?         @relation("MediaAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  form         Form?         @relation("MediaAssetForm", fields: [formId], references: [id], onDelete: SetNull)
+  formResponse FormResponse? @relation("MediaAssetFormResponse", fields: [responseId], references: [id], onDelete: SetNull)
+
+  projectLogoFor         Project?            @relation("ProjectLogoAsset")
+  accountDefaultsLogoFor User?               @relation("UserAccountDefaultsLogoAsset")
+  exportArtifactFor      ExportDelivery?     @relation("ExportArtifactAsset")
+  moderationRuns         FormModerationRun[] @relation("MediaAssetFormModeration")
+
+  @@index([projectId, purpose])
+  @@index([userId, purpose])
+  @@index([status, createdAt])
+  @@index([visibility, status])
+  @@index([formId])
+  @@index([responseId])
 }
 
 model Plan {
@@ -112,15 +579,49 @@ model Plan {
   isActive       Boolean  @default(true)
   limits         Json // { "projects": 5, "teamMembers": 2 }
   razorpayPlanId String?  @unique // ID from Razorpay
-  type           UserPlan @default(FREE) // Mapping to enum for code compatibility
+  type           UserPlan @unique @default(FREE) // Mapping to enum for code compatibility
 
-  subscriptions        Subscription[]
-  subscriptionPayments SubscriptionPayment[]
+  subscriptions          Subscription[]
+  scheduledSubscriptions Subscription[]        @relation("ScheduledPlan")
+  subscriptionPayments   SubscriptionPayment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([isActive])
+}
+
+model AdminUser {
+  id             String    @id @default(cuid())
+  clerkUserId    String    @unique
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  grantedByEmail String?
+  grantedAt      DateTime  @default(now())
+  revokedAt      DateTime?
+  lastLoginAt    DateTime?
+  notes          String?
+
+  auditLogs AdminAuditLog[]
+
+  @@index([isActive])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String
+  action      String   @db.VarChar(64)
+  targetType  String?  @db.VarChar(64)
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?  @db.VarChar(64)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId, createdAt])
+  @@index([action, createdAt])
 }
 
 model Subscription {
@@ -133,8 +634,10 @@ model Subscription {
   providerStatus String? @db.VarChar(32)
 
   // Relations
-  planId String?
-  plan   Plan?   @relation(fields: [planId], references: [id])
+  planId          String?
+  plan            Plan?   @relation(fields: [planId], references: [id])
+  scheduledPlanId String?
+  scheduledPlan   Plan?   @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id])
 
   // Legacy/Code Enum fallback (optional, but good to keep synced)
   userPlan UserPlan @default(FREE) @map("plan")
@@ -142,8 +645,11 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  externalSubscriptionId String? @unique // Razorpay Subscription ID
-  externalCustomerId     String? // Razorpay Customer ID (optional)
+  externalSubscriptionId          String?   @unique // Razorpay Subscription ID
+  razorpaySubscriptionId          String?
+  externalCustomerId              String? // Razorpay Customer ID (optional)
+  scheduledRazorpaySubscriptionId String?   @unique
+  scheduledStartAt                DateTime?
 
   // Razorpay Specifics
   razorpayOrderId      String?
@@ -170,9 +676,78 @@ model Subscription {
   @@index([userId])
   @@index([userId, externalSubscriptionId])
   @@index([planId])
+  @@index([scheduledPlanId])
   @@index([status])
   @@index([providerStatus])
   @@index([lastWebhookAt])
+}
+
+model PaymentMethod {
+  id              String             @id @default(cuid())
+  userId          String
+  brand           PaymentMethodBrand
+  last4           String             @db.VarChar(4)
+  expMonth        Int
+  expYear         Int
+  isDefault       Boolean            @default(false)
+  razorpayTokenId String?            @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+enum PaymentMethodBrand {
+  VISA
+  MASTERCARD
+  RUPAY
+  AMEX
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  userId            String
+  number            String        @db.VarChar(120)
+  issuedAt          DateTime
+  amount            Int
+  currency          String        @default("INR") @db.VarChar(3)
+  status            InvoiceStatus
+  planName          String        @db.VarChar(255)
+  razorpayInvoiceId String?       @unique
+  downloadUrl       String?       @db.VarChar(1000)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, issuedAt])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  PAID
+  OPEN
+  VOID
+}
+
+model BillingProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  name       String   @default("") @db.VarChar(255)
+  line1      String   @default("") @db.VarChar(500)
+  line2      String?  @db.VarChar(500)
+  city       String   @default("") @db.VarChar(255)
+  state      String   @default("") @db.VarChar(255)
+  postalCode String   @default("") @db.VarChar(32)
+  country    String   @default("IN") @db.VarChar(2)
+  gstin      String?  @db.VarChar(32)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SubscriptionPayment {
@@ -227,123 +802,184 @@ model PaymentWebhookEvent {
   @@index([receivedAt])
 }
 
-model Testimonial {
-  id            String          @id @default(cuid())
-  userId        String?
-  projectId     String?
-  authorName    String          @db.VarChar(255)
-  authorEmail   String?         @db.VarChar(255)
-  authorRole    String?         @db.VarChar(255) // e.g., "CEO", "Marketing Manager"
-  authorCompany String?         @db.VarChar(255) // e.g., "Acme Inc."
-  authorAvatar  String?         @db.VarChar(1000) // Avatar URL from Azure Blob Storage
-  content       String          @db.Text
-  type          TestimonialType @default(TEXT)
-  videoUrl      String?
-  mediaUrl      String?
-  source        String?         @db.VarChar(100) // e.g., "manual", "twitter", etc.
-  sourceUrl     String?         @db.VarChar(500) // e.g., URL of the tweet if sourced from Twitter
-  oembedData    Json? // Store oEmbed (Extracted Embed Info)
-  isPublished   Boolean         @default(false)
-  rating        Int?            @db.SmallInt // e.g., 1 to 5 stars
-  isApproved    Boolean         @default(false) // For moderation purposes
-  ipAddress     String?         @db.VarChar(45) // To store IPv6 addresses if needed
-  userAgent     String?         @db.Text // To store user agent string if needed
-
-  // OAuth Verification
-  isOAuthVerified Boolean @default(false) // True if verified via OAuth
-  oauthProvider   String? @db.VarChar(50) // e.g., "google", "github"
-  oauthSubject    String? @db.VarChar(255) // OAuth subject/user ID for verification
-
-  // Auto-Moderation
-  moderationStatus ModerationStatus @default(PENDING)
-  moderationScore  Float? // 0-1, higher = more likely spam
-  moderationFlags  Json? // Array of detected issues
-  autoPublished    Boolean          @default(false) // True if auto-approved by moderation
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  User    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tags    Tag[]    @relation("TestimonialTags")
-
-  @@index([userId])
-  @@index([projectId])
-  @@index([isPublished])
-  @@index([createdAt])
-  @@index([isOAuthVerified])
-  // Composite indexes for common query patterns
-  @@index([projectId, isPublished, isApproved, createdAt]) // Public widget embed + API-key listing
-  @@index([projectId, moderationStatus, createdAt]) // Moderation queue + admin filtering
-  @@index([projectId, createdAt]) // Paginated list ordered by date
-  @@index([ipAddress, createdAt]) // IP velocity check (moderation)
-  @@index([ipAddress, projectId, createdAt]) // IP+project velocity (moderation)
-  @@index([authorEmail, createdAt]) // Email velocity + privacy queries
+model ClerkWebhookEvent {
+  id              String    @id @default(cuid())
+  providerEventId String    @unique
+  eventType       String
+  payload         Json
+  status          String    @default("processed")
+  error           String?   @db.Text
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
 }
 
-enum TestimonialType {
-  TEXT
-  VIDEO
-  AUDIO
+enum StudioDraftResourceType {
+  FORM
+  WIDGET
 }
 
-enum ModerationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FLAGGED
+model StudioDraft {
+  id               String                  @id @default(cuid())
+  projectId        String
+  resourceType     StudioDraftResourceType
+  resourceId       String
+  version          Int                     @default(1)
+  publishedVersion Int?
+  draft            Json
+  updatedByUserId  String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedBy User?   @relation("StudioDraftUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, resourceType, resourceId])
+  @@index([projectId, resourceType])
+  @@index([updatedByUserId])
+  @@index([updatedAt])
+}
+
+enum WidgetType {
+  EMBED
+  WALL_OF_LOVE
+}
+
+enum LayoutType {
+  CAROUSEL
+  GRID
+  MASONRY
+  LIST
+  WALL
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  AUTO
+}
+
+enum CardStyle {
+  SHADOW
+  BORDERED
+  FLAT
+  ELEVATED
+}
+
+enum WidgetDensity {
+  COMPACT
+  DEFAULT
+  COZY
 }
 
 model Widget {
-  id        String   @id @default(cuid())
-  projectId String?
-  config    Json // Customization tokens, colors, layout, etc.
+  id        String @id @default(cuid())
+  projectId String
+  name      String @default("Untitled widget") @db.VarChar(255)
+
+  kind   WidgetType @default(EMBED)
+  layout LayoutType @default(CAROUSEL)
+  theme  ThemeMode  @default(LIGHT)
+
+  preset     String        @default("clean") @db.VarChar(64)
+  accent     String        @default("#0f172a") @db.VarChar(64)
+  text       String        @default("#0a0a0b") @db.VarChar(64)
+  bg         String        @default("#ffffff") @db.VarChar(64)
+  line       String        @default("#e5e7eb") @db.VarChar(64)
+  surface    String        @default("#f7f7f8") @db.VarChar(64)
+  radius     Int           @default(12)
+  fontFamily String        @default("\"Geist\", system-ui, sans-serif") @db.VarChar(255)
+  fontHead   String        @default("\"Geist\", system-ui, sans-serif") @db.VarChar(255)
+  cardStyle  CardStyle     @default(BORDERED)
+  density    WidgetDensity @default(DEFAULT)
+
+  showRating  Boolean @default(true)
+  showAvatar  Boolean @default(true)
+  showCompany Boolean @default(true)
+  showDate    Boolean @default(false)
+  showSource  Boolean @default(false)
+
+  maxItems       Int     @default(9)
+  autoRotate     Boolean @default(true)
+  rotateInterval Int     @default(5000)
+  showBranding   Boolean @default(true)
+
+  contentMode       WidgetContentMode @default(ALL)
+  pickedIds         String[]          @default([])
+  config            Json
+  publishedSnapshot Json?
+
+  wallSlug    String? @unique @db.VarChar(64)
+  wallTitle   String? @db.VarChar(500)
+  wallSubhead String? @db.Text
+  isActive    Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  Project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@index([projectId]) // Widget listing by project
+  @@index([projectId])
+}
+
+enum WidgetContentMode {
+  ALL
+  HANDPICKED
+}
+
+enum ApiKeyType {
+  SECRET
+  PUBLISHABLE
+  AGENT
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+  EXPIRED
 }
 
 model ApiKey {
-  id        String @id @default(cuid())
-  name      String @db.VarChar(255) // e.g., "Production Widget Key", "Development Key"
-  keyHash   String @unique @db.VarChar(255) // Hashed API key (bcrypt)
-  keyPrefix String @db.VarChar(20) // Visible prefix for identification (e.g., "tresta_live_abcd1234")
+  id        String       @id @default(cuid())
+  name      String       @db.VarChar(255) // e.g., "Production Widget Key", "Development Key"
+  keyHash   String       @unique @db.VarChar(255) // Hashed API key (bcrypt)
+  keyPrefix String       @db.VarChar(20) // Visible prefix for identification (e.g., "semblia_live_abcd1234")
+  keyType   ApiKeyType   @default(SECRET)
+  status    ApiKeyStatus @default(ACTIVE)
+  lastFour  String?      @db.VarChar(8)
 
   // Relations
   userId    String
   projectId String
 
   // Permissions & Limits
-  permissions Json? // { widgets: true, testimonials: false, analytics: false }
-  usageCount  Int   @default(0) // Total number of requests
+  permissions Json? // { widgets: true, submissions: false, analytics: false }
+  scopes      String[] @default([])
+  usageCount  Int      @default(0) // Total number of requests
   usageLimit  Int? // Maximum allowed requests (null = unlimited)
-  rateLimit   Int   @default(100) // Requests per hour
+  rateLimit   Int      @default(100) // Requests per hour
 
   // Status & Lifecycle
   isActive   Boolean   @default(true)
   lastUsedAt DateTime?
   expiresAt  DateTime? // null = never expires
+  revokedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dailyUsage ApiKeyDailyUsage[]
 
   @@index([userId])
   @@index([projectId])
   @@index([keyHash])
   @@index([isActive])
-}
-
-model Tag {
-  id           String        @id @default(cuid())
-  name         String        @unique
-  testimonials Testimonial[] @relation("TestimonialTags")
+  @@index([projectId, status])
+  @@index([keyType, status])
+  @@index([expiresAt])
 }
 
 enum SubscriptionStatus {
@@ -358,6 +994,16 @@ enum SubscriptionStatus {
 enum UserPlan {
   FREE
   PRO
+  BUSINESS
+}
+
+enum UserOnboardingStep {
+  PROFILE
+  REFERRAL
+  INTENT
+  PROJECT
+  COLLECTION
+  COMPLETED
 }
 
 enum ProjectType {
@@ -380,6 +1026,13 @@ enum ProjectVisibility {
   INVITE_ONLY
 }
 
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
 // ============================================
 // Notification System Models
 // ============================================
@@ -391,7 +1044,7 @@ model Notification {
   title     String
   message   String           @db.Text // Sanitized HTML-safe content
   link      String?
-  metadata  Json? // Additional data (testimonialId, projectId, etc.)
+  metadata  Json? // Additional data (submissionId, projectId, etc.)
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
@@ -403,20 +1056,63 @@ model Notification {
 }
 
 enum NotificationType {
-  NEW_TESTIMONIAL
-  TESTIMONIAL_FLAGGED
-  TESTIMONIAL_APPROVED
-  TESTIMONIAL_REJECTED
+  SUBMISSION_CREATED
+  SUBMISSION_MODERATED
+  SUBMISSION_FLAGGED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  EXPORT_DELIVERY_FAILED
+  EXPORT_DELIVERY_READY
+  AGENT_ACTION_CREATED
+  PROJECT_INVITE_RECEIVED
+  PROJECT_INVITE_ACCEPTED
+  PROJECT_TRANSFER_REQUESTED
+  PROJECT_TRANSFER_ACCEPTED
+  PROJECT_TRANSFER_DECLINED
+  PROJECT_TRANSFER_CANCELLED
+  OUTBOUND_WEBHOOK_DELIVERY_FAILED
   SECURITY_ALERT
 }
 
+enum EmailDeliveryStatus {
+  PENDING
+  ENQUEUED
+  SENDING
+  SENT
+  FAILED
+  EXHAUSTED
+  SUPPRESSED
+}
+
+enum EmailTemplateKey {
+  NOTIFICATION
+  PROJECT_MEMBER_INVITE
+  CLERK_EMAIL
+}
+
 model NotificationPreferences {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  emailEnabled Boolean  @default(true)
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  emailEnabled    Boolean  @default(true)
+  typePreferences Json? // { SUBMISSION_CREATED: { email: true, inApp: true } }
+  updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKeyDailyUsage {
+  id            String    @id @default(cuid())
+  apiKeyId      String
+  date          String    @db.VarChar(10) // YYYY-MM-DD in UTC
+  requestCount  Int       @default(0)
+  lastRequestAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, date])
+  @@index([date])
 }
 
 model EmailUsage {
@@ -428,6 +1124,34 @@ model EmailUsage {
   updatedAt         DateTime @updatedAt
 
   @@index([date])
+}
+
+model EmailDelivery {
+  id                String              @id @default(cuid())
+  userId            String?
+  notificationId    String?
+  projectId         String?
+  recipientEmail    String              @db.VarChar(320)
+  recipientName     String?             @db.VarChar(255)
+  template          EmailTemplateKey
+  subject           String              @db.VarChar(255)
+  payload           Json
+  status            EmailDeliveryStatus @default(PENDING)
+  attempts          Int                 @default(0)
+  nextAttemptAt     DateTime?
+  provider          String              @default("resend") @db.VarChar(40)
+  providerMessageId String?             @db.VarChar(255)
+  idempotencyKey    String              @unique @db.VarChar(255)
+  providerError     String?             @db.Text
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([userId, createdAt])
+  @@index([notificationId])
+  @@index([projectId, createdAt])
+  @@index([recipientEmail, createdAt])
 }
 
 // Transactional outbox pattern - ensures reliable job enqueuing
@@ -485,10 +1209,10 @@ model JobIdempotency {
 model AuditLog {
   id          String   @id @default(cuid())
   adminId     String // Clerk user ID of admin
-  action      String // e.g., "PATCH /admin/testimonials/:id/status"
+  action      String // e.g., "PATCH /admin/submissions/:id/status"
   method      String // HTTP method (GET, POST, PUT, PATCH, DELETE)
   path        String // Request path
-  targetType  String? // e.g., "user", "project", "testimonial"
+  targetType  String? // e.g., "user", "project", "submission"
   targetId    String? // ID of the affected resource
   requestBody Json? // Sanitized request body
   statusCode  Int? // HTTP response status code
@@ -502,6 +1226,27 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([requestId])
   @@index([createdAt])
+}
+
+model ProjectActionAudit {
+  id           String   @id @default(cuid())
+  projectId    String
+  actorType    String   @db.VarChar(32)
+  actorId      String?  @db.VarChar(255)
+  credentialId String?  @db.VarChar(255)
+  action       String   @db.VarChar(120)
+  targetType   String?  @db.VarChar(120)
+  targetId     String?  @db.VarChar(255)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([projectId, action, createdAt])
+  @@index([targetType, targetId])
+  @@index([actorType, actorId])
+  @@index([credentialId])
 }
 
 model SystemSettings {
@@ -594,6 +1339,25 @@ model FeatureFlag {
 // Widget Analytics Models
 // ============================================
 
+model ProjectAnalyticsDaily {
+  id                    String   @id @default(cuid())
+  projectId             String
+  day                   DateTime @db.Date
+  formViews             Int      @default(0)
+  formSubmissions       Int      @default(0)
+  widgetLoads           Int      @default(0)
+  submissionImpressions Int      @default(0)
+  hostedPageViews       Int      @default(0)
+  apiRequests           Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, day])
+  @@index([day])
+}
+
 model WidgetAnalytics {
   id         String   @id @default(cuid())
   widgetId   String
@@ -635,4 +1399,298 @@ model WidgetPerformanceAlert {
 enum WidgetAlertType {
   LOAD_TIME_EXCEEDED
   ERROR_RATE_EXCEEDED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Forms (rebuilt collection surface) — docs/plans/2026-06-18-forms-rebuild.md
+//
+// Form          : editable draft source object (the FormDefinitionDoc lives in `draft`).
+// FormVersion   : immutable, versioned, public-safe published snapshot.
+// FormResponse  : canonical collected feedback record (replaces CollectionFormSubmission).
+// FormView      : public form-view impression event.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum FormIntent {
+  TESTIMONIAL
+  REVIEW
+  PRODUCT_FEEDBACK
+  CUSTOMER_STORY
+  CUSTOM
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum FormVersionStatus {
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FormResponseTrustMode {
+  ORIGIN
+  HMAC
+}
+
+// Review (moderation) status and publish status are intentionally orthogonal:
+// a response can be APPROVED but PRIVATE, PUBLISHABLE but not PUBLISHED, etc.
+enum FormResponseReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+  ARCHIVED
+}
+
+enum FormResponsePublishStatus {
+  PRIVATE
+  PUBLISHABLE
+  PUBLISHED
+  UNPUBLISHED
+}
+
+enum FormModerationRunStatus {
+  PENDING
+  ENQUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SUPPRESSED
+}
+
+enum FormModerationArtifactType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  VIDEO_FRAME
+  TRANSCRIPT
+}
+
+enum FormModerationDecision {
+  APPROVE
+  REVIEW
+  REJECT
+}
+
+model Form {
+  id              String     @id @default(cuid())
+  projectId       String
+  intent          FormIntent @default(CUSTOM)
+  name            String     @default("Untitled form") @db.VarChar(255)
+  slug            String?    @db.VarChar(255)
+  status          FormStatus @default(DRAFT)
+  open            Boolean    @default(true) // accepting submissions when published
+  draft           Json // FormDefinitionDoc: structure/fields/screens/flow/design/content/settings
+  draftVersion    Int        @default(1) // optimistic concurrency token for draft saves
+  currentVersion  Int? // published version pointer (FormVersion.version)
+  updatedByUserId String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedBy   User?          @relation("FormUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  versions    FormVersion[]
+  responses   FormResponse[]
+  views       FormView[]
+  mediaAssets MediaAsset[]   @relation("MediaAssetForm")
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+  @@index([projectId, status])
+}
+
+model FormVersion {
+  id              String            @id @default(cuid()) // snapshotId
+  formId          String
+  projectId       String
+  slug            String?           @db.VarChar(255)
+  version         Int
+  schemaVersion   String            @db.VarChar(32)
+  rendererVersion String            @db.VarChar(32)
+  coreVersion     String            @db.VarChar(32)
+  status          FormVersionStatus @default(PUBLISHED)
+  snapshot        Json // immutable public-safe PublicSnapshot
+  checksum        String            @db.VarChar(128)
+  previewImageUrl String?           @db.VarChar(1000)
+  publishedAt     DateTime          @default(now())
+
+  form      Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responses FormResponse[]
+
+  @@unique([formId, version])
+  @@index([projectId])
+  @@index([formId, status])
+}
+
+model FormResponse {
+  id                   String                    @id @default(cuid())
+  projectId            String
+  formId               String
+  versionId            String // FormVersion.id (snapshotId) the response was validated against
+  version              Int
+  trustMode            FormResponseTrustMode
+  trustedOriginId      String?
+  signingSecretId      String?
+  idempotencyKey       String?                   @db.VarChar(255)
+  payloadHash          String?                   @db.VarChar(64)
+  answers              Json // StoredAnswer[]: { fieldId, type, labelSnapshot, value, private, publishable, usedInWidget }
+  ratingValue          Int?                      @db.SmallInt
+  ratingScale          Int?                      @db.SmallInt
+  // Denormalized display projection (consent-gated at serve time) for fast widget/list reads.
+  authorName           String?                   @db.VarChar(255)
+  authorRole           String?                   @db.VarChar(255)
+  authorCompany        String?                   @db.VarChar(255)
+  authorAvatarAssetId  String?
+  consent              Json? // FormResponseConsent
+  reviewStatus         FormResponseReviewStatus  @default(PENDING)
+  publishStatus        FormResponsePublishStatus @default(PRIVATE)
+  moderationReason     String?                   @db.Text
+  moderatedByActorType String?                   @db.VarChar(32)
+  moderatedByActorId   String?                   @db.VarChar(255)
+  moderatedAt          DateTime?
+  sourceMetadata       Json? // source type, referrer, utm, campaign, externalId, uaHash, ipHash, snapshotId
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  project         Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  form            Form                         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formVersion     FormVersion                  @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  trustedOrigin   ProjectTrustedOrigin?        @relation(fields: [trustedOriginId], references: [id], onDelete: SetNull)
+  signingSecret   ProjectSigningSecret?        @relation(fields: [signingSecretId], references: [id], onDelete: SetNull)
+  privateMetadata FormResponsePrivateMetadata?
+  annotations     FormResponseAnnotation[]
+  moderationRuns  FormModerationRun[]
+  mediaAssets     MediaAsset[]                 @relation("MediaAssetFormResponse")
+  idempotencyHits FormSubmitIdempotency[]
+
+  @@index([projectId, createdAt])
+  @@index([formId, createdAt])
+  @@index([projectId, formId, createdAt])
+  @@index([projectId, reviewStatus, createdAt])
+  @@index([projectId, publishStatus, createdAt])
+  @@index([versionId])
+  @@index([trustedOriginId])
+  @@index([signingSecretId])
+}
+
+model FormResponsePrivateMetadata {
+  id                   String    @id @default(cuid())
+  responseId           String    @unique
+  authorEmailEncrypted String?   @db.Text
+  authorEmailHash      String?   @db.VarChar(128)
+  ipAddressEncrypted   String?   @db.Text
+  ipAddressHash        String?   @db.VarChar(128)
+  userAgentEncrypted   String?   @db.Text
+  userAgentHash        String?   @db.VarChar(128)
+  retentionUntil       DateTime?
+  consentSnapshot      Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([authorEmailHash])
+  @@index([ipAddressHash])
+  @@index([retentionUntil])
+}
+
+model FormResponseAnnotation {
+  id         String   @id @default(cuid())
+  projectId  String
+  responseId String
+  actorType  String   @db.VarChar(32)
+  actorId    String?  @db.VarChar(255)
+  note       String?  @db.Text
+  labels     String[] @default([])
+  sentiment  String?  @db.VarChar(64)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([responseId, createdAt])
+  @@index([actorType, actorId])
+}
+
+model FormModerationRun {
+  id                  String                     @id @default(cuid())
+  projectId           String
+  responseId          String
+  mediaAssetId        String?
+  artifactType        FormModerationArtifactType
+  artifactHash        String                     @db.VarChar(64)
+  provider            String                     @db.VarChar(64)
+  providerOperation   String                     @db.VarChar(128)
+  providerJobId       String?                    @db.VarChar(255)
+  status              FormModerationRunStatus    @default(PENDING)
+  decision            FormModerationDecision?
+  score               Float?
+  flags               Json?
+  categories          Json?
+  rawResult           Json?
+  estimatedCostMicros Int?
+  attempts            Int                        @default(0)
+  lastAttemptAt       DateTime?
+  nextAttemptAt       DateTime?
+  completedAt         DateTime?
+  errorCode           String?                    @db.VarChar(128)
+  errorMessage        String?                    @db.Text
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response   FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset?  @relation("MediaAssetFormModeration", fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([responseId, artifactType, artifactHash, provider, providerOperation])
+  @@index([projectId, status, createdAt])
+  @@index([responseId, createdAt])
+  @@index([mediaAssetId])
+  @@index([provider, providerJobId])
+  @@index([nextAttemptAt, status])
+}
+
+model FormView {
+  id        String   @id @default(cuid())
+  projectId String
+  formId    String?
+  versionId String?
+  surface   String?  @db.VarChar(32) // hosted | embed | native
+  ipAddress String?  @db.VarChar(255)
+  userAgent String?  @db.Text
+  timestamp DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  form    Form?   @relation(fields: [formId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, timestamp])
+  @@index([formId, timestamp])
+}
+
+model FormSubmitIdempotency {
+  id                 String   @id @default(cuid())
+  projectId          String
+  formId             String?
+  idempotencyKey     String   @db.VarChar(255)
+  payloadHash        String   @db.VarChar(64)
+  responseId         String?
+  responseStatusCode Int
+  responseBody       Json
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  response FormResponse? @relation(fields: [responseId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, formId, idempotencyKey])
+  @@index([responseId])
+  @@index([expiresAt])
 }

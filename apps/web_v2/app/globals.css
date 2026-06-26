@@ -1,0 +1,963 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ─────────────────────────────────────────────────────────────────
+   Semblia — "Quiet Precision" Design System
+   Typography: Inter (sans) + Geist Mono (code)
+   Palette:    Warm Slate neutrals + single Amber-Sand accent
+   Motion:     150ms standard, 200ms layout, 350ms enter/exit
+   Density:    Comfortable (not data-dense, not spacious)
+   ───────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Tailwind theme bridge ── */
+@theme inline {
+  /* Colours */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand accent (amber-sand) */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+
+  /* Success / Warning */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  /* Surface (panel) */
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Typography */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-inter);
+
+  /* Radius — tighter scale for a more precise feel */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.5);
+  --radius-4xl: calc(var(--radius) * 3);
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 350ms;
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LIGHT MODE — Warm Slate / Linen
+   Strategy: Warm off-white bg with warm-leaning slate text.
+   No pure black. No cold gray. Single amber-sand accent.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* ── Surfaces ── */
+  --background: oklch(0.985 0.006 75); /* Warm linen white */
+  --foreground: oklch(0.18 0.012 60); /* Deep warm slate */
+  --card: oklch(1 0.004 75); /* Pure warm white */
+  --card-foreground: oklch(0.18 0.012 60);
+  --popover: oklch(1 0.004 75);
+  --popover-foreground: oklch(0.18 0.012 60);
+
+  /* ── Primary (interactive) — dark warm slate ── */
+  --primary: oklch(0.22 0.014 60); /* Near-black warm */
+  --primary-foreground: oklch(0.97 0.006 75);
+
+  /* ── Secondary — muted warm surface ── */
+  --secondary: oklch(0.94 0.008 70);
+  --secondary-foreground: oklch(0.25 0.012 60);
+
+  /* ── Muted ── */
+  --muted: oklch(0.94 0.008 70);
+  --muted-foreground: oklch(0.5 0.01 65); /* Warm medium gray */
+
+  /* ── Accent — matches secondary for quiet precision ── */
+  --accent: oklch(0.94 0.008 70);
+  --accent-foreground: oklch(0.22 0.014 60);
+
+  /* ── Surface (intermediate panel layer) ── */
+  --surface: oklch(0.975 0.006 75);
+  --surface-foreground: oklch(0.18 0.012 60);
+
+  /* ── Brand accent — warm amber-sand (used sparingly) ── */
+  --brand: oklch(0.7 0.12 55); /* Sandy amber */
+  --brand-foreground: oklch(0.18 0.012 60);
+  --brand-muted: oklch(0.93 0.04 70); /* Pale amber tint */
+
+  /* ── Semantic ── */
+  --destructive: oklch(0.57 0.22 27); /* Warm red */
+  --success: oklch(0.56 0.15 145); /* Sage green */
+  --success-foreground: oklch(0.97 0.005 145);
+  --warning: oklch(0.7 0.12 55); /* Same as brand */
+  --warning-foreground: oklch(0.18 0.012 60);
+
+  /* ── Borders & Rings ── */
+  --border: oklch(0.88 0.008 70); /* Warm light divider */
+  --input: oklch(0.88 0.008 70);
+  --ring: oklch(0.5 0.01 65); /* Soft warm ring */
+
+  /* ── Charts — warm sequential palette ── */
+  --chart-1: oklch(0.7 0.12 55); /* Brand amber */
+  --chart-2: oklch(0.56 0.15 145); /* Sage */
+  --chart-3: oklch(0.58 0.14 265); /* Slate blue */
+  --chart-4: oklch(0.64 0.12 330); /* Muted rose */
+  --chart-5: oklch(0.45 0.01 65); /* Deep slate */
+
+  /* ── Base radius (all others derived in @theme) ── */
+  --radius: 0.5rem;
+
+  /* ── Sidebar ── */
+  --sidebar: oklch(0.97 0.007 75); /* Slightly off-white */
+  --sidebar-foreground: oklch(0.18 0.012 60);
+  --sidebar-primary: oklch(0.22 0.014 60);
+  --sidebar-primary-foreground: oklch(0.97 0.006 75);
+  --sidebar-accent: oklch(0.92 0.01 70);
+  --sidebar-accent-foreground: oklch(0.22 0.014 60);
+  --sidebar-border: oklch(0.88 0.008 70);
+  --sidebar-ring: oklch(0.5 0.01 65);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DARK MODE — Deep Warm Slate
+   Strategy: Not pure black. Warm low-chroma dark like charcoal linen.
+   Cards slightly lifted from background.
+   ══════════════════════════════════════════════════════════════════ */
+.dark {
+  /* ── Surfaces (wider tonal staircase for clear layering) ── */
+  --background: oklch(
+    0.135 0.012 55
+  ); /* Deep warm charcoal — warmer hue pull */
+  --foreground: oklch(0.93 0.008 70); /* Warm off-white */
+  --card: oklch(0.185 0.013 57); /* Lifted card — 0.05 step visible */
+  --card-foreground: oklch(0.93 0.008 70);
+  --popover: oklch(0.205 0.013 57); /* Popover sits above card */
+  --popover-foreground: oklch(0.93 0.008 70);
+
+  /* ── Surface (intermediate panel layer between bg and card) ── */
+  --surface: oklch(0.16 0.012 56);
+  --surface-foreground: oklch(0.93 0.008 70);
+
+  /* ── Primary — light warm for dark bg ── */
+  --primary: oklch(0.92 0.008 70);
+  --primary-foreground: oklch(0.16 0.014 55);
+
+  /* ── Secondary ── */
+  --secondary: oklch(0.22 0.013 57);
+  --secondary-foreground: oklch(0.93 0.008 70);
+
+  /* ── Muted ── */
+  --muted: oklch(0.22 0.013 57);
+  --muted-foreground: oklch(0.58 0.01 62);
+
+  /* ── Accent ── */
+  --accent: oklch(0.22 0.013 57);
+  --accent-foreground: oklch(0.93 0.008 70);
+
+  /* ── Brand accent — slightly brighter for dark bg ── */
+  --brand: oklch(0.74 0.13 55);
+  --brand-foreground: oklch(0.14 0.012 60);
+  --brand-muted: oklch(0.28 0.06 65);
+
+  /* ── Semantic ── */
+  --destructive: oklch(0.68 0.2 27);
+  --success: oklch(0.64 0.16 145);
+  --success-foreground: oklch(0.14 0.012 60);
+  --warning: oklch(0.74 0.13 55);
+  --warning-foreground: oklch(0.14 0.012 60);
+
+  /* ── Borders & Rings ── */
+  --border: oklch(1 0 0 / 11%); /* More visible dividers */
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.7 0.06 55); /* Ring picks up brand warmth */
+
+  /* ── Charts — richer on dark ── */
+  --chart-1: oklch(0.74 0.13 55); /* Brand amber */
+  --chart-2: oklch(0.64 0.16 145); /* Sage */
+  --chart-3: oklch(0.65 0.15 265); /* Slate blue */
+  --chart-4: oklch(0.7 0.14 330); /* Muted rose */
+  --chart-5: oklch(0.55 0.01 65); /* Warm gray */
+
+  /* ── Sidebar ── */
+  --sidebar: oklch(
+    0.15 0.013 55
+  ); /* Slightly darker than background for depth */
+  --sidebar-foreground: oklch(0.93 0.008 70);
+  --sidebar-primary: oklch(0.74 0.13 55); /* Brand as nav highlight */
+  --sidebar-primary-foreground: oklch(0.14 0.014 55);
+  --sidebar-accent: oklch(0.21 0.013 57);
+  --sidebar-accent-foreground: oklch(0.93 0.008 70);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.7 0.06 55);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BASE LAYER — Global Resets & Defaults
+   ══════════════════════════════════════════════════════════════════ */
+@layer base {
+  /* Default border and outline */
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* Document defaults */
+  html {
+    @apply font-sans;
+    font-feature-settings:
+      "kern" 1,
+      "liga" 1,
+      "calt" 1,
+      "ss01" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-synthesis: none;
+  }
+
+  /* Headings use the heading token (enables custom heading font if set) */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+    letter-spacing: -0.02em;
+  }
+
+  /* Smooth outline transition */
+  :focus-visible {
+    outline-offset: 2px;
+  }
+
+  /* Selection colour inherits brand accent */
+  ::selection {
+    background-color: var(--brand-muted);
+    color: var(--foreground);
+  }
+
+  /* Scrollbar — thin & themed */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+    opacity: 0.5;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPONENT LAYER — Refined defaults on top of shadcn primitives
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* ── Elevation helpers ── */
+  .elevation-1 {
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 5%),
+      0 0 0 1px oklch(0 0 0 / 4%);
+  }
+  .elevation-2 {
+    box-shadow:
+      0 4px 8px oklch(0 0 0 / 8%),
+      0 1px 2px oklch(0 0 0 / 5%),
+      0 0 0 1px oklch(0 0 0 / 4%);
+  }
+  .elevation-3 {
+    box-shadow:
+      0 12px 24px oklch(0 0 0 / 10%),
+      0 4px 8px oklch(0 0 0 / 6%),
+      0 0 0 1px oklch(0 0 0 / 4%);
+  }
+
+  /* Dark-mode elevation adjustments */
+  .dark .elevation-1 {
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 30%),
+      0 0 0 1px oklch(1 0 0 / 6%);
+  }
+  .dark .elevation-2 {
+    box-shadow:
+      0 4px 12px oklch(0 0 0 / 40%),
+      0 1px 3px oklch(0 0 0 / 20%),
+      0 0 0 1px oklch(1 0 0 / 6%);
+  }
+  .dark .elevation-3 {
+    box-shadow:
+      0 20px 40px oklch(0 0 0 / 60%),
+      0 8px 16px oklch(0 0 0 / 30%),
+      0 0 0 1px oklch(1 0 0 / 8%);
+  }
+
+  /* ── Brand accent highlight (bg tint, not side-stripe) ── */
+  .brand-highlight {
+    background-color: color-mix(in oklch, var(--brand) 8%, transparent);
+    border-radius: var(--radius);
+    padding-left: 0.75rem;
+  }
+
+  /* ── Stat card ── */
+  .stat-card {
+    @apply relative overflow-hidden rounded-xl bg-card p-5 ring-1 ring-foreground/8;
+    transition:
+      box-shadow var(--duration-base) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-out);
+  }
+  .stat-card:hover {
+    box-shadow:
+      0 6px 16px oklch(0 0 0 / 10%),
+      0 2px 4px oklch(0 0 0 / 6%),
+      0 0 0 1px oklch(0 0 0 / 5%);
+    transform: translateY(-1px);
+  }
+
+  /* ── Quiet label — ALL CAPS tracking ── */
+  .label-quiet {
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  /* ── Inline code ── */
+  code:not(pre code) {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.8em] text-foreground;
+  }
+
+  /* ── Kbd token color ── */
+  kbd {
+    @apply font-mono;
+  }
+
+  /* ── Studio panel — grid-based collapse/expand ── */
+  .studio-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms ease;
+  }
+  .studio-collapse[data-closed] {
+    grid-template-rows: 0fr;
+  }
+  .studio-collapse > .studio-collapse-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Studio panel — responsive grid ── */
+  @container studio-panel (max-width: 380px) {
+    .studio-layout-grid {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    .studio-presets-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (max-width: 480px) {
+    .studio-layout-grid {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    .studio-presets-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILITY LAYER  — motion, animation helpers
+   ══════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  /* Respects prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Soft fade-up entrance (used on page sections) */
+  .animate-fade-up {
+    animation: fade-up var(--duration-slow) var(--ease-standard) both;
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger helpers — pairs with animate-fade-up */
+  .stagger-1 {
+    animation-delay: 50ms;
+  }
+  .stagger-2 {
+    animation-delay: 100ms;
+  }
+  .stagger-3 {
+    animation-delay: 150ms;
+  }
+  .stagger-4 {
+    animation-delay: 200ms;
+  }
+  .stagger-5 {
+    animation-delay: 250ms;
+  }
+  .stagger-6 {
+    animation-delay: 300ms;
+  }
+  .stagger-7 {
+    animation-delay: 350ms;
+  }
+  .stagger-8 {
+    animation-delay: 400ms;
+  }
+
+  /* Shimmer skeleton (use instead of animate-pulse for feel) */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      color-mix(in oklch, var(--muted) 60%, var(--background)) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Tactile press — add to interactive rows */
+  .tactile {
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  .tactile:active {
+    transform: scale(0.99);
+  }
+
+  /* Active sidebar item — brand-colored icon signals active state */
+  [data-sidebar="menu-button"][data-active="true"] {
+    position: relative;
+  }
+
+  /* Scrollbar hide — used on overflow-x-auto tab rows */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Brand highlight text */
+  .text-brand {
+    color: var(--brand);
+  }
+  .bg-brand {
+    background-color: var(--brand);
+  }
+  .border-brand {
+    border-color: var(--brand);
+  }
+  .text-brand-muted {
+    color: var(--brand-muted);
+  }
+  .bg-brand-muted {
+    background-color: var(--brand-muted);
+  }
+
+  /* ── Auth panel stagger (brand side — left panel on desktop) ── */
+  .auth-stagger-1,
+  .auth-stagger-2,
+  .auth-stagger-3,
+  .auth-stagger-4 {
+    animation: auth-reveal 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .auth-stagger-1 {
+    animation-delay: 80ms;
+  }
+  .auth-stagger-2 {
+    animation-delay: 200ms;
+  }
+  .auth-stagger-3 {
+    animation-delay: 360ms;
+  }
+  .auth-stagger-4 {
+    animation-delay: 480ms;
+  }
+
+  @keyframes auth-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Auth form entrance — fast & calm (seen on every login) ── */
+  .auth-form-enter {
+    animation: auth-form-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes auth-form-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Auth step transition (verify step crossfade) ── */
+  .auth-step-enter {
+    animation: auth-step-in 350ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes auth-step-in {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ── Onboarding step animations ── */
+  .onboard-fade-in {
+    animation: onboard-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes onboard-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Tactile auth button press (per Emil philosophy) ── */
+  .auth-btn {
+    transition:
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .auth-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* ── Focus ring for auth inputs ── */
+  .auth-input-focus {
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+  .auth-input-focus:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px oklch(0.7 0.12 55 / 0.1);
+  }
+
+  /* ── Inline notification slide-in (error / success) ── */
+  .auth-notice-in {
+    animation: notice-slide 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes notice-slide {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 60px;
+    }
+  }
+
+  /* ── Checkmark pop animation (onboarding success) ── */
+  .check-pop {
+    animation: check-pop-in 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes check-pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* ── Testimonial detail panel entrance ── */
+  .detail-panel-enter {
+    animation: detail-panel-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes detail-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ── Testimonial detail content crossfade (on selection switch) ── */
+  .detail-content-enter {
+    animation: detail-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes detail-content-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Testimonial detail panel section stagger ── */
+  .detail-section-enter {
+    animation: detail-section-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes detail-section-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── List content fade ── */
+  .list-content-enter {
+    animation: list-content-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes list-content-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* ── Directional step transitions — auth (horizontal) ── */
+  .step-enter-forward {
+    animation: step-fwd-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .step-exit-forward {
+    animation: step-fwd-out 130ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  .step-enter-back {
+    animation: step-back-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .step-exit-back {
+    animation: step-back-out 130ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes step-fwd-in {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes step-fwd-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+  }
+  @keyframes step-back-in {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes step-back-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+  }
+
+  /* ── Directional step transitions — onboarding (vertical) ── */
+  .onboard-enter-fwd {
+    animation: onboard-fwd-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .onboard-exit-fwd {
+    animation: onboard-fwd-out 140ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  .onboard-enter-rev {
+    animation: onboard-rev-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .onboard-exit-rev {
+    animation: onboard-rev-out 140ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes onboard-fwd-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes onboard-fwd-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes onboard-rev-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes onboard-rev-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* ── Help FAB animations ── */
+  .help-fab-menu-enter {
+    animation: help-fab-menu-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .help-fab-item-enter {
+    animation: help-fab-item-in 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .help-fab-icon-enter {
+    animation: help-fab-spin-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes help-fab-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes help-fab-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes help-fab-spin-in {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+  }
+
+  /* ── Detail panel slide in/out (desktop) ── */
+  .detail-panel-slide-enter {
+    animation: detail-slide-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .detail-panel-slide-exit {
+    animation: detail-slide-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  @keyframes detail-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes detail-slide-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  /* ── Settings save bar ── */
+  .settings-save-enter {
+    animation: settings-save-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes settings-save-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Settings section content entrance ── */
+  .settings-section-enter {
+    animation: settings-section-in 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes settings-section-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Copy-to-clipboard success animation ── */
+  .copy-success {
+    animation: copy-pop 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes copy-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
