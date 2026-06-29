@@ -34,6 +34,7 @@ import {
 import type {
   WidgetKind,
   WidgetLayout,
+  WidgetListEntry,
   WidgetStudioConfig,
 } from "@/lib/widgets/widget-types";
 import { WidgetCard } from "./widget-card";
@@ -61,6 +62,21 @@ type Filter = "all" | "embed" | "wall";
 
 interface WidgetListProps {
   project: V2ProjectDTO;
+}
+
+interface WidgetListContentProps {
+  projectSlug: string;
+  loading: boolean;
+  listCount: number;
+  filtered: WidgetListEntry[];
+  filter: Filter;
+  viewMode: "grid" | "list";
+  configById: Map<string, WidgetStudioConfig>;
+  onPick: (kind: WidgetKind) => void;
+  onDuplicate: (widgetId: string) => void;
+  onDelete: (widgetId: string) => void;
+  onToggleActive: (widgetId: string, isActive: boolean) => void;
+  onRename: (widgetId: string, name: string) => void;
 }
 
 function GalleryGridSkeleton() {
@@ -218,7 +234,7 @@ export function WidgetList({ project }: WidgetListProps) {
     [updateMutation],
   );
 
-  const loading = isWaitingForLiveData;
+  const loading = Boolean(isWaitingForLiveData);
   const showToolbar = !loading && list.length > 0;
 
   return (
@@ -272,65 +288,20 @@ export function WidgetList({ project }: WidgetListProps) {
       />
 
       <PageBody padding="bare" className="overflow-y-auto">
-        {loading ? (
-          <GalleryGridSkeleton />
-        ) : list.length === 0 ? (
-          <WidgetEmptyState onPick={(kind) => setQuery({ new: kind })} />
-        ) : filtered.length === 0 ? (
-          <FilteredEmpty
-            kind={filter as Exclude<Filter, "all">}
-            onCreate={() => setQuery({ new: filter as WidgetKind })}
-          />
-        ) : viewMode === "list" ? (
-          <div
-            className="divide-y divide-border"
-            role="list"
-            aria-label="Widgets"
-          >
-            {filtered.map((entry) => (
-              <WidgetRow
-                key={entry.id}
-                slug={project.slug}
-                entry={entry}
-                previewConfig={configById.get(entry.id)}
-                wallSlug={null}
-                hasDirtyDraft={false}
-                onDuplicate={() => handleDuplicate(entry.id)}
-                onDelete={() => handleDelete(entry.id)}
-                onToggleActive={() =>
-                  handleToggleActive(entry.id, entry.isActive)
-                }
-                onRename={(name) => handleRename(entry.id, name)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="px-4 py-5 sm:px-6">
-            <div
-              className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              role="list"
-              aria-label="Widgets"
-            >
-              {filtered.map((entry) => (
-                <div key={entry.id} role="listitem" className="h-full">
-                  <WidgetCard
-                    slug={project.slug}
-                    entry={entry}
-                    previewConfig={configById.get(entry.id)}
-                    wallSlug={null}
-                    hasDirtyDraft={false}
-                    onDuplicate={() => handleDuplicate(entry.id)}
-                    onDelete={() => handleDelete(entry.id)}
-                    onToggleActive={() =>
-                      handleToggleActive(entry.id, entry.isActive)
-                    }
-                    onRename={(name) => handleRename(entry.id, name)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <WidgetListContent
+          projectSlug={project.slug}
+          loading={loading}
+          listCount={list.length}
+          filtered={filtered}
+          filter={filter}
+          viewMode={viewMode}
+          configById={configById}
+          onPick={(kind) => setQuery({ new: kind })}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          onToggleActive={handleToggleActive}
+          onRename={handleRename}
+        />
       </PageBody>
 
       <WidgetKindPicker
@@ -341,6 +312,134 @@ export function WidgetList({ project }: WidgetListProps) {
         onCreate={handleCreate}
         initialKind={initialKind}
       />
+    </div>
+  );
+}
+
+function WidgetListContent({
+  projectSlug,
+  loading,
+  listCount,
+  filtered,
+  filter,
+  viewMode,
+  configById,
+  onPick,
+  onDuplicate,
+  onDelete,
+  onToggleActive,
+  onRename,
+}: WidgetListContentProps) {
+  if (loading) return <GalleryGridSkeleton />;
+  if (listCount === 0) return <WidgetEmptyState onPick={onPick} />;
+  if (filtered.length === 0 && filter !== "all") {
+    return <FilteredEmpty kind={filter} onCreate={() => onPick(filter)} />;
+  }
+
+  if (viewMode === "list") {
+    return (
+      <WidgetRows
+        projectSlug={projectSlug}
+        entries={filtered}
+        configById={configById}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onToggleActive={onToggleActive}
+        onRename={onRename}
+      />
+    );
+  }
+
+  return (
+    <WidgetGrid
+      projectSlug={projectSlug}
+      entries={filtered}
+      configById={configById}
+      onDuplicate={onDuplicate}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+      onRename={onRename}
+    />
+  );
+}
+
+function WidgetRows({
+  projectSlug,
+  entries,
+  configById,
+  onDuplicate,
+  onDelete,
+  onToggleActive,
+  onRename,
+}: {
+  projectSlug: string;
+  entries: WidgetListEntry[];
+  configById: Map<string, WidgetStudioConfig>;
+  onDuplicate: (widgetId: string) => void;
+  onDelete: (widgetId: string) => void;
+  onToggleActive: (widgetId: string, isActive: boolean) => void;
+  onRename: (widgetId: string, name: string) => void;
+}) {
+  return (
+    <div className="divide-y divide-border" role="list" aria-label="Widgets">
+      {entries.map((entry) => (
+        <WidgetRow
+          key={entry.id}
+          slug={projectSlug}
+          entry={entry}
+          previewConfig={configById.get(entry.id)}
+          wallSlug={null}
+          hasDirtyDraft={false}
+          onDuplicate={() => onDuplicate(entry.id)}
+          onDelete={() => onDelete(entry.id)}
+          onToggleActive={() => onToggleActive(entry.id, entry.isActive)}
+          onRename={(name) => onRename(entry.id, name)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WidgetGrid({
+  projectSlug,
+  entries,
+  configById,
+  onDuplicate,
+  onDelete,
+  onToggleActive,
+  onRename,
+}: {
+  projectSlug: string;
+  entries: WidgetListEntry[];
+  configById: Map<string, WidgetStudioConfig>;
+  onDuplicate: (widgetId: string) => void;
+  onDelete: (widgetId: string) => void;
+  onToggleActive: (widgetId: string, isActive: boolean) => void;
+  onRename: (widgetId: string, name: string) => void;
+}) {
+  return (
+    <div className="px-4 py-5 sm:px-6">
+      <div
+        className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        role="list"
+        aria-label="Widgets"
+      >
+        {entries.map((entry) => (
+          <div key={entry.id} role="listitem" className="h-full">
+            <WidgetCard
+              slug={projectSlug}
+              entry={entry}
+              previewConfig={configById.get(entry.id)}
+              wallSlug={null}
+              hasDirtyDraft={false}
+              onDuplicate={() => onDuplicate(entry.id)}
+              onDelete={() => onDelete(entry.id)}
+              onToggleActive={() => onToggleActive(entry.id, entry.isActive)}
+              onRename={(name) => onRename(entry.id, name)}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
