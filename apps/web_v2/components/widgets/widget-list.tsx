@@ -79,6 +79,11 @@ interface WidgetListContentProps {
   onRename: (widgetId: string, name: string) => void;
 }
 
+type WidgetListActions = Pick<
+  WidgetListContentProps,
+  "onDuplicate" | "onDelete" | "onToggleActive" | "onRename"
+>;
+
 function GalleryGridSkeleton() {
   return (
     <div className="px-4 py-5 sm:px-6">
@@ -336,23 +341,10 @@ function WidgetListContent({
     return <FilteredEmpty kind={filter} onCreate={() => onPick(filter)} />;
   }
 
-  if (viewMode === "list") {
-    return (
-      <WidgetRows
-        projectSlug={projectSlug}
-        entries={filtered}
-        configById={configById}
-        onDuplicate={onDuplicate}
-        onDelete={onDelete}
-        onToggleActive={onToggleActive}
-        onRename={onRename}
-      />
-    );
-  }
-
   return (
-    <WidgetGrid
+    <WidgetCollection
       projectSlug={projectSlug}
+      viewMode={viewMode}
       entries={filtered}
       configById={configById}
       onDuplicate={onDuplicate}
@@ -363,8 +355,9 @@ function WidgetListContent({
   );
 }
 
-function WidgetRows({
+function WidgetCollection({
   projectSlug,
+  viewMode,
   entries,
   configById,
   onDuplicate,
@@ -373,50 +366,42 @@ function WidgetRows({
   onRename,
 }: {
   projectSlug: string;
+  viewMode: "grid" | "list";
   entries: WidgetListEntry[];
   configById: Map<string, WidgetStudioConfig>;
-  onDuplicate: (widgetId: string) => void;
-  onDelete: (widgetId: string) => void;
-  onToggleActive: (widgetId: string, isActive: boolean) => void;
-  onRename: (widgetId: string, name: string) => void;
-}) {
-  return (
-    <div className="divide-y divide-border" role="list" aria-label="Widgets">
-      {entries.map((entry) => (
-        <WidgetRow
-          key={entry.id}
-          slug={projectSlug}
-          entry={entry}
-          previewConfig={configById.get(entry.id)}
-          wallSlug={null}
-          hasDirtyDraft={false}
-          onDuplicate={() => onDuplicate(entry.id)}
-          onDelete={() => onDelete(entry.id)}
-          onToggleActive={() => onToggleActive(entry.id, entry.isActive)}
-          onRename={(name) => onRename(entry.id, name)}
-        />
-      ))}
-    </div>
-  );
-}
+} & WidgetListActions) {
+  const renderItem = (entry: WidgetListEntry) => {
+    const commonProps = {
+      slug: projectSlug,
+      entry,
+      previewConfig: configById.get(entry.id),
+      wallSlug: null,
+      hasDirtyDraft: false,
+      onDuplicate: () => onDuplicate(entry.id),
+      onDelete: () => onDelete(entry.id),
+      onToggleActive: () => onToggleActive(entry.id, entry.isActive),
+      onRename: (name: string) => onRename(entry.id, name),
+    };
 
-function WidgetGrid({
-  projectSlug,
-  entries,
-  configById,
-  onDuplicate,
-  onDelete,
-  onToggleActive,
-  onRename,
-}: {
-  projectSlug: string;
-  entries: WidgetListEntry[];
-  configById: Map<string, WidgetStudioConfig>;
-  onDuplicate: (widgetId: string) => void;
-  onDelete: (widgetId: string) => void;
-  onToggleActive: (widgetId: string, isActive: boolean) => void;
-  onRename: (widgetId: string, name: string) => void;
-}) {
+    if (viewMode === "list") {
+      return <WidgetRow key={entry.id} {...commonProps} />;
+    }
+
+    return (
+      <div key={entry.id} role="listitem" className="h-full">
+        <WidgetCard {...commonProps} />
+      </div>
+    );
+  };
+
+  if (viewMode === "list") {
+    return (
+      <div className="divide-y divide-border" role="list" aria-label="Widgets">
+        {entries.map(renderItem)}
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-5 sm:px-6">
       <div
@@ -424,21 +409,7 @@ function WidgetGrid({
         role="list"
         aria-label="Widgets"
       >
-        {entries.map((entry) => (
-          <div key={entry.id} role="listitem" className="h-full">
-            <WidgetCard
-              slug={projectSlug}
-              entry={entry}
-              previewConfig={configById.get(entry.id)}
-              wallSlug={null}
-              hasDirtyDraft={false}
-              onDuplicate={() => onDuplicate(entry.id)}
-              onDelete={() => onDelete(entry.id)}
-              onToggleActive={() => onToggleActive(entry.id, entry.isActive)}
-              onRename={(name) => onRename(entry.id, name)}
-            />
-          </div>
-        ))}
+        {entries.map(renderItem)}
       </div>
     </div>
   );
