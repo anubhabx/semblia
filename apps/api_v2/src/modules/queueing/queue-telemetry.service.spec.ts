@@ -40,6 +40,17 @@ describe("QueueTelemetryService", () => {
             createdAt: new Date("2026-05-28T07:58:30.000Z"),
           }),
         },
+        formModerationRun: {
+          groupBy: vi
+            .fn()
+            .mockResolvedValueOnce([
+              { status: "SUPPRESSED", _count: { _all: 1 } },
+              { status: "FAILED", _count: { _all: 2 } },
+            ])
+            .mockResolvedValueOnce([
+              { status: "ENQUEUED", _count: { _all: 3 } },
+            ]),
+        },
         deadLetterJob: {
           count: vi.fn().mockResolvedValue(7),
         },
@@ -96,11 +107,20 @@ describe("QueueTelemetryService", () => {
         outboundWebhooks: { PENDING: 2, FAILED: 1 },
         exports: { SUCCEEDED: 3 },
         emails: { PENDING: 5 },
-        moderationRuns: {},
-        moderationRunsLast24h: {},
+        moderationRuns: { SUPPRESSED: 1, FAILED: 2 },
+        moderationRunsLast24h: { ENQUEUED: 3 },
         oldestPendingEmailDeliveryAgeSeconds: 90,
         deadLetterJobs: 7,
       },
+    });
+    expect(prisma.client.formModerationRun.groupBy).toHaveBeenNthCalledWith(2, {
+      by: ["status"],
+      where: {
+        createdAt: {
+          gte: new Date("2026-05-27T08:00:00.000Z"),
+        },
+      },
+      _count: { _all: true },
     });
     vi.useRealTimers();
   });

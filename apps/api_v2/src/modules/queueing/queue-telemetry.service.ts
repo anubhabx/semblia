@@ -68,10 +68,19 @@ export class QueueTelemetryService {
         by: ["status"],
         _count: { _all: true },
       }),
-      // Submission moderation runs were removed in the forms rebuild (rebuilt as
-      // form moderation in Phase 6). No moderation telemetry rows for now.
-      Promise.resolve([] as StatusGroup[]),
-      Promise.resolve([] as StatusGroup[]),
+      this.prisma.client.formModerationRun.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.client.formModerationRun.groupBy({
+        by: ["status"],
+        where: {
+          createdAt: {
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          },
+        },
+        _count: { _all: true },
+      }),
       this.prisma.client.emailDelivery.findFirst({
         where: {
           status: {

@@ -86,7 +86,7 @@ describe("OpsAdminController", () => {
           alertHistory: {
             count: vi.fn().mockResolvedValue(2),
           },
-          submissionModerationRun: {
+          formModerationRun: {
             count: vi.fn().mockResolvedValue(3),
             findFirst: vi.fn().mockResolvedValue({
               createdAt: new Date("2026-05-28T07:55:00.000Z"),
@@ -112,8 +112,8 @@ describe("OpsAdminController", () => {
         },
         unresolvedAlertCount: 2,
         moderationBudget: {
-          budgetSuppressedCount: 0,
-          lastBudgetSuppressedAt: null,
+          budgetSuppressedCount: 3,
+          lastBudgetSuppressedAt: "2026-05-28T07:55:00.000Z",
         },
       }),
     );

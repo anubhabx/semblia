@@ -6,7 +6,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
-import { Prisma } from "@workspace/database/prisma";
+import { FormModerationRunStatus, Prisma } from "@workspace/database/prisma";
 import type { Queue } from "bullmq";
 import {
   EXPORT_DELIVERY_QUEUE,
@@ -30,10 +30,6 @@ import {
 } from "../queueing/queueing.constants.js";
 import type { EmailDeliveryJob } from "../email/email.types.js";
 
-// The submission-moderation pipeline was removed in the forms rebuild
-// (docs/plans/2026-06-18-forms-rebuild.md). The queue name stays registered as
-// reserved infra; Phase 6 reintroduces a form-moderation processor on it. Ops
-// DLQ retry stays generic over the queue.
 type SubmissionModerationJob = { runId: string };
 
 @Injectable()
@@ -87,10 +83,14 @@ export class OpsAdminService {
         this.prisma.client.alertHistory.count({
           where: { resolved: false },
         }),
-        // Submission moderation runs were removed in the forms rebuild
-        // (rebuilt as form moderation in Phase 6). Report no budget suppressions.
-        Promise.resolve(0),
-        Promise.resolve<{ createdAt: Date } | null>(null),
+        this.prisma.client.formModerationRun.count({
+          where: { status: FormModerationRunStatus.SUPPRESSED },
+        }),
+        this.prisma.client.formModerationRun.findFirst({
+          where: { status: FormModerationRunStatus.SUPPRESSED },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        }),
       ]);
 
     return {
