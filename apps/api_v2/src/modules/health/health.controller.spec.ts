@@ -1,14 +1,12 @@
 import { RequestMethod } from "@nestjs/common";
-import {
-  THROTTLER_LIMIT,
-  THROTTLER_TTL,
-} from "@nestjs/throttler/dist/throttler.constants.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { IS_PUBLIC_KEY } from "../../common/decorators/public.decorator.js";
 import { HealthController } from "./health.controller.js";
 
 const PATH_METADATA = "path";
 const METHOD_METADATA = "method";
+const DEFAULT_THROTTLER_LIMIT_METADATA = "THROTTLER:LIMITdefault";
+const DEFAULT_THROTTLER_TTL_METADATA = "THROTTLER:TTLdefault";
 
 describe("HealthController", () => {
   afterEach(() => {
@@ -24,12 +22,12 @@ describe("HealthController", () => {
     expect(
       Reflect.getMetadata(METHOD_METADATA, HealthController.prototype.getHealth),
     ).toBe(RequestMethod.GET);
-    expect(Reflect.getMetadata(THROTTLER_LIMIT + "default", HealthController)).toBe(
-      30,
-    );
-    expect(Reflect.getMetadata(THROTTLER_TTL + "default", HealthController)).toBe(
-      60000,
-    );
+    expect(
+      Reflect.getMetadata(DEFAULT_THROTTLER_LIMIT_METADATA, HealthController),
+    ).toBe(30);
+    expect(
+      Reflect.getMetadata(DEFAULT_THROTTLER_TTL_METADATA, HealthController),
+    ).toBe(60000);
   });
 
   it("reports ok only when required dependencies are up", async () => {

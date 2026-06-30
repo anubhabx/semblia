@@ -237,10 +237,6 @@ describe("MediaService", () => {
       "Media asset belongs to another actor",
     );
     expect(s3DeleteObject).not.toHaveBeenCalled();
-    expect(mediaAssetUpdate).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: MediaAssetStatus.DELETED }),
-      }),
-    );
+    expect(mediaAssetUpdate).not.toHaveBeenCalled();
   });
 });
