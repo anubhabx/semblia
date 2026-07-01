@@ -19,6 +19,25 @@ widget gap is server-side save/publish parity (draft still persists to the local
 
 ## Current Snapshot
 
+- 2026-06-30 — **API surface fitness pass** (`codex/api-surface-fitness`, commits
+  `bf518730` -> `287e3221`). User goal: stop blind bug-fixing and move the API surface
+  toward a measurable quality target. Benchmark used five 20-point layers: build/executable
+  health, contract/route coverage, authz/trust boundaries, data/workflow correctness, and
+  ops/dependency readiness. Final score: **95/100**, with zero open API-scoped P0/P1 findings
+  and no layer below 18/20. Shipped real fixes for moderation telemetry and ops suppressed-run
+  counts, account-default logo upload actor isolation, media/public-submit asset boundary
+  coverage, health route contract coverage, stale billing webhook TODO cleanup, and API-relevant
+  transitive dependency hardening. `pnpm audit --prod --json` still exits 1 for the monorepo,
+  but parsed `apps__api_v2` advisory paths are 0; the remaining advisories are in `packages/ui`,
+  `apps/admin`, `apps/web_v2`, and `packages/semblia-mcp-server`. Full report:
+  `docs/api-surface-fitness-2026-06-30.md`.
+  Verification passed with repo-pinned Corepack pnpm 11.1.3: `corepack.cmd pnpm --filter
+  @workspace/database generate`; `corepack.cmd pnpm --filter @workspace/database exec prisma
+  validate`; `corepack.cmd pnpm --filter @workspace/types build`; `corepack.cmd pnpm --filter
+  api_v2 typecheck`; `corepack.cmd pnpm --filter api_v2 lint`; `corepack.cmd pnpm --filter
+  api_v2 test` (65 files / 420 tests); `corepack.cmd pnpm build --filter api_v2` (6/6 tasks);
+  `corepack.cmd pnpm --filter api_v2 smoke:worker`.
+
 - 2026-06-23 (late) — **STUDIOS UNIFICATION** (revamp/v2, committed `7c7c4099` → `6e49e664`,
   8 clean per-phase commits). User goal: the forms + widgets studios still felt like "two
   passion projects," not one serious product. Approved a full unification + pipeline framing,

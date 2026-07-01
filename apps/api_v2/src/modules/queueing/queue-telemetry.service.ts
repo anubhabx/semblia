@@ -38,41 +38,105 @@ export class QueueTelemetryService {
 
   async getSnapshot() {
     const [
+      queues,
+      deliveryCounts,
+      moderationRunCounts,
+      moderationRunCountsLast24h,
+      oldestPendingEmailDeliveryAgeSeconds,
+      deadLetterJobs,
+    ] = await Promise.all([
+      this.getQueueSnapshots(),
+      this.getDeliveryStatusCounts(),
+      this.getModerationRunCounts(),
+      this.getRecentModerationRunCounts(),
+      this.getOldestPendingEmailDeliveryAgeSeconds(),
+      this.prisma.client.deadLetterJob.count(),
+    ]);
+
+    return {
+      queues,
+      deliveries: {
+        ...deliveryCounts,
+        moderationRuns: this.toStatusCounts(moderationRunCounts),
+        moderationRunsLast24h: this.toStatusCounts(
+          moderationRunCountsLast24h,
+        ),
+        oldestPendingEmailDeliveryAgeSeconds,
+        deadLetterJobs,
+      },
+    };
+  }
+
+  private async getQueueSnapshots() {
+    const [
       outboundQueue,
       exportQueue,
       integrationQueue,
       emailQueue,
       moderationQueue,
-      outboundDeliveryCounts,
-      exportDeliveryCounts,
-      emailDeliveryCounts,
-      moderationRunCounts,
-      moderationRunCountsLast24h,
-      oldestPendingEmailDelivery,
-      deadLetterJobs,
     ] = await Promise.all([
       this.getQueueCounts(this.outboundWebhookQueue),
       this.getQueueCounts(this.exportDeliveryQueue),
       this.getQueueCounts(this.nativeIntegrationQueue),
       this.getQueueCounts(this.emailDeliveryQueue),
       this.getQueueCounts(this.submissionModerationQueue),
-      this.prisma.client.outboundWebhookDelivery.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-      this.prisma.client.exportDelivery.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-      this.prisma.client.emailDelivery.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-      // Submission moderation runs were removed in the forms rebuild (rebuilt as
-      // form moderation in Phase 6). No moderation telemetry rows for now.
-      Promise.resolve([] as StatusGroup[]),
-      Promise.resolve([] as StatusGroup[]),
-      this.prisma.client.emailDelivery.findFirst({
+    ]);
+
+    return {
+      [OUTBOUND_WEBHOOK_QUEUE]: outboundQueue,
+      [EXPORT_DELIVERY_QUEUE]: exportQueue,
+      [NATIVE_INTEGRATION_EXPORT_QUEUE]: integrationQueue,
+      [EMAIL_DELIVERY_QUEUE]: emailQueue,
+      [SUBMISSION_MODERATION_QUEUE]: moderationQueue,
+    };
+  }
+
+  private async getDeliveryStatusCounts() {
+    const [outboundDeliveryCounts, exportDeliveryCounts, emailDeliveryCounts] =
+      await Promise.all([
+        this.prisma.client.outboundWebhookDelivery.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
+        this.prisma.client.exportDelivery.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
+        this.prisma.client.emailDelivery.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
+      ]);
+
+    return {
+      outboundWebhooks: this.toStatusCounts(outboundDeliveryCounts),
+      exports: this.toStatusCounts(exportDeliveryCounts),
+      emails: this.toStatusCounts(emailDeliveryCounts),
+    };
+  }
+
+  private getModerationRunCounts() {
+    return this.prisma.client.formModerationRun.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    });
+  }
+
+  private getRecentModerationRunCounts() {
+    return this.prisma.client.formModerationRun.groupBy({
+      by: ["status"],
+      where: {
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        },
+      },
+      _count: { _all: true },
+    });
+  }
+
+  private async getOldestPendingEmailDeliveryAgeSeconds() {
+    const oldestPendingEmailDelivery =
+      await this.prisma.client.emailDelivery.findFirst({
         where: {
           status: {
             in: [EmailDeliveryStatus.PENDING, EmailDeliveryStatus.FAILED],
@@ -80,39 +144,18 @@ export class QueueTelemetryService {
         },
         orderBy: { createdAt: "asc" },
         select: { createdAt: true },
-      }),
-      this.prisma.client.deadLetterJob.count(),
-    ]);
+      });
 
-    return {
-      queues: {
-        [OUTBOUND_WEBHOOK_QUEUE]: outboundQueue,
-        [EXPORT_DELIVERY_QUEUE]: exportQueue,
-        [NATIVE_INTEGRATION_EXPORT_QUEUE]: integrationQueue,
-        [EMAIL_DELIVERY_QUEUE]: emailQueue,
-        [SUBMISSION_MODERATION_QUEUE]: moderationQueue,
-      },
-      deliveries: {
-        outboundWebhooks: this.toStatusCounts(outboundDeliveryCounts),
-        exports: this.toStatusCounts(exportDeliveryCounts),
-        emails: this.toStatusCounts(emailDeliveryCounts),
-        moderationRuns: this.toStatusCounts(moderationRunCounts),
-        moderationRunsLast24h: this.toStatusCounts(
-          moderationRunCountsLast24h,
-        ),
-        oldestPendingEmailDeliveryAgeSeconds:
-          oldestPendingEmailDelivery === null
-            ? null
-            : Math.max(
-                0,
-                Math.floor(
-                  (Date.now() - oldestPendingEmailDelivery.createdAt.getTime()) /
-                    1000,
-                ),
-              ),
-        deadLetterJobs,
-      },
-    };
+    if (oldestPendingEmailDelivery === null) {
+      return null;
+    }
+
+    return Math.max(
+      0,
+      Math.floor(
+        (Date.now() - oldestPendingEmailDelivery.createdAt.getTime()) / 1000,
+      ),
+    );
   }
 
   private async getQueueCounts(queue: Queue): Promise<QueueCounts> {
