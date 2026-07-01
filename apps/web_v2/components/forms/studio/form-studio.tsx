@@ -34,9 +34,9 @@ import {
   type FormSectionId,
 } from "./form-inspector";
 import { FormStudioPreview } from "./form-studio-preview";
+import { hostedFormUrl } from "@/lib/semblia-urls";
 
 const AUTOSAVE_MS = 1200;
-const HOSTED_BASE = "forms.semblia.com/f";
 
 function isConflict(err: unknown): boolean {
   return (
@@ -193,9 +193,7 @@ export function FormStudio({ slug, formId }: { slug: string; formId: string }) {
 
   const status = formStatusMeta(form.status, form.open);
   const hostedUrl =
-    form.status === "PUBLISHED" && form.slug
-      ? `${HOSTED_BASE}/${form.slug}`
-      : null;
+    form.status === "PUBLISHED" && form.slug ? hostedFormUrl(form.slug) : null;
   const previewMeta: PreviewMeta = {
     formId: form.id,
     projectId: form.projectId,

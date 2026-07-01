@@ -27,8 +27,7 @@ import { ItemCard, ItemActionRow, type ItemAction } from "@/components/shared";
 import { intentMeta } from "@/lib/forms/intents";
 import { FormStatusBadge } from "./form-status-badge";
 import { FormPreviewLauncher } from "./form-preview-launcher";
-
-const HOSTED_BASE = "forms.semblia.com/f";
+import { hostedFormUrl } from "@/lib/semblia-urls";
 
 interface FormCardProps {
   slug: string;
@@ -50,7 +49,7 @@ export const FormCard = React.memo(function FormCard({
   const Icon = meta.icon;
   const isPublished =
     form.status === "PUBLISHED" && form.currentVersion != null;
-  const hostedUrl = form.slug ? `${HOSTED_BASE}/${form.slug}` : null;
+  const hostedUrl = form.slug ? hostedFormUrl(form.slug) : null;
   const editHref = `/projects/${slug}/forms/${form.id}`;
   const inactive = form.status === "ARCHIVED" || !form.open;
 

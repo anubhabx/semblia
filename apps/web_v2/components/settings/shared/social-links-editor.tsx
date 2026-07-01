@@ -144,15 +144,35 @@ function CustomLinksEditor({
   links: CustomSocialLink[];
   onChange: (v: CustomSocialLink[]) => void;
 }) {
+  // Stable per-row keys so editing or removing a row never remounts the wrong
+  // input (index keys reuse a deleted row's instance for the row that shifts
+  // up). Keys live in local state — updated in lockstep with add/remove so a
+  // content edit keeps its key — and an effect resyncs if the parent replaces
+  // the list (e.g. discard). CustomSocialLink itself stays id-free so the
+  // settings form's JSON.stringify dirty check is unaffected.
+  const keySeq = React.useRef(links.length);
+  const [keys, setKeys] = React.useState<string[]>(() =>
+    links.map((_, i) => `c${i}`),
+  );
+  React.useEffect(() => {
+    setKeys((prev) =>
+      prev.length === links.length
+        ? prev
+        : links.map((_, i) => prev[i] ?? `c${keySeq.current++}`),
+    );
+  }, [links]);
+
   function update(idx: number, patch: Partial<CustomSocialLink>) {
     onChange(links.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   }
 
   function remove(idx: number) {
+    setKeys((k) => k.filter((_, i) => i !== idx));
     onChange(links.filter((_, i) => i !== idx));
   }
 
   function add() {
+    setKeys((k) => [...k, `c${keySeq.current++}`]);
     onChange([...links, { platformName: "", platformUrl: "", profileUrl: "" }]);
   }
 
@@ -184,7 +204,7 @@ function CustomLinksEditor({
 
         return (
           <div
-            key={idx}
+            key={keys[idx] ?? idx}
             className="relative space-y-2.5 rounded-lg border border-border bg-muted/20 p-3 transition-colors hover:bg-muted/30"
           >
             <div className="flex items-center gap-2">

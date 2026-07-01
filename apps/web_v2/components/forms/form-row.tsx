@@ -10,6 +10,7 @@ import {
   EyeSlashIcon,
 } from "@phosphor-icons/react";
 import { timeAgo } from "@/lib/format";
+import { hostedFormUrl } from "@/lib/semblia-urls";
 import type { V2FormSummaryDTO } from "@workspace/types";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { InlineName } from "@/components/studio/inline-name";
@@ -17,8 +18,6 @@ import { ItemShell, ItemActionRow, type ItemAction } from "@/components/shared";
 import { intentMeta } from "@/lib/forms/intents";
 import { FormStatusBadge } from "./form-status-badge";
 import { FormPreviewLauncher } from "./form-preview-launcher";
-
-const HOSTED_BASE = "forms.semblia.com/f";
 
 interface FormRowProps {
   slug: string;
@@ -39,7 +38,7 @@ export const FormRow = React.memo(function FormRow({
   const meta = intentMeta(form.intent);
   const isPublished =
     form.status === "PUBLISHED" && form.currentVersion != null;
-  const hostedUrl = form.slug ? `${HOSTED_BASE}/${form.slug}` : null;
+  const hostedUrl = form.slug ? hostedFormUrl(form.slug) : null;
   const editHref = `/projects/${slug}/forms/${form.id}`;
   const inactive = form.status === "ARCHIVED" || !form.open;
 
